@@ -1,0 +1,240 @@
+/* ═══════════════════════════════════════════════════════════════════
+   GENTE v3 — Responsividade Global dos Módulos
+   Arquivo: resources/gente-v3/src/assets/responsive.css
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Variáveis de breakpoint ──────────────────────────────────────── */
+:root {
+    --page-max: 1280px;
+    --page-pad: clamp(12px, 3vw, 32px);
+    --gap-cards: clamp(10px, 2vw, 18px);
+    --radius-card: 18px;
+}
+
+/* ── Container padrão para todas as páginas ───────────────────────── */
+.bh-page,
+.pe-page,
+.fl-page,
+.rh-page,
+.pf-page,
+.pa-page,
+.at-page,
+.ab-page,
+.es-page,
+.fe-page,
+.fa-page,
+.db-page,
+.cv-page,
+.dr-page,
+.gd-page,
+.mt-page,
+.ml-page,
+.og-page,
+.pf2-page,
+.pf3-page,
+.ps-page,
+.pg-page,
+.st-page,
+.tr-page,
+.av-page,
+.bf-page,
+.cm-page,
+.ov-page,
+.ag-page,
+.nt-page,
+.re-page {
+    max-width: var(--page-max);
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* ── Hero responsivo ──────────────────────────────────────────────── */
+[class$="-page"] .hero,
+[class*="-page"] .hero {
+    padding: clamp(18px, 3vw, 30px) clamp(16px, 3vw, 34px);
+}
+
+[class$="-page"] .hero-inner,
+[class*="-page"] .hero-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+/* ── KPI Strip / Grid responsivo ──────────────────────────────────── */
+.kpi-strip,
+.kpi-grid,
+.stat-row,
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+    gap: var(--gap-cards);
+    width: 100%;
+}
+
+/* ── Tabelas: scroll horizontal sem overflow visível ──────────────── */
+.table-scroll,
+.table-wrap,
+[class*="table-card"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    min-width: 500px;
+}
+
+/* ── Cards de conteúdo: máx-largura e centralização ──────────────── */
+.card,
+.progress-card,
+.timeline-card,
+.table-card,
+.form-card,
+.sec-card,
+.resumo-card,
+.detail-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ── Grid de 2 colunas responsivo ────────────────────────────────── */
+.two-col,
+.adicionais-grid,
+.config-grid,
+.kpi-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: var(--gap-cards);
+}
+
+/* ── Flex rows que quebram em mobile ──────────────────────────────── */
+.flex-row-wrap,
+.tab-row,
+.filter-row,
+.tc-hdr,
+.card-hdr,
+.sec-hdr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* ── Tabs / botões de filtro responsivos ─────────────────────────── */
+.tabs,
+.tab-btns,
+.f-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BREAKPOINTS
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Tablet (≤ 900px) */
+@media (max-width: 900px) {
+    .hero-title {
+        font-size: 22px !important;
+    }
+
+    .kpi-strip,
+    .kpi-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+    }
+
+    .month-nav .mes-label-nav {
+        min-width: 120px;
+        font-size: 13px;
+    }
+
+    .two-col,
+    .adicionais-grid,
+    .config-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Mobile grande (≤ 640px) */
+@media (max-width: 640px) {
+    :root {
+        --page-pad: 12px;
+    }
+
+    .hero {
+        border-radius: 14px !important;
+    }
+
+    .hero-title {
+        font-size: 20px !important;
+    }
+
+    .hero-sub {
+        font-size: 12px !important;
+    }
+
+    .kpi-strip,
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .two-col,
+    .adicionais-grid,
+    .config-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tabs,
+    .tab-btns {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+    }
+
+    .tc-hdr,
+    .card-hdr {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .tc-filters,
+    .card-acts {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .month-nav .mes-label-nav {
+        min-width: 100px;
+        font-size: 12px;
+    }
+
+    /* Esconde colunas opcionais em telas pequenas */
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+/* Mobile pequeno (≤ 430px) */
+@media (max-width: 430px) {
+
+    .kpi-strip,
+    .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .hero-title {
+        font-size: 18px !important;
+    }
+
+    .card,
+    .progress-card,
+    .timeline-card,
+    .table-card {
+        border-radius: 14px;
+        padding: 14px;
+    }
+}

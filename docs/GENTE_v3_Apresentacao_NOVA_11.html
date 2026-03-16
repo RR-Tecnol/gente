@@ -1,0 +1,600 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GENTE v3 â€” ApresentaÃ§Ã£o do Sistema</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; background: #f8fafc; padding: 40px 20px; }
+  .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 48px 56px; box-shadow: 0 4px 32px rgba(0,0,0,0.08); }
+  h1 { font-size: 32px; color: #0f172a; margin-bottom: 8px; padding-bottom: 16px; border-bottom: 3px solid #6366f1; }
+  h2 { font-size: 22px; color: #1e3a5f; margin: 40px 0 12px; padding-left: 12px; border-left: 4px solid #6366f1; }
+  h3 { font-size: 17px; color: #334155; margin: 24px 0 8px; }
+  h4 { font-size: 15px; color: #475569; margin: 16px 0 6px; }
+  p  { font-size: 14px; color: #475569; line-height: 1.7; margin: 8px 0; }
+  ul { margin: 8px 0 12px 24px; }
+  li { font-size: 14px; color: #475569; line-height: 1.8; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 36px 0; }
+  blockquote { background: #f0f9ff; border-left: 4px solid #38bdf8; border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 14px; color: #0369a1; }
+  figure { margin: 20px 0; text-align: center; }
+  figure img { max-width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+  figcaption { font-size: 12px; color: #94a3b8; margin-top: 6px; font-style: italic; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th { background: #f1f5f9; color: #334155; font-weight: 700; padding: 10px 14px; text-align: left; border: 1px solid #e2e8f0; }
+  td { padding: 9px 14px; border: 1px solid #e2e8f0; color: #475569; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  strong { color: #1e293b; font-weight: 700; }
+  .pdf-btn { position: fixed; top: 18px; right: 24px; z-index: 999; background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(99,102,241,0.35); transition: background .2s; }
+  .pdf-btn:hover { background: #4f46e5; }
+  @media print {
+    @page { size: A4; margin: 15mm 12mm; }
+    .pdf-btn { display: none !important; }
+    body { background: white; padding: 0; }
+    .container { box-shadow: none; border-radius: 0; padding: 20px 32px; max-width: 100%; }
+    figure img { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<button class="pdf-btn" onclick="window.print()">â¬‡ Salvar como PDF</button>
+<div class="container">
+<h1>GENTE v3 — Sistema de Gestão de Pessoas</h1>
+<h2>Apresentação Completa do Sistema</h2>
+<p></p>
+<p>> <strong>GENTE v3</strong> é um sistema completo de gestão de recursos humanos para municípios, desenvolvido para modernizar e digitalizar todos os processos de pessoal — do registro de ponto ao contracheque, da escala de trabalho à progressão funcional, com conformidade total às obrigações legais vigentes (eSocial, LRF, LGPD).</p>
+<p></p>
+<table>
+<tr><td>Item</td> <td>Descrição</td> <td></td></tr>
+<tr><td>------</td> <td>-----------</td> <td></td></tr>
+<tr><th><strong>Público-alvo</strong></th> <th>Prefeituras e autarquias municipais</th> <th></th></tr>
+<tr><th><strong>Usuários</strong></th> <th>Servidores efetivos, comissionados e RH</th> <th></th></tr>
+<tr><th><strong>Plataformas</strong></th> <th>Web (qualquer navegador) + App Mobile (Android e iOS)</th> <th></th></tr>
+<tr><th><strong>Acesso</strong></th> <th>Autenticação segura por CPF e senha</th> <th></th></tr>
+<tr><th><strong>Arquitetura</strong></th> <th>Nuvem ou servidor local (on-premise)</th> <th></th></tr>
+</table>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>0. Tela de Login</h2>
+<p></p>
+<figure><img src="screenshots/01-login.png" alt="Login"><figcaption>Login</figcaption></figure>
+<p></p>
+<h3>Autocadastro — Onboarding Digital</h3>
+<ul><li>Geração de <strong>link tokenizado</strong> para novos servidores preencherem seus próprios dados</li>
+<li>O servidor preenche tudo pelo celular ou computador, sem ir ao RH</li>
+<li><strong>Fluxo de revisão pelo RH</strong>: dados ficam pendentes de validação</li>
+</ul>
+<figure><img src="screenshots/00-autocadastro.png" alt="Autocadastro"><figcaption>Autocadastro</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>1. Portal do Servidor — Dashboard</h2>
+<p></p>
+<ul><li>Painel inicial personalizado com <strong>nome, cargo, setor</strong> do servidor</li>
+<li>Acesso rápido a todos os módulos</li>
+<li><strong>Notificações em tempo real</strong>: pendências de aprovação, comunicados, vencimentos</li>
+<li>Indicadores rápidos: abonos pendentes, status da folha, competência atual</li>
+</ul>
+<figure><img src="screenshots/02-dashboard.png" alt="Dashboard"><figcaption>Dashboard</figcaption></figure>
+<p></p>
+<h3>Notificações</h3>
+<figure><img src="screenshots/08-notificacoes.png" alt="Notificações"><figcaption>Notificações</figcaption></figure>
+<p></p>
+<h3>Comunicados</h3>
+<figure><img src="screenshots/06-comunicados.png" alt="Comunicados"><figcaption>Comunicados</figcaption></figure>
+<p></p>
+<h3>Agenda</h3>
+<figure><img src="screenshots/07-agenda.png" alt="Agenda"><figcaption>Agenda</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>2. Perfil do Servidor</h2>
+<p></p>
+<ul><li>Visualização completa de dados <strong>pessoais, funcionais e de contato</strong></li>
+<li>Edição de dados pessoais: nome social, estado civil, grau de instrução, e-mail</li>
+<li>Dados de <strong>eSocial</strong> integrados: PIS/PASEP, raça/cor, deficiência (campos obrigatórios S-2200)</li>
+</ul>
+<figure><img src="screenshots/03-meu-perfil.png" alt="Meu Perfil"><figcaption>Meu Perfil</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>3. Ponto Eletrônico e Frequência</h2>
+<p></p>
+<ul><li>Consulta do <strong>espelho de ponto</strong> por período</li>
+<li>Registro de faltas, atrasos e horas extras</li>
+<li>Justificativas de faltas com upload de atestados médicos</li>
+<li>Solicitação de <strong>abono de faltas</strong> com aprovação do gestor</li>
+</ul>
+<h3>Ponto Eletrônico</h3>
+<figure><img src="screenshots/04-ponto-eletronico.png" alt="Ponto Eletrônico"><figcaption>Ponto Eletrônico</figcaption></figure>
+<p></p>
+<h3>Banco de Horas</h3>
+<ul><li>Saldo consolidado de horas extras e compensações</li>
+<li>Extrato detalhado por período</li>
+</ul>
+<figure><img src="screenshots/12-banco-horas.png" alt="Banco de Horas"><figcaption>Banco de Horas</figcaption></figure>
+<p></p>
+<h3>Atestados Médicos</h3>
+<ul><li>Envio digital de atestados médicos diretamente pelo sistema, sem necessidade de entrega física</li>
+<li>Classificação por <strong>CID</strong> (Código Internacional de Doenças)</li>
+<li>Controle de prazo de validade do afastamento e status de aprovação pelo RH</li>
+<li>Histórico completo de afastamentos por servidor</li>
+</ul>
+<figure><img src="screenshots/10-atestados-medicos.png" alt="Atestados Médicos"><figcaption>Atestados Médicos</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>4. Contracheque / Holerite</h2>
+<p></p>
+<ul><li>Visualização do <strong>contracheque digital</strong> por competência</li>
+<li>Detalhamento completo de proventos e descontos: salário base, horas extras, faltas, INSS, IRRF</li>
+<li>Export em <strong>PDF</strong> com formatação profissional</li>
+<li>Acesso ao histórico de todos os meses anteriores</li>
+</ul>
+<figure><img src="screenshots/05-holerites.png" alt="Holerites"><figcaption>Holerites</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>5. Declarações e Requerimentos (Servidor)</h2>
+<p></p>
+<ul><li><strong>Geração automática</strong> de declarações: tempo de serviço, vínculo empregatício, rendimentos</li>
+<li><strong>Download imediato</strong> em PDF com assinatura digital</li>
+<li>Histórico de todas as solicitações realizadas</li>
+</ul>
+<figure><img src="screenshots/09-declaracoes-requerimentos.png" alt="Declarações e Requerimentos"><figcaption>Declarações e Requerimentos</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>6. Férias e Licenças</h2>
+<p></p>
+<ul><li>Consulta de <strong>períodos aquisitivos e de gozo</strong> de férias</li>
+<li>Solicitação online com seleção de datas</li>
+<li>Acompanhamento de status: pendente → aprovado → agendado</li>
+<li>Registro e consulta de <strong>licenças</strong>: saúde, gestante, paternidade, prêmio e outras</li>
+</ul>
+<figure><img src="screenshots/11-ferias-licencas.png" alt="Férias e Licenças"><figcaption>Férias e Licenças</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>7. Progressão Funcional (Servidor)</h2>
+<p></p>
+<ul><li>Exibição da <strong>posição atual</strong> na carreira: classe e referência</li>
+<li>Cálculo automático da <strong>próxima data de progressão</strong> (interstício de 24 meses)</li>
+<li>Indicador de elegibilidade: nota mínima, estágio probatório</li>
+</ul>
+<figure><img src="screenshots/29-progressao-funcional.png" alt="Progressão Funcional — Servidor"><figcaption>Progressão Funcional — Servidor</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>8. Contratos e Vínculos</h2>
+<p></p>
+<ul><li>Consulta detalhada do <strong>vínculo empregatício</strong> atual: regime, cargo, carga horária, data de admissão</li>
+<li>Histórico de todos os contratos anteriores</li>
+<li>Informações sobre <strong>estágio probatório</strong> e estabilidade</li>
+</ul>
+<figure><img src="screenshots/46-contratos-vinculos.png" alt="Contratos e Vínculos"><figcaption>Contratos e Vínculos</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>9. Ouvidoria</h2>
+<p></p>
+<ul><li>Canal de comunicação <strong>anônimo ou identificado</strong></li>
+<li>Categorias: reclamação, sugestão, elogio, denúncia, solicitação</li>
+<li>Protocolo de atendimento com número para acompanhamento</li>
+</ul>
+<h3>Canal do Servidor</h3>
+<figure><img src="screenshots/13-ouvidoria-servidor.png" alt="Ouvidoria — Servidor"><figcaption>Ouvidoria — Servidor</figcaption></figure>
+<p></p>
+<h3>Painel Administrativo</h3>
+<figure><img src="screenshots/53-ouvidoria-admin.png" alt="Ouvidoria — Admin"><figcaption>Ouvidoria — Admin</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>10. Gestão de Servidores (RH / Admin)</h2>
+<p></p>
+<ul><li>Cadastro completo com todos os campos eSocial</li>
+<li>Controle de lotação: histórico de movimentações entre setores</li>
+<li>Gestão de afastamentos, documentos pessoais e vínculos</li>
+</ul>
+<h3>Lista de Servidores</h3>
+<figure><img src="screenshots/21-funcionarios.png" alt="Funcionários"><figcaption>Funcionários</figcaption></figure>
+<p></p>
+<h3>Autocadastro — Gestão</h3>
+<figure><img src="screenshots/22-autocadastro-gestao.png" alt="Autocadastro Gestão"><figcaption>Autocadastro Gestão</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>11. Controle de Faltas e Abonos (RH)</h2>
+<p></p>
+<p>Módulo central para a apuração de presença de toda a equipe. O RH visualiza, valida e toma decisões sobre ocorrências de falta, atraso e saída antecipada, garantindo que a folha de pagamento reflita a frequência real dos servidores.</p>
+<p></p>
+<h3>Abono de Faltas</h3>
+<ul><li>Painel com todas as <strong>solicitações de abono</strong> pendentes de aprovação</li>
+<li>O gestor ou RH pode <strong>aprovar, recusar ou solicitar documentação</strong> complementar</li>
+<li>Histórico completo de abonos concedidos por servidor, mês e setor</li>
+<li>Integração direta com a apuração de ponto: faltas abonadas não são descontadas na folha</li>
+</ul>
+<figure><img src="screenshots/24-abono-faltas.png" alt="Abono de Faltas"><figcaption>Abono de Faltas</figcaption></figure>
+<p></p>
+<h3>Faltas e Atrasos</h3>
+<ul><li>Relatório consolidado de faltas, atrasos e saídas antecipadas por período</li>
+<li>Filtros por setor, servidor, tipo de ocorrência e período</li>
+<li>Indicadores visuais de <strong>reincidência</strong> e impacto financeiro acumulado</li>
+<li>Export para Excel ou PDF para uso em reuniões ou processos administrativos</li>
+</ul>
+<figure><img src="screenshots/25-faltas-atrasos.png" alt="Faltas e Atrasos"><figcaption>Faltas e Atrasos</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>12. Gestão de Declarações (Admin)</h2>
+<p></p>
+<p>Painel administrativo para controle completo das declarações e requerimentos solicitados pelos servidores.</p>
+<p></p>
+<ul><li>Visualização de <strong>todas as solicitações</strong> enviadas: status, tipo de documento e servidor solicitante</li>
+<li>Aprovação ou recusa individualizada com registro de justificativa</li>
+<li>Geração de <strong>modelos personalizados</strong> de declaração para a prefeitura (papel timbrado, assinatura digital)</li>
+<li>Histórico auditável de todos os documentos emitidos com data e responsável</li>
+</ul>
+<h3>Solicitações</h3>
+<figure><img src="screenshots/52-gestao-declaracoes-solicitacoes.png" alt="Gestão de Declarações — Solicitações"><figcaption>Gestão de Declarações — Solicitações</figcaption></figure>
+<p></p>
+<h3>Modelos de Documento</h3>
+<figure><img src="screenshots/52b-gestao-declaracoes-modelos.png" alt="Gestão de Declarações — Modelos"><figcaption>Gestão de Declarações — Modelos</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>13. Portal do Gestor</h2>
+<p></p>
+<p>Visão gerencial exclusiva para chefias de setor, coordenadores e diretores. Consolida informações da equipe sem necessidade de acesso ao painel administrativo do RH.</p>
+<p></p>
+<ul><li><strong>Painel da equipe</strong>: lista de servidores sob sua coordenação com status de ponto do dia</li>
+<li>Aprovação de <strong>férias, abonos e declarações</strong> diretamente pelo portal</li>
+<li>Visualização da <strong>escala de trabalho</strong> do setor e alertas de cobertura mínima</li>
+<li>Indicadores de frequência, horas extras e banco de horas da equipe</li>
+<li>Acesso ao <strong>organograma do setor</strong> com contatos e estrutura hierárquica</li>
+</ul>
+<h3>Avaliação de Desempenho pelo Gestor</h3>
+<p></p>
+<p>Diretamente no Portal do Gestor, o chefe de setor pode <strong>avaliar individualmente cada servidor da equipe</strong> sem sair da tela. Ao clicar em <strong>"⭐ Avaliar"</strong> no card do servidor, abre um modal completo com:</p>
+<p></p>
+<ul><li><strong>5 critérios ponderados</strong> por estrelas (1–10): Cumprimento de Metas (25%), Trabalho em Equipe (20%), Pontualidade e Assiduidade (20%), Iniciativa e Proatividade (15%) e Qualidade Técnica (20%)</li>
+<li><strong>Nota final ponderada</strong> calculada em tempo real conforme o gestor clica</li>
+<li>Campo de <strong>observações por critério</strong> para detalhar o feedback</li>
+<li>Envio direto para o histórico do servidor, que pode consultar sua evolução na tela de Avaliação de Desempenho</li>
+</ul>
+<figure><img src="screenshots/14-portal-gestor.png" alt="Portal do Gestor"><figcaption>Portal do Gestor</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>14. Folha de Pagamento</h2>
+<p></p>
+<p>Módulo financeiro central para o processamento da folha de pagamento mensal de todos os servidores.</p>
+<p></p>
+<ul><li><strong>Processamento por competência</strong>: cálculo automático de proventos e descontos com base nos eventos do mês</li>
+<li>Suporte a <strong>múltiplos vínculos</strong>: efetivos, comissionados, contratos temporários e estagiários</li>
+<li>Cálculo automático de <strong>anuênios</strong> (percentual adicional por tempo de serviço)</li>
+<li>Integração com apuração de ponto: faltas e horas extras já aparecem calculadas</li>
+<li>Geração do <strong>arquivo para remessa bancária</strong> CNAB 240 com um clique</li>
+<li>Relatório detalhado de <strong>custo por setor</strong> para gestão orçamentária</li>
+<li>Histórico de todas as competências processadas com possibilidade de reprocessamento</li>
+</ul>
+<figure><img src="screenshots/26-folha-pagamento.png" alt="Folha de Pagamento"><figcaption>Folha de Pagamento</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>15. Remessa Bancária CNAB 240</h2>
+<p></p>
+<ul><li>Geração de arquivo <strong>CNAB 240</strong> para pagamento de salários via banco</li>
+<li>Compatível: <strong>Caixa (104), Banco do Brasil (001), Bradesco (237), Itaú (341), Santander (033)</strong></li>
+<li>Download do arquivo TXT pronto para envio ao banco</li>
+</ul>
+<figure><img src="screenshots/27-remessa-cnab.png" alt="Remessa CNAB 240"><figcaption>Remessa CNAB 240</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>16. Central de Relatórios</h2>
+<p></p>
+<p>Todos os relatórios com exportação em <strong>CSV, Excel e PDF</strong>:</p>
+<p></p>
+<table>
+<tr><td>Relatório</td> <td>Descrição</td> <td></td></tr>
+<tr><td>-----------</td> <td>-----------</td> <td></td></tr>
+<tr><th><strong>Quadro de Servidores</strong></th> <th>Lista completa com cargo, setor, vínculo e admissão</th> <th></th></tr>
+<tr><th><strong>Folha de Pagamento</strong></th> <th>Proventos e descontos por competência</th> <th></th></tr>
+<tr><th><strong>Atestados Médicos</strong></th> <th>Afastamentos por CID e período</th> <th></th></tr>
+<tr><th><strong>Faltas e Atrasos</strong></th> <th>Ocorrências por servidor e período</th> <th></th></tr>
+<tr><th><strong>Banco de Horas</strong></th> <th>Saldo consolidado de toda a folha</th> <th></th></tr>
+<tr><th><strong>Escalas</strong></th> <th>Grade de turnos por setor e período</th> <th></th></tr>
+<tr><th><strong>Progressão</strong></th> <th>Servidores elegíveis na rodada atual</th> <th></th></tr>
+<tr><th><strong>eSocial</strong></th> <th>Relatórios de consistência cadastral</th> <th></th></tr>
+</table>
+<p></p>
+<figure><img src="screenshots/23-relatorios.png" alt="Relatórios"><figcaption>Relatórios</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>17. Progressão Funcional — Painel RH</h2>
+<p></p>
+<ul><li>Lista de todos os servidores <strong>elegíveis</strong> para progressão na rodada atual</li>
+<li><strong>Cálculo de impacto financeiro</strong> total da rodada</li>
+<li>Verificação de conformidade com o <strong>teto da LRF</strong></li>
+<li>Aplicação individual ou em lote com geração de <strong>minuta de portaria</strong></li>
+</ul>
+<figure><img src="screenshots/30-progressao-admin.png" alt="Progressão Admin — RH"><figcaption>Progressão Admin — RH</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>18. Cargos e Salários</h2>
+<p></p>
+<p>Gerenciamento completo da estrutura de cargos e tabela salarial do município, base para todos os cálculos de folha e progressão.</p>
+<p></p>
+<ul><li>Cadastro de <strong>cargos, carreiras e classes</strong> com todos os atributos: carga horária, nível de escolaridade exigido e requisitos legais</li>
+<li><strong>Tabela salarial</strong> por referência e classe, atualizada conforme lei municipal ou negociação coletiva</li>
+<li>Configuração do <strong>PCCV</strong> (Plano de Cargos, Carreiras e Vencimentos): interstício, nota mínima de avaliação, percentual de anuênio</li>
+<li>Histórico de reajustes salariais com data de vigência e base legal</li>
+<li>Relatório de <strong>impacto orçamentário</strong> por cargo e setor</li>
+</ul>
+<figure><img src="screenshots/28-cargos-salarios.png" alt="Cargos e Salários"><figcaption>Cargos e Salários</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>19. Medicina do Trabalho</h2>
+<p></p>
+<ul><li>Consulta de <strong>exames periódicos</strong> (ASO — Atestado de Saúde Ocupacional)</li>
+<li>Alertas de exames vencidos ou próximos do vencimento</li>
+<li>Histórico de exames com resultados e laudos</li>
+</ul>
+<figure><img src="screenshots/44-medicina-trabalho.png" alt="Medicina do Trabalho"><figcaption>Medicina do Trabalho</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>20. Benefícios</h2>
+<p></p>
+<p>Controle centralizado de todos os benefícios concedidos aos servidores, integrando-os automaticamente ao cálculo da folha.</p>
+<p></p>
+<ul><li>Visualização dos benefícios ativos por servidor: <strong>plano de saúde, vale-transporte, vale-alimentação, auxílio-creche, auxílio-funeral e outros</strong></li>
+<li>Cadastro e controle de <strong>dependentes</strong> por benefício, com validade e documentação</li>
+<li>Cálculo automático do <strong>desconto proporcional</strong> em folha (ex.: vale-transporte = 6% do salário até o limite do benefício)</li>
+<li>Histórico de <strong>inclusões e exclusões</strong> com data e responsável pelo lançamento</li>
+<li>Alertas de benefícios com <strong>validade próxima</strong> (ex.: plano por faixa etária, dependente que completou 24 anos)</li>
+</ul>
+<figure><img src="screenshots/45-beneficios.png" alt="Benefícios"><figcaption>Benefícios</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>21. Pesquisa de Satisfação</h2>
+<p></p>
+<p>Ferramenta de escuta ativa para o RH e gestores mensurarem o clima organizacional e a satisfação dos servidores com o ambiente de trabalho, liderança e condições oferecidas.</p>
+<p></p>
+<ul><li><strong>Criação de pesquisas</strong> pelo RH: título, período de resposta, público-alvo (setor ou toda a prefeitura)</li>
+<li>Tipos de pergunta: escala de 1 a 5, múltipla escolha e campo aberto</li>
+<li>Respostas <strong>anônimas por padrão</strong> para garantir maior sinceridade dos participantes</li>
+<li><strong>Dashboard de resultados</strong> com gráficos por pergunta, setor e evolução temporal</li>
+<li>Exportação dos resultados em CSV ou PDF para fins de diagnóstico e ação</li>
+</ul>
+<h3>Visão do Servidor</h3>
+<figure><img src="screenshots/50-pesquisa-satisfacao.png" alt="Pesquisa de Satisfação"><figcaption>Pesquisa de Satisfação</figcaption></figure>
+<p></p>
+<h3>Painel Administrativo</h3>
+<figure><img src="screenshots/51-pesquisa-admin.png" alt="Pesquisa Admin"><figcaption>Pesquisa Admin</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>22. Avaliação de Desempenho</h2>
+<p></p>
+<p>Instrumento formal para mensurar a performance dos servidores com base em critérios objetivos, indispensável para as rodadas de <strong>progressão funcional e estágio probatório</strong>.</p>
+<p></p>
+<ul><li>Definição de <strong>competências e critérios</strong> de avaliação pelo RH (assiduidade, qualidade do trabalho, proatividade, trabalho em equipe, etc.)</li>
+<li>Avaliação realizada pelo <strong>gestor imediato</strong>, com possibilidade de autoavaliação pelo servidor</li>
+<li>Ciclos configuráveis: avaliação anual, semestral ou por projeto</li>
+<li><strong>Nota final calculada automaticamente</strong> com base nos pesos definidos por critério</li>
+<li>Integração com <strong>Progressão Funcional</strong>: a nota é verificada automaticamente ao calcular elegibilidade</li>
+<li>Histórico de avaliações anteriores por servidor com evolução ao longo do tempo</li>
+</ul>
+<figure><img src="screenshots/47-avaliacao-desempenho.png" alt="Avaliação de Desempenho"><figcaption>Avaliação de Desempenho</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>23. Treinamentos e Capacitações</h2>
+<p></p>
+<p>Gestão completa da educação corporativa dos servidores: da inscrição ao certificado, com histórico individual de capacitações.</p>
+<p></p>
+<ul><li>Cadastro de <strong>cursos e treinamentos</strong> com carga horária, modalidade (presencial/online/EAD), instrutor e datas</li>
+<li><strong>Inscrição de servidores</strong> individualmente ou em lote por setor</li>
+<li>Controle de <strong>presença e aprovação</strong>: o sistema registra quem frequentou e a nota ou conceito obtido</li>
+<li>Emissão de <strong>certificado digital</strong> ao final do treinamento (PDF com dados do servidor, carga horária e conteúdo)</li>
+<li>Histórico individual: cada servidor visualiza todos os treinamentos que realizou no "meu perfil"</li>
+<li>Relatório de <strong>capacitações por setor</strong> para controle do plano anual de treinamento</li>
+</ul>
+<figure><img src="screenshots/48-treinamentos.png" alt="Treinamentos"><figcaption>Treinamentos</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>24. Segurança do Trabalho</h2>
+<p></p>
+<p>Módulo dedicado ao controle dos requisitos legais de saúde e segurança ocupacional, em conformidade com as Normas Regulamentadoras (NRs) aplicáveis ao serviço público.</p>
+<p></p>
+<ul><li>Registro de <strong>EPIs (Equipamentos de Proteção Individual)</strong> entregues a cada servidor: tipo, data, validade e assinatura de recebimento</li>
+<li>Controle de <strong>laudos de insalubridade e periculosidade</strong> por cargo e setor, com percentuais e base legal</li>
+<li>Cadastro de <strong>acidentes de trabalho</strong> com registro de CAT (Comunicação de Acidente de Trabalho) integrado ao eSocial</li>
+<li>Alertas de <strong>renovação de EPIs</strong> com vencimento próximo</li>
+<li>Registro de <strong>treinamentos obrigatórios</strong> de segurança (CIPA, Brigada de Incêndio, NR-35, etc.)</li>
+<li>Relatório de conformidade com as NRs para auditorias internas e externas</li>
+</ul>
+<figure><img src="screenshots/49-seguranca-trabalho.png" alt="Segurança do Trabalho"><figcaption>Segurança do Trabalho</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>25. Organograma Interativo</h2>
+<p></p>
+<ul><li>Visualização hierárquica de toda a estrutura da prefeitura: diretorias, departamentos e setores</li>
+<li><strong>Visão dupla</strong>: modo gestor e modo servidor</li>
+<li>CRUD completo de setores pelo administrador</li>
+</ul>
+<figure><img src="screenshots/15-organograma.png" alt="Organograma"><figcaption>Organograma</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>26. Escalas de Trabalho</h2>
+<p></p>
+<p>Sistema completo para montagem, publicação e controle de escalas de trabalho em quaisquer regimes de jornada — especialmente útil para áreas que operam em turnos, sobreaviso ou plantões, como saúde, assistência social, vigilância e obras.</p>
+<p></p>
+<p>A grade mensal é montada visualmente com os servidores nas linhas e os dias do mês nas colunas. Cada célula recebe um tipo de turno (Manhã, Tarde, Noturno, Plantão 12h, Folga ou Afastamento) por arraste ou clique. O sistema valida automaticamente a distribuição para garantir cobertura mínima por turno.</p>
+<p></p>
+<h3>Escala de Trabalho</h3>
+<ul><li>Montagem visual da escala mensal por setor em formato de calendário ou grade</li>
+<li>Suporte a <strong>múltiplos turnos</strong>: diurno, noturno, 12x36, 6x1, sobreaviso</li>
+<li>Validação de <strong>cobertura mínima</strong>: o sistema alerta quando um turno fica abaixo do efetivo necessário</li>
+<li>Publicação da escala para visualização dos servidores no portal pessoal</li>
+<li>Exportação da grade em PDF para afixação ou envio por e-mail</li>
+</ul>
+<figure><img src="screenshots/16-escala-trabalho.png" alt="Escala de Trabalho — Fevereiro 2026"><figcaption>Escala de Trabalho — Fevereiro 2026</figcaption></figure>
+<p></p>
+<h3>Matriz de Escala</h3>
+<ul><li>Visão consolidada de todos os setores e turnos em uma única grade matricial</li>
+<li>Ideal para gestores de RH e diretores que supervisionam múltiplas equipes simultaneamente</li>
+<li>Filtros por setor, vínculo, turno e período para análise rápida da cobertura</li>
+</ul>
+<figure><img src="screenshots/17-escala-matriz.png" alt="Matriz de Escala"><figcaption>Matriz de Escala</figcaption></figure>
+<p></p>
+<h3>Substituições</h3>
+<ul><li>Registro e gestão de <strong>trocas de turno e substituições</strong> entre servidores</li>
+<li>Fluxo de aprovação: solicitação pelo servidor → validação pelo gestor → publicação na escala</li>
+<li>Histórico de todas as substituições realizadas para fins de cálculo de pagamento</li>
+<li>Controle de <strong>equilíbrio de trocas</strong>: o sistema garante que substituições gerem compensações corretas</li>
+</ul>
+<figure><img src="screenshots/18-substituicoes.png" alt="Substituições"><figcaption>Substituições</figcaption></figure>
+<p></p>
+<h3>Escala de Sobreaviso (On-call)</h3>
+<ul><li>Controle de servidores em regime de <strong>sobreaviso</strong>: disponibilidade para chamada fora do horário normal</li>
+<li>Definição do <strong>raio de deslocamento</strong> e tempo máximo para atendimento (ex.: 30 minutos)</li>
+<li>Registro de <strong>acionamentos</strong>: quando o servidor é chamado, o sistema registra horário de entrada e saída</li>
+<li>Cálculo automático do pagamento de sobreaviso conforme legislação (1/3 da hora normal por hora de sobreaviso)</li>
+</ul>
+<figure><img src="screenshots/19-escala-sobreaviso.png" alt="Escala de Sobreaviso"><figcaption>Escala de Sobreaviso</figcaption></figure>
+<p></p>
+<h3>Plantões Extras</h3>
+<ul><li>Registro de <strong>plantões realizados fora da escala regular</strong> por solicitação da chefia</li>
+<li>Validação pelo gestor antes do lançamento no sistema financeiro</li>
+<li><strong>Cálculo automático de pagamento</strong>: hora extra, adicional noturno ou banco de horas conforme política do município</li>
+<li>Relatório de plantões por servidor e período para controle orçamentário</li>
+</ul>
+<figure><img src="screenshots/20-plantoes-extras.png" alt="Plantões Extras"><figcaption>Plantões Extras</figcaption></figure>
+<p></p>
+<h3>Escalas Hospitalares / Escalas Médicas</h3>
+<p>Módulo especializado para gestão de escalas em <strong>unidades de saúde</strong> (UBS, UPA, hospitais municipais, pronto-atendimentos). Projetado para atender as particularidades da escala médica e de enfermagem, onde a continuidade do atendimento é crítica e a cobertura por turno é obrigatória.</p>
+<p></p>
+<ul><li><strong>Tipos de turno configuráveis</strong>: Manhã (07–13h), Tarde (13–19h), Noturno (19–07h), Plantão 12h (07–19h), Folga e Afastamento</li>
+<li><strong>Construção visual por arraste</strong>: o gestor monta a escala clicando ou arrastando turnos célula a célula — uma coluna por dia, uma linha por profissional</li>
+<li><strong>Contador de plantões por profissional</strong>: a coluna "Total" exibe automaticamente o número de turnos trabalhados no mês, facilitando o equilíbrio da distribuição</li>
+<li>Filtros por <strong>setor, competência e tipo de escala</strong> (Geral, UTI, Plantão, etc.)</li>
+<li>Exportação da escala em <strong>PDF</strong> para afixação no setor ou envio por e-mail</li>
+<li>Botão <strong>"+ Nova"</strong> para criação de escalas adicionais sem sobrescrever a vigente</li>
+<li><strong>Salvar em tempo real</strong>: alterações são salvas imediatamente sem necessidade de recarregar a página</li>
+<li>Apoio a <strong>múltiplos setores</strong> num mesmo mês: UTI adulto, UTI pediátrica, Pronto Atendimento, Enfermaria, entre outros</li>
+</ul>
+<figure><img src="screenshots/49-escalas-hospitalares.png" alt="Escalas Hospitalares — Fevereiro 2026"><figcaption>Escalas Hospitalares — Fevereiro 2026</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>27. Configurações do Sistema (Admin)</h2>
+<p></p>
+<ul><li>Cadastro de <strong>cargos, carreiras, tabela salarial</strong> e estrutura de eventos de folha</li>
+<li>Gestão de usuários e perfis de acesso (admin, RH, gestor, servidor)</li>
+<li>Configuração de terminais de ponto e raio GPS por local de trabalho</li>
+</ul>
+<h3>Configurações — Segurança</h3>
+<figure><img src="screenshots/54-configuracoes-seguranca.png" alt="Config Segurança"><figcaption>Config Segurança</figcaption></figure>
+<p></p>
+<h3>Configurações — Vínculos</h3>
+<figure><img src="screenshots/54b-configuracoes-vinculos.png" alt="Config Vínculos"><figcaption>Config Vínculos</figcaption></figure>
+<p></p>
+<h3>Configurações — Ponto Eletrônico</h3>
+<figure><img src="screenshots/54c-configuracoes-ponto.png" alt="Config Ponto"><figcaption>Config Ponto</figcaption></figure>
+<p></p>
+<h3>Configuração do Sistema</h3>
+<p>Controle técnico de módulos ativos, permissões por perfil de usuário e configurações de autenticação (tempo de sessão, 2FA, etc.).</p>
+<p></p>
+<figure><img src="screenshots/55-configuracao-sistema.png" alt="Config Sistema"><figcaption>Config Sistema</figcaption></figure>
+<p></p>
+<h3>Parâmetros Financeiros</h3>
+<p>Define as regras de cálculo da folha: percentual de INSS por faixa, tabela de IRRF, alíquota de contribuição previdenciária própria do município e teto da LRF.</p>
+<p></p>
+<figure><img src="screenshots/56-parametros-financeiros.png" alt="Parâmetros Financeiros"><figcaption>Parâmetros Financeiros</figcaption></figure>
+<p></p>
+<h3>Tabelas Auxiliares</h3>
+<p>Cadastro de domínios usados em todo o sistema: municípios, estados, bancos, tipos de logradouro, CIDs frequentes e outros dados de referência.</p>
+<p></p>
+<figure><img src="screenshots/57-tabelas-auxiliares.png" alt="Tabelas Auxiliares"><figcaption>Tabelas Auxiliares</figcaption></figure>
+<p></p>
+<h3>Turnos de Trabalho</h3>
+<p>Cadastro dos regimes de jornada praticados: carga horária diária, horário de início e fim, intervalo de almoço, tolerância de marcação e adicional noturno aplicável.</p>
+<p></p>
+<figure><img src="screenshots/58-turnos.png" alt="Turnos"><figcaption>Turnos</figcaption></figure>
+<p></p>
+<h3>Feriados</h3>
+<p>Calendário de feriados nacionais, estaduais e municipais com vigência por ano. O sistema usa essa base para calcular corretamente banco de horas, sobreaviso e extras em dias de feriado.</p>
+<p></p>
+<figure><img src="screenshots/59-feriados.png" alt="Feriados"><figcaption>Feriados</figcaption></figure>
+<p></p>
+<h3>Vínculos Empregatícios</h3>
+<p>Cadastro dos tipos de vínculo reconhecidos pelo município: efetivo, comissionado, temporário, estagiário, agente político, etc. Cada vínculo possui regras próprias de benefícios e cálculo.</p>
+<p></p>
+<figure><img src="screenshots/60-vinculos.png" alt="Vínculos"><figcaption>Vínculos</figcaption></figure>
+<p></p>
+<h3>Eventos da Folha</h3>
+<p>Cadastro de todos os <strong>eventos (verbas)</strong> que compõem a folha: proventos (salário base, adicional noturno, horas extras, anuênio, insalubridade) e descontos (INSS, IRRF, plano de saúde, vale-transporte, faltas). Cada evento tem código, tipo, incidência e base de cálculo configuráveis.</p>
+<p></p>
+<figure><img src="screenshots/61-eventos-folha.png" alt="Eventos da Folha"><figcaption>Eventos da Folha</figcaption></figure>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>28. Conformidade Legal</h2>
+<p></p>
+<table>
+<tr><td>Norma</td> <td>Como o sistema atende</td> <td></td></tr>
+<tr><td>-------</td> <td>----------------------</td> <td></td></tr>
+<tr><th><strong>eSocial</strong></th> <th>Campos obrigatórios do evento S-2200 presentes no cadastro (CPF, PIS, raça/cor, deficiência)</th> <th></th></tr>
+<tr><th><strong>LRF</strong></th> <th>Painel de impacto financeiro de progressões com verificação do teto de 54% da RCL</th> <th></th></tr>
+<tr><th><strong>LGPD</strong></th> <th>Dados pessoais protegidos por autenticação, perfis de acesso e logs de auditoria</th> <th></th></tr>
+<tr><th><strong>Portaria MTP 671/2021</strong></th> <th>Compatível com registros de ponto eletrônico e arquivo AFD</th> <th></th></tr>
+</table>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>29. Tecnologia</h2>
+<p></p>
+<table>
+<tr><td>Camada</td> <td>Tecnologia</td> <td></td></tr>
+<tr><td>--------</td> <td>-----------</td> <td></td></tr>
+<tr><th><strong>Backend</strong></th> <th>Laravel 10 (PHP 8.1) — API REST v3</th> <th></th></tr>
+<tr><th><strong>Frontend Web</strong></th> <th>Vue.js 3 + Vite + Vuetify — SPA responsiva</th> <th></th></tr>
+<tr><th><strong>App Mobile</strong></th> <th>React Native + Expo (Android e iOS)</th> <th></th></tr>
+<tr><th><strong>Banco de Dados</strong></th> <th>SQL Server (legado) / MySQL ou PostgreSQL (produção)</th> <th></th></tr>
+<tr><th><strong>Autenticação</strong></th> <th>Laravel Sanctum (web) + JWT (app mobile)</th> <th></th></tr>
+<tr><th><strong>Exportações</strong></th> <th>PDF nativo do navegador + Excel/CSV sem bibliotecas externas</th> <th></th></tr>
+<tr><th><strong>Remessa Bancária</strong></th> <th>CNAB 240 gerado no servidor, compatível com múltiplos bancos</th> <th></th></tr>
+</table>
+<p></p>
+<p>---</p>
+<p></p>
+<h2>30. Diferenciais Competitivos</h2>
+<p></p>
+<ul><li>✅ <strong>100% digital</strong>: elimina papelóis, planilhas e processos manuais</li>
+<li>✅ <strong>App mobile com facial</strong>: solução de ponta sem custo de equipamento REP</li>
+<li>✅ <strong>Onboarding digital</strong>: servidor preenche seus dados pelo link sem ir ao RH</li>
+<li>✅ <strong>Progressão automatizada</strong>: calcula elegíveis, impacto financeiro e gera portaria</li>
+<li>✅ <strong>Remessa CNAB</strong>: integração direta com bancos para pagamento da folha</li>
+<li>✅ <strong>eSocial completo</strong>: cadastro com todos os campos obrigatórios</li>
+<li>✅ <strong>Escalas inteligentes</strong>: médica, sobreaviso e substituições em grade visual</li>
+<li>✅ <strong>Central de relatórios</strong>: todos os dados exportáveis sem depender de TI</li>
+<li>✅ <strong>Multi-banco</strong>: Caixa, BB, Bradesco, Itaú, Santander</li>
+</ul>
+<p>---</p>
+<p></p>
+<em>GENTE v3 — RR Tecnol · Março/2026</em>
+
+</div>
+</body>
+</html>

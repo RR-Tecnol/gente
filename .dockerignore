@@ -1,0 +1,15 @@
+.git
+.gitignore
+node_modules
+npm-debug.log
+docker
+.env
+.env.*
+!.env.example
+*.log
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache
+public/hot

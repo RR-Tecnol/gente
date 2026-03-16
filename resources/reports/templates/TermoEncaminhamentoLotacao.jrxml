@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.6.0.final using JasperReports Library version 6.6.0  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="TermoEncaminhamentoLotacao" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="753e79db-92bf-4c3d-9d9e-40232bb5a100">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="SISGEP_PROD"/>
+	<property name="ireport.jasperserver.url" value="http://172.17.4.12:8080/jasperserver/"/>
+	<property name="ireport.jasperserver.user" value="jasperadmin"/>
+	<property name="ireport.jasperserver.report.resource" value="/reports/SISFOLHA/TermoEncaminhamentoLotacao_files/main_jrxml"/>
+	<property name="ireport.jasperserver.reportUnit" value="/reports/SISFOLHA/SISFOLHA_PROD/TermoEncaminhamentoLotacao"/>
+	<parameter name="pLotacaoId" class="java.lang.String"/>
+	<parameter name="pBrasao" class="java.lang.String"/>
+	<queryString language="SQL">
+		<![CDATA[]]>
+	</queryString>
+	<field name="SETOR_NOME" class="java.lang.String"/>
+	<field name="UNIDADE_NOME" class="java.lang.String"/>
+	<field name="PESSOA_NOME" class="java.lang.String"/>
+	<field name="ATRIBUICAO_NOME" class="java.lang.String"/>
+	<field name="VINCULO_SIGLA" class="java.lang.String"/>
+	<field name="LOTACAO_DATA_INICIO" class="java.lang.String"/>
+	<field name="RG" class="java.lang.String"/>
+	<field name="CPF" class="java.lang.String"/>
+	<field name="PESSOA_ENDERECO" class="java.lang.String"/>
+	<field name="PESSOA_COMPLEMENTO" class="java.lang.String"/>
+	<field name="BAIRRO_NOME" class="java.lang.String"/>
+	<field name="CIDADE_NOME" class="java.lang.String"/>
+	<field name="CELULAR" class="java.lang.String"/>
+	<field name="TEL" class="java.lang.String"/>
+	<field name="EMAIL" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<pageHeader>
+		<band height="588" splitType="Stretch">
+			<image>
+				<reportElement x="260" y="0" width="35" height="57" uuid="3cf65c7c-a30d-442c-9e45-d55a9f706392"/>
+				<imageExpression><![CDATA[$P{pBrasao}]]></imageExpression>
+			</image>
+			<staticText>
+				<reportElement x="10" y="57" width="540" height="16" uuid="7d890623-880e-401f-a8b3-0c71d68ae30d">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA DE SÃO LUÍS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="168" width="300" height="18" uuid="689c480b-5fe8-4179-ad3c-2dd1eb901013">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Left">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[DA: COORDENAÇÃO DE PESSOAL/SEMUS]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="10" y="186" width="534" height="18" uuid="338d3675-33b9-4bc0-b370-130412df22eb">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["PARA: "  + $F{UNIDADE_NOME}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="10" y="73" width="540" height="16" uuid="c4533a76-8043-41a7-9a23-198fcc4913cc">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[SECRETARIA MUNICIPAL DE SAÚDE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="89" width="540" height="16" uuid="cb6b6b54-e90e-490b-9c64-587a565df6ea">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[COORDENAÇÃO DE PESSOAL]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="310" y="168" width="234" height="18" uuid="2aae2cd5-cf2d-4f2d-be69-7d2e8b88bac8">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Right">
+					<font size="12"/>
+				</textElement>
+				<textFieldExpression><![CDATA["São Luís (MA), " +
+    new java.text.SimpleDateFormat("d 'de' MMMM 'de' yyyy", new java.util.Locale("pt","BR"))
+      .format(new java.util.Date())
+    + "."]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="10" y="240" width="534" height="80" uuid="9f1ae576-27b0-4ef7-b8e8-7b2fae412dd9"/>
+				<textElement textAlignment="Justified" markup="html">
+					<font size="12"/>
+				</textElement>
+				<textFieldExpression><![CDATA["&nbsp &nbsp &nbsp &nbsp " + "Informamos a Vossa Senhoria, que o (a) servidor (a) " + "<b>"+$F{PESSOA_NOME}  + " - "+ $F{ATRIBUICAO_NOME} + " - Vínculo " +  "(" + $F{VINCULO_SIGLA} +")"  + "</b>" + ", irá desenvolver suas atividades profissionais no setor " + "<b>" + $F{SETOR_NOME} + "</b>" + " a partir de " + $F{LOTACAO_DATA_INICIO} + "."]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="178" y="480" width="200" height="18" uuid="bae60f40-6675-4264-9a48-75d6f5c587d9">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Atenciosamente,]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="10" y="322" width="534" height="18" uuid="0c21e7ef-e92d-4334-8884-fd7ce6335c13"/>
+				<textElement markup="html">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["<b>CPF:</b> " + ($F{CPF} != null ? $F{CPF} : "NÃO INFORMADO")]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="10" y="339" width="534" height="18" uuid="3d4538a9-102e-4aa8-bde5-6dc20d5049fd"/>
+				<textElement markup="html">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["<b>ENDEREÇO:</b> " + 
+(
+  $F{PESSOA_ENDERECO} != null && $F{BAIRRO_NOME} != null && $F{CIDADE_NOME} != null
+    ? $F{PESSOA_ENDERECO} + 
+      ($F{PESSOA_COMPLEMENTO} != null ? ", " + $F{PESSOA_COMPLEMENTO} : "") + 
+      ", " + $F{BAIRRO_NOME} + " - " + $F{CIDADE_NOME}
+    : "NÃO INFORMADO"
+)]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="10" y="357" width="534" height="18" uuid="1b8c61de-91c0-4b01-93fa-f978ee2e6948"/>
+				<textElement markup="html">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["<b>CELULAR:</b> " + ($F{CELULAR} != null ? $F{CELULAR} : "NÃO INFORMADO")]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="10" y="393" width="534" height="18" uuid="e9127832-0bf9-4a72-8f82-b7c997cbd13d"/>
+				<textElement markup="html">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["<b>EMAIL:</b> " + ($F{EMAIL} != null ? $F{EMAIL} : "NÃO INFORMADO")]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="10" y="570" width="50" height="18" uuid="ba79ff5b-9a0a-4919-a05b-c52893587e82">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Left">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[CIENTE:]]></text>
+			</staticText>
+			<line>
+				<reportElement x="70" y="582" width="460" height="1" uuid="597b1357-5718-492d-9862-80edf731fda9">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="px"/>
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<graphicElement>
+					<pen lineStyle="Solid"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="10" y="105" width="540" height="16" uuid="5c4103b5-8811-4359-8a2d-3c063c931c53">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[SISTEMA DE GESTÃO DE PESSOAL - SISGEP ]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="10" y="375" width="534" height="18" uuid="db034eaa-1501-481c-a680-e3ebfb3b6919"/>
+				<textElement markup="html">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["<b>TELEFONE:</b> " + ($F{TEL} != null ? $F{TEL} : "NÃO INFORMADO")]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<pageFooter>
+		<band height="33" splitType="Stretch">
+			<staticText>
+				<reportElement x="10" y="9" width="534" height="12" uuid="a56689f7-6cd6-4e92-800a-d77ed1be0cf3">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Dep. Raimundo Vieria da Silva, 2000. Centro - Parque Bom Menino - CEP 65025-180.São Luís/MA ]]></text>
+			</staticText>
+			<line>
+				<reportElement x="10" y="3" width="534" height="1" uuid="3fac97aa-2097-4816-9954-61f2395e8d36">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="px"/>
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<graphicElement>
+					<pen lineStyle="Solid"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="10" y="21" width="534" height="12" uuid="f35831e2-b6e9-46cc-97a5-864261d993a4">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Fones: (98) 3214-7300 / 7337 / 7339 / 7342 / 7345 - E-mail:sras.semus@yahoo.com.br]]></text>
+			</staticText>
+		</band>
+	</pageFooter>
+</jasperReport>

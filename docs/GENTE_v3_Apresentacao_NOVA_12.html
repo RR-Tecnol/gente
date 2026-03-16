@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GENTE v3 — Apresentação do Sistema</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --dark: #0f172a;
+      --dark2: #1e293b;
+      --dark3: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --border: #334155;
+      --c-servidor: #1e88e5;
+      --c-rh: #7c3aed;
+      --c-financeiro: #059669;
+      --c-carreira: #d97706;
+      --c-saude: #dc2626;
+      --c-clima: #0891b2;
+      --c-escalas: #0891b2;
+      --c-estrutura: #475569;
+      --c-conformidade: #6366f1;
+      --c-fiscal: #059669;
+      --c-patrimonio: #b45309;
+      --c-compras: #7c3aed;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ─── PÁGINA (A4 simulado) ─── */
+    .page {
+      width: 960px;
+      margin: 0 auto 32px;
+      background: #fff;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ─── CAPA ─── */
+    .capa {
+      background: var(--dark);
+      height: 1357px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 60px 72px;
+      position: relative;
+    }
+
+    .capa::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(30, 136, 229, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .capa-top {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .capa-logo {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .capa-logo img {
+      height: 80px;
+      object-fit: contain;
+    }
+
+    .logo-fallback {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-gente-text {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .logo-gente-text span {
+      color: var(--c-servidor);
+    }
+
+    .badge-v3 {
+      background: var(--c-servidor);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+      vertical-align: super;
+      margin-left: 4px;
+    }
+
+    .capa-subtitle {
+      font-size: 13px;
+      font-weight: 500;
+      color: #38bdf8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .capa-divider {
+      height: 2px;
+      background: linear-gradient(90deg, var(--c-servidor), transparent);
+      margin: 8px 0;
+    }
+
+    .capa-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .capa-tagline {
+      font-size: 16px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .capa-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .capa-badge {
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .capa-middle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 0;
+    }
+
+    .logo-rr {
+      height: 72px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 32px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .logo-rr-fallback {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 48px;
+      background: rgba(255, 255, 255, 0.04);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-rr-text {
+      font-size: 32px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+
+    .logo-rr-text em {
+      color: var(--c-servidor);
+      font-style: normal;
+    }
+
+    .capa-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 0;
+    }
+
+    .stat-card {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--c-servidor);
+      line-height: 1;
+    }
+
+    .stat-number.green {
+      color: var(--c-financeiro);
+    }
+
+    .stat-number.amber {
+      color: var(--c-carreira);
+    }
+
+    .stat-number.purple {
+      color: var(--c-rh);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    .capa-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ─── TOPBAR (páginas internas) ─── */
+    .topbar {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .topbar-left {
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.3px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+    }
+
+    .topbar-logo {
+      height: 22px;
+      object-fit: contain;
+    }
+
+    .topbar-logo-text {
+      font-size: 13px;
+      font-weight: 800;
+      color: #334155;
+      letter-spacing: -0.5px;
+    }
+
+    .topbar-logo-text em {
+      color: var(--c-servidor);
+      font-style: normal;
+    }
+
+    /* ─── FOOTER (páginas internas) ─── */
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 9px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    /* ─── ÍNDICE ─── */
+    .indice-page {
+      padding: 40px 48px 0;
+    }
+
+    .indice-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 28px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .indice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin-bottom: 0;
+    }
+
+    .indice-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 16px 9px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .indice-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .indice-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      min-width: 28px;
+    }
+
+    .indice-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .indice-cat {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    /* ─── MÓDULO ─── */
+    .modulo-page {
+      padding: 0;
+    }
+
+    .modulo-header {
+      background: var(--dark2);
+      padding: 16px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0;
+    }
+
+    .modulo-num {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .modulo-titulo {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.1;
+    }
+
+    .modulo-badge {
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 6px;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .modulo-desc {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.6;
+      padding: 16px 40px 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .modulo-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: 280px;
+    }
+
+    .modulo-screenshot {
+      padding: 20px 20px 20px 40px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .modulo-screenshot img {
+      width: 100%;
+      max-width: 420px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      object-fit: cover;
+    }
+
+    .screenshot-placeholder {
+      width: 100%;
+      max-width: 420px;
+      height: 240px;
+      background: var(--dark2);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .modulo-bullets {
+      padding: 20px 40px 20px 20px;
+    }
+
+    .modulo-bullets ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modulo-bullets li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 12.5px;
+      color: #334155;
+      line-height: 1.5;
+    }
+
+    .modulo-bullets li::before {
+      content: '•';
+      font-size: 16px;
+      line-height: 1.2;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ─── PÁGINA COM 2 MÓDULOS ─── */
+    .two-modules .modulo-header {
+      margin-top: 0;
+    }
+
+    .two-modules .modulo-page+.modulo-page {
+      border-top: 3px solid #f1f5f9;
+    }
+
+    /* ─── DIFERENCIAIS ─── */
+    .diferenciais-page {
+      padding: 40px 48px;
+    }
+
+    .diferenciais-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .diferenciais-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .diferencial-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .diferencial-check {
+      color: var(--c-financeiro);
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .diferencial-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 3px;
+    }
+
+    .diferencial-desc {
+      font-size: 11.5px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    .conformidade-section {
+      margin-bottom: 24px;
+    }
+
+    .conformidade-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+
+    .conformidade-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .conformidade-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .conformidade-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1e293b;
+      white-space: nowrap;
+      min-width: 90px;
+      padding-top: 1px;
+    }
+
+    .conformidade-desc {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    .stack-section {}
+
+    .stack-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stack-item {
+      background: var(--dark2);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .stack-layer {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+
+    .stack-tech {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    /* ─── CORES POR CATEGORIA ─── */
+    .cat-servidor {
+      color: var(--c-servidor);
+    }
+
+    .cat-rh {
+      color: var(--c-rh);
+    }
+
+    .cat-financeiro {
+      color: var(--c-financeiro);
+    }
+
+    .cat-carreira {
+      color: var(--c-carreira);
+    }
+
+    .cat-saude {
+      color: var(--c-saude);
+    }
+
+    .cat-clima {
+      color: var(--c-clima);
+    }
+
+    .cat-escalas {
+      color: var(--c-escalas);
+    }
+
+    .cat-estrutura {
+      color: var(--c-estrutura);
+    }
+
+    .cat-conformidade {
+      color: var(--c-conformidade);
+    }
+
+    .cat-fiscal {
+      color: var(--c-fiscal);
+    }
+
+    .cat-patrimonio {
+      color: var(--c-patrimonio);
+    }
+
+    .cat-compras {
+      color: var(--c-compras);
+    }
+
+    .bg-servidor {
+      background: var(--c-servidor);
+    }
+
+    .bg-rh {
+      background: var(--c-rh);
+    }
+
+    .bg-financeiro {
+      background: var(--c-financeiro);
+    }
+
+    .bg-carreira {
+      background: var(--c-carreira);
+    }
+
+    .bg-saude {
+      background: var(--c-saude);
+    }
+
+    .bg-clima {
+      background: var(--c-clima);
+    }
+
+    .bg-escalas {
+      background: var(--c-escalas);
+    }
+
+    .bg-estrutura {
+      background: var(--c-estrutura);
+    }
+
+    .bg-conformidade {
+      background: var(--c-conformidade);
+    }
+
+    .bg-fiscal {
+      background: var(--c-fiscal);
+    }
+
+    .bg-patrimonio {
+      background: var(--c-patrimonio);
+    }
+
+    .bg-compras {
+      background: var(--c-compras);
+    }
+
+    .ind-servidor {
+      background: rgba(30, 136, 229, 0.1);
+      color: var(--c-servidor);
+    }
+
+    .ind-rh {
+      background: rgba(124, 58, 237, 0.1);
+      color: var(--c-rh);
+    }
+
+    .ind-financeiro {
+      background: rgba(5, 150, 105, 0.1);
+      color: var(--c-financeiro);
+    }
+
+    .ind-carreira {
+      background: rgba(217, 119, 6, 0.1);
+      color: var(--c-carreira);
+    }
+
+    .ind-saude {
+      background: rgba(220, 38, 38, 0.1);
+      color: var(--c-saude);
+    }
+
+    .ind-clima {
+      background: rgba(8, 145, 178, 0.1);
+      color: var(--c-clima);
+    }
+
+    .ind-escalas {
+      background: rgba(8, 145, 178, 0.1);
+      color: var(--c-escalas);
+    }
+
+    .ind-estrutura {
+      background: rgba(71, 85, 105, 0.12);
+      color: var(--c-estrutura);
+    }
+
+    .ind-conformidade {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--c-conformidade);
+    }
+
+    .ind-fiscal {
+      background: rgba(5, 150, 105, 0.1);
+      color: var(--c-fiscal);
+    }
+
+    .ind-patrimonio {
+      background: rgba(180, 83, 9, 0.1);
+      color: var(--c-patrimonio);
+    }
+
+    .ind-compras {
+      background: rgba(124, 58, 237, 0.1);
+      color: var(--c-compras);
+    }
+
+    /* ─── PRINT ─── */
+    @media print {
+      @page {
+        size: 960px 1357px;
+        margin: 0;
+      }
+
+      body {
+        background: white;
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color-adjust: exact;
+      }
+
+      .page {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 960px !important;
+        page-break-after: always;
+        page-break-inside: avoid;
+        break-after: page;
+      }
+
+      .page:last-child {
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+
+      .capa {
+        height: 1357px !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <button onclick="window.print()"
+    style="position:fixed;bottom:24px;right:24px;z-index:9999;background:#1e88e5;color:#fff;border:none;border-radius:8px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(30,136,229,0.4);font-family:'Inter',sans-serif;">⬇
+    Salvar como PDF</button>
+
+  <!-- ════════════════════════════════════════════════════════
+     CAPA
+════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="capa">
+
+      <!-- TOPO: logo GENTE + badge v3 sobrepostos -->
+      <div>
+        <!--
+        A logo PNG é 1024x1024 com ~30% whitespace em volta.
+        Solução: container com overflow:hidden + tamanho menor que a imagem escalada
+        para "recortar" o padding interno e mostrar só o conteúdo real.
+        A imagem é escalada via transform:scale, e o container corta as bordas brancas.
+      -->
+        <div style="position:relative; display:inline-block; margin-bottom:16px;">
+          <!-- wrapper que faz o crop do whitespace -->
+          <div style="
+          width: 360px;
+          height: 110px;
+          overflow: hidden;
+          position: relative;
+        ">
+            <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/resources/gente-v3/public/logo.png"
+              alt="GENTE v3" style="
+              position: absolute;
+              width: 560px;
+              height: auto;
+              top: 50%;
+              left: 50%;
+              transform: translate(-55%, -50%);
+              mix-blend-mode: lighten;
+              filter: brightness(1.5) contrast(1.1) saturate(1.3);
+            "
+              onerror="this.closest('div').closest('div').style.display='none'; document.getElementById('logo-fallback-capa').style.display='block'">
+          </div>
+          <!-- badge v3 sobre o canto superior direito da logo — igual ao PDF -->
+          <span style="
+          position: absolute;
+          top: 2px;
+          right: 36px;
+          background: #1e88e5;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 800;
+          padding: 3px 10px;
+          border-radius: 6px;
+          font-family: 'Inter', sans-serif;
+          letter-spacing: 0.2px;
+          line-height: 1.4;
+          z-index: 2;
+        ">v3</span>
+        </div>
+
+        <!-- fallback texto se logo não carregar -->
+        <div id="logo-fallback-capa" style="display:none; margin-bottom:16px;">
+          <div style="position:relative; display:inline-block;">
+            <span
+              style="font-size:60px; font-weight:900; color:#fff; letter-spacing:-2px; line-height:1; font-family:'Inter',sans-serif;">GENTE</span>
+            <span
+              style="position:absolute; top:4px; right:-36px; background:#1e88e5; color:#fff; font-size:12px; font-weight:800; padding:3px 10px; border-radius:6px;">v3</span>
+          </div>
+          <div style="font-size:18px; font-weight:500; color:#7bc67e; margin-top:4px;">Gestão de Pessoas</div>
+        </div>
+
+        <!-- linha divisória azul logo abaixo da logo -->
+        <div style="height:2px; background:linear-gradient(90deg,#1e88e5,transparent); margin:0 0 20px;"></div>
+
+        <!-- título e tagline -->
+        <div
+          style="font-size:22px; font-weight:600; color:#fff; margin-bottom:8px; line-height:1.3; font-family:'Inter',sans-serif;">
+          Sistema de Gestão de Pessoas para Municípios
+        </div>
+        <div style="font-size:15px; color:#94a3b8; margin-bottom:24px; font-family:'Inter',sans-serif;">
+          Modernizando o RH municipal — do ponto ao contracheque.
+        </div>
+
+        <!-- badges de conformidade -->
+        <div class="capa-badges">
+          <span class="capa-badge">eSocial</span>
+          <span class="capa-badge">LRF</span>
+          <span class="capa-badge">LGPD</span>
+          <span class="capa-badge">CNAB 240</span>
+          <span class="capa-badge">App Mobile</span>
+          <span class="capa-badge">On-Premise / Nuvem</span>
+        </div>
+      </div>
+
+      <!-- MEIO: logo RR Tecnol centralizada e grande -->
+      <div style="display:flex; justify-content:center; align-items:center; padding:32px 0;">
+        <div
+          style="border:1px solid rgba(255,255,255,0.15); border-radius:14px; padding:24px 48px; background:rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; overflow:hidden;">
+          <!-- crop do whitespace da logo RR — imagem é 1287x469 mas com padding interno -->
+          <div style="width:300px; height:72px; overflow:hidden; position:relative;">
+            <img
+              src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/logo pdf_page-0001-remove-background.com.png"
+              alt="RR Tecnol" style="
+              position:absolute;
+              width: 520px;
+              height: auto;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              mix-blend-mode: lighten;
+              filter: brightness(1.5) contrast(1.1) saturate(1.2);
+            "
+              onerror="this.closest('div').style.display='none'; document.getElementById('rr-fallback').style.display='flex'">
+          </div>
+          <div id="rr-fallback" style="display:none; align-items:center;">
+            <span
+              style="font-size:32px; font-weight:900; color:#1d3461; font-family:'Inter',sans-serif; letter-spacing:-1px;">RR
+              TECN</span><span
+              style="font-size:32px; font-weight:900; color:#38bdf8; font-family:'Inter',sans-serif; letter-spacing:-1px;">OL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BAIXO: cards de stats + footer -->
+      <div>
+        <div class="capa-stats">
+          <div class="stat-card">
+            <div class="stat-number">37</div>
+            <div class="stat-label">Módulos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number green">100%</div>
+            <div class="stat-label">Digital</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number amber">5 Bancos</div>
+            <div class="stat-label">CNAB 240</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number purple">Web + App</div>
+            <div class="stat-label">Mobile</div>
+          </div>
+        </div>
+        <div class="capa-footer" style="margin-top:24px;">
+          <span>RR Tecnol | Gestão de Pessoas para Municípios | Março / 2026</span>
+          <span>Documento Confidencial</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════
+     ÍNDICE — pág 1
+════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="topbar">
+      <span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span>
+      <span class="topbar-logo-text"><em>RR</em> Tecnol</span>
+    </div>
+    <div class="indice-page">
+      <div class="indice-title">Índice de Módulos</div>
+      <div class="indice-grid">
+        <!-- col 1 -->
+        <div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#01</span><span class="indice-name">Portal do Servidor —
+                Dashboard</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#02</span><span class="indice-name">Perfil do
+                Servidor</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#03</span><span class="indice-name">Ponto Eletrônico e
+                Frequência</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#04</span><span class="indice-name">Contracheque /
+                Holerite</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#05</span><span class="indice-name">Declarações e
+                Requerimentos</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#06</span><span class="indice-name">Férias e
+                Licenças</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#07</span><span class="indice-name">Progressão Funcional
+                (Servidor)</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#08</span><span class="indice-name">Contratos e
+                Vínculos</span></div><span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#09</span><span class="indice-name">Ouvidoria</span></div>
+            <span class="indice-cat ind-servidor">Área do Servidor</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#10</span><span class="indice-name">Gestão de Servidores
+                (RH)</span></div><span class="indice-cat ind-rh">Gestão RH / Admin</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#11</span><span class="indice-name">Controle de Faltas e
+                Abonos (RH)</span></div><span class="indice-cat ind-rh">Gestão RH / Admin</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#12</span><span class="indice-name">Gestão de Declarações
+                (Admin)</span></div><span class="indice-cat ind-rh">Gestão RH / Admin</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#13</span><span class="indice-name">Portal do
+                Gestor</span></div><span class="indice-cat ind-rh">Gestão RH / Admin</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#14</span><span class="indice-name">Folha de
+                Pagamento</span></div><span class="indice-cat ind-financeiro">Financeiro</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#15</span><span class="indice-name">Remessa Bancária CNAB
+                240</span></div><span class="indice-cat ind-financeiro">Financeiro</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#16</span><span class="indice-name">Central de
+                Relatórios</span></div><span class="indice-cat ind-financeiro">Financeiro</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#17</span><span class="indice-name">Progressão Funcional —
+                RH</span></div><span class="indice-cat ind-carreira">Carreira e Desempenho</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#18</span><span class="indice-name">Cargos e
+                Salários</span></div><span class="indice-cat ind-carreira">Carreira e Desempenho</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#19</span><span class="indice-name">Avaliação de
+                Desempenho</span></div><span class="indice-cat ind-carreira">Carreira e Desempenho</span>
+          </div>
+        </div>
+        <!-- col 2 -->
+        <div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#20</span><span class="indice-name">Treinamentos e
+                Capacitações</span></div><span class="indice-cat ind-carreira">Carreira e Desempenho</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#21</span><span class="indice-name">Medicina do
+                Trabalho</span></div><span class="indice-cat ind-saude">Saúde e Segurança</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#22</span><span class="indice-name">Benefícios</span>
+            </div><span class="indice-cat ind-saude">Saúde e Segurança</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#23</span><span class="indice-name">Segurança do
+                Trabalho</span></div><span class="indice-cat ind-saude">Saúde e Segurança</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#24</span><span class="indice-name">Pesquisa de
+                Satisfação</span></div><span class="indice-cat ind-clima">Clima e Comunicação</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#25</span><span class="indice-name">Escalas de
+                Trabalho</span></div><span class="indice-cat ind-escalas">Escalas e Jornada</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#26</span><span class="indice-name">Escalas Hospitalares /
+                Médicas</span></div><span class="indice-cat ind-escalas">Escalas e Jornada</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#27</span><span class="indice-name">Organograma
+                Interativo</span></div><span class="indice-cat ind-estrutura">Estrutura Organizacional</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#28</span><span class="indice-name">Conformidade Legal e
+                Tecnologia</span></div><span class="indice-cat ind-conformidade">Conformidade e Tecnologia</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#29</span><span class="indice-name">Contabilidade
+                Pública</span></div><span class="indice-cat ind-fiscal">Financeiro e Fiscal</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#30</span><span class="indice-name">Execução
+                Orçamentária</span></div><span class="indice-cat ind-fiscal">Financeiro e Fiscal</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#31</span><span class="indice-name">Empenho / Liquidação /
+                Pagamento</span></div><span class="indice-cat ind-fiscal">Financeiro e Fiscal</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#32</span><span class="indice-name">Tesouraria
+                Pública</span></div><span class="indice-cat ind-fiscal">Financeiro e Fiscal</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#33</span><span class="indice-name">Receita
+                Municipal</span></div><span class="indice-cat ind-fiscal">Financeiro e Fiscal</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#34</span><span class="indice-name">Patrimônio
+                Público</span></div><span class="indice-cat ind-patrimonio">Patrimônio e Estoque</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#35</span><span class="indice-name">Almoxarifado</span>
+            </div><span class="indice-cat ind-patrimonio">Patrimônio e Estoque</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#36</span><span class="indice-name">Compras e
+                Licitações</span></div><span class="indice-cat ind-compras">Compras e Contratos</span>
+          </div>
+          <div class="indice-item">
+            <div class="indice-left"><span class="indice-num">#37</span><span class="indice-name">Integração Tribunal de
+                Contas</span></div><span class="indice-cat ind-fiscal">Financeiro e Fiscal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="height:32px"></div>
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 1 / 20</span></div>
+  </div>
+
+  <!-- ════════════════ MACRO para módulos ════════════════ -->
+  <!-- Cada "page" contém 2 módulos por página como no PDF -->
+
+  <!-- ════ PÁG 2: #01 + #02 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#01</div>
+          <div class="modulo-titulo">Portal do Servidor — Dashboard</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Painel inicial personalizado que centraliza o acesso a todos os módulos do sistema, com
+        notificações em tempo real e indicadores do período atual.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/02-dashboard.png"
+            alt="Dashboard" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>02-dashboard.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Painel com nome, cargo e setor do servidor</li>
+            <li>Acesso rápido a todos os módulos disponíveis</li>
+            <li>Notificações em tempo real: pendências, comunicados e vencimentos</li>
+            <li>Indicadores: abonos pendentes, status da folha e competência atual</li>
+            <li>Comunicados internos por categoria (RH, Financeiro, Operacional, Urgente)</li>
+            <li>Agenda com eventos, reuniões e plantões programados</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#02</div>
+          <div class="modulo-titulo">Perfil do Servidor</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Visualização e edição dos dados pessoais, funcionais e de contato do servidor, com campos
+        obrigatórios do eSocial integrados.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/03-meu-perfil.png"
+            alt="Perfil" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>03-meu-perfil.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Dados pessoais: nome social, estado civil, escolaridade, e-mail</li>
+            <li>Dados funcionais: matrícula, cargo, vínculo, lotação e data de início</li>
+            <li>Integração eSocial: PIS/PASEP, raça/cor e deficiência (S-2200)</li>
+            <li>Edição direta pelo servidor sem necessidade de ir ao RH</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 2 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 3: #03 + #04 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#03</div>
+          <div class="modulo-titulo">Ponto Eletrônico e Frequência</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Controle completo de frequência com espelho de ponto mensal, banco de horas e envio
+        digital de atestados médicos por CID.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/04-ponto-eletronico.png"
+            alt="Ponto" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>04-ponto-eletronico.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Espelho de ponto mensal com presenças, faltas e inconsistências</li>
+            <li>Solicitação de abono de faltas com upload de documentação</li>
+            <li>Banco de horas: saldo consolidado de extras e compensações</li>
+            <li>Atestados médicos digitais classificados por CID</li>
+            <li>Histórico completo de afastamentos com status de aprovação</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#04</div>
+          <div class="modulo-titulo">Contracheque / Holerite</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Acesso digital ao contracheque mensal com detalhamento completo de proventos e descontos,
+        exportável em PDF com formatação profissional.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/05-holerites.png"
+            alt="Holerite" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>05-holerites.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Visualização por competência (mês/ano)</li>
+            <li>Proventos: salário base, horas extras, anuênio, insalubridade</li>
+            <li>Descontos: INSS, IRRF, plano de saúde, faltas, vale-transporte</li>
+            <li>Exportação em PDF com formatação oficial</li>
+            <li>Histórico de todos os meses anteriores disponível</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 3 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 4: #05 + #06 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#05</div>
+          <div class="modulo-titulo">Declarações e Requerimentos</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Emissão automática de declarações funcionais com download imediato em PDF assinado
+        digitalmente, sem burocracia presencial.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img
+            src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/09-declaracoes-requerimentos.png"
+            alt="Declarações"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>09-declaracoes-requerimentos.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Declaração de vínculo empregatício — emissão instantânea</li>
+            <li>Declaração de renda (IR), plano de saúde e financiamento imobiliário</li>
+            <li>Certidão de tempo de serviço com prazo de 3 dias</li>
+            <li>Ficha cadastral atualizada e holerite avulso por competência</li>
+            <li>Histórico de todas as solicitações com status em tempo real</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#06</div>
+          <div class="modulo-titulo">Férias e Licenças</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Gestão completa de férias e licenças com solicitação online, acompanhamento de status e
+        controle de períodos aquisitivos.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/11-ferias-licencas.png"
+            alt="Férias" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>11-ferias-licencas.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Consulta de períodos aquisitivos e saldo de dias disponíveis</li>
+            <li>Agendamento de férias com seleção de datas no sistema</li>
+            <li>Fluxo de aprovação: pendente → aprovado → agendado</li>
+            <li>Licenças: saúde, gestante, paternidade, prêmio e outras</li>
+            <li>Visualização em calendário e histórico de afastamentos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 4 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 5: #07 + #08 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#07</div>
+          <div class="modulo-titulo">Progressão Funcional (Servidor)</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Transparência total sobre a carreira: posição atual, próxima data de progressão e
+        critérios de elegibilidade calculados automaticamente.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img
+            src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/29-progressao-funcional.png"
+            alt="Progressão Servidor"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>29-progressao-funcional.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Classe e referência atual na grade salarial</li>
+            <li>Próxima data de progressão calculada (interstício de 24 meses)</li>
+            <li>Elegibilidade: nota mínima de avaliação e estágio probatório</li>
+            <li>Histórico completo de progressões com salários e datas</li>
+            <li>Remuneração total: base + triênio + quinquênio</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#08</div>
+          <div class="modulo-titulo">Contratos e Vínculos</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Consulta do vínculo empregatício vigente e histórico de contratos anteriores, com dados
+        sobre estágio probatório e estabilidade.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/46-contratos-vinculos.png"
+            alt="Contratos"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>46-contratos-vinculos.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Regime, cargo, carga horária e data de admissão</li>
+            <li>Documentos: portaria de nomeação, termo de posse e declaração</li>
+            <li>Histórico de vínculos com tempo de serviço total</li>
+            <li>Status do estágio probatório e informações sobre estabilidade</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 5 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 6: #09 + #10 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-servidor">#09</div>
+          <div class="modulo-titulo">Ouvidoria</div>
+        </div>
+        <span class="modulo-badge bg-servidor">Área do Servidor</span>
+      </div>
+      <div class="modulo-desc">Canal institucional seguro para manifestações dos servidores, com opção de envio anônimo
+        e protocolo de acompanhamento.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/13-ouvidoria-servidor.png"
+            alt="Ouvidoria"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>13-ouvidoria-servidor.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Envio identificado ou totalmente anônimo</li>
+            <li>Categorias: reclamação, sugestão, elogio, denúncia e solicitação</li>
+            <li>Urgência configurável: normal ou urgente</li>
+            <li>Protocolo gerado automaticamente para rastreamento</li>
+            <li>Painel administrativo para resposta e gestão das manifestações</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-rh">#10</div>
+          <div class="modulo-titulo">Gestão de Servidores (RH)</div>
+        </div>
+        <span class="modulo-badge bg-rh">Gestão RH / Admin</span>
+      </div>
+      <div class="modulo-desc">Cadastro completo de servidores com todos os campos do eSocial, controle de lotação e
+        onboarding digital para novos ingressantes.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/21-funcionarios.png"
+            alt="Funcionários"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>21-funcionarios.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Cadastro com campos obrigatórios do evento eSocial S-2200</li>
+            <li>Controle de lotação e histórico de movimentações entre setores</li>
+            <li>Perfil individual: dados pessoais, funcionais, contratos e holerites</li>
+            <li>Autocadastro: link tokenizado para preenchimento pelo celular</li>
+            <li>Fluxo de revisão e validação pelo RH antes da ativação</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 6 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 7: #11 + #12 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-rh">#11</div>
+          <div class="modulo-titulo">Controle de Faltas e Abonos (RH)</div>
+        </div>
+        <span class="modulo-badge bg-rh">Gestão RH / Admin</span>
+      </div>
+      <div class="modulo-desc">Módulo central para apuração de presença de toda a equipe, com aprovação de abonos e
+        relatório consolidado de ocorrências.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/24-abono-faltas.png"
+            alt="Abono Faltas"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>24-abono-faltas.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Painel de abonos pendentes de aprovação ou recusa</li>
+            <li>Justificativas: atestado médico, declaração, luto, casamento e serviço público</li>
+            <li>Relatório de faltas e atrasos com filtros por setor e período</li>
+            <li>Indicadores de reincidência e impacto financeiro acumulado</li>
+            <li>Integração com folha: faltas abonadas não são descontadas</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-rh">#12</div>
+          <div class="modulo-titulo">Gestão de Declarações (Admin)</div>
+        </div>
+        <span class="modulo-badge bg-rh">Gestão RH / Admin</span>
+      </div>
+      <div class="modulo-desc">Painel para controle de todas as declarações solicitadas pelos servidores, com modelos
+        personalizados em papel timbrado.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img
+            src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/52-gestao-declaracoes-solicitacoes.png"
+            alt="Gestão Declarações"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>52-gestao-declaracoes-solicitacoes.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Visualização de solicitações com status: pendente, em andamento, resolvido</li>
+            <li>Aprovação ou indeferimento com registro de justificativa</li>
+            <li>Modelos personalizados com papel timbrado e assinatura digital</li>
+            <li>Histórico auditável com data e responsável pela emissão</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 7 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 8: #13 + #14 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-rh">#13</div>
+          <div class="modulo-titulo">Portal do Gestor</div>
+        </div>
+        <span class="modulo-badge bg-rh">Gestão RH / Admin</span>
+      </div>
+      <div class="modulo-desc">Visão gerencial para chefias de setor, com aprovação de solicitações, indicadores da
+        equipe e avaliação de desempenho integrada.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/14-portal-gestor.png"
+            alt="Portal Gestor"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>14-portal-gestor.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Painel da equipe com status de ponto e presença do dia</li>
+            <li>Aprovação de férias, abonos e declarações em um clique</li>
+            <li>Escala de trabalho do setor e alertas de cobertura mínima</li>
+            <li>Indicadores: frequência, banco de horas e horas extras</li>
+            <li>Avaliação: 5 critérios ponderados com nota calculada em tempo real</li>
+            <li>Avisos automáticos de períodos avaliativos para concursados</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-financeiro">#14</div>
+          <div class="modulo-titulo">Folha de Pagamento</div>
+        </div>
+        <span class="modulo-badge bg-financeiro">Financeiro</span>
+      </div>
+      <div class="modulo-desc">Processamento mensal da folha com cálculo automático de proventos e descontos, suporte a
+        múltiplos vínculos e geração de remessa bancária.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/26-folha-pagamento.png"
+            alt="Folha" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>26-folha-pagamento.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Cálculo automático por competência de todos os eventos</li>
+            <li>Suporte a efetivos, comissionados, temporários e estagiários</li>
+            <li>Anuênios e adicionais por tempo de serviço calculados automaticamente</li>
+            <li>Integração com ponto: faltas e extras entram calculados</li>
+            <li>Relatório de custo por setor para gestão orçamentária</li>
+            <li>Histórico de competências com reprocessamento disponível</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 8 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 9: #15 + #16 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-financeiro">#15</div>
+          <div class="modulo-titulo">Remessa Bancária CNAB 240</div>
+        </div>
+        <span class="modulo-badge bg-financeiro">Financeiro</span>
+      </div>
+      <div class="modulo-desc">Geração automática do arquivo CNAB 240 para pagamento de salários, compatível com os
+        cinco maiores bancos do Brasil.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/27-remessa-cnab.png"
+            alt="CNAB" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>27-remessa-cnab.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Geração com um clique após fechamento da folha</li>
+            <li>Caixa (104), Banco do Brasil (001), Bradesco (237), Itaú (341), Santander (033)</li>
+            <li>Download do arquivo TXT pronto para envio ao banco</li>
+            <li>Histórico de remessas geradas por competência</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-financeiro">#16</div>
+          <div class="modulo-titulo">Central de Relatórios</div>
+        </div>
+        <span class="modulo-badge bg-financeiro">Financeiro</span>
+      </div>
+      <div class="modulo-desc">Central com todos os relatórios do sistema, exportáveis em CSV, Excel e PDF, sem
+        dependência de TI.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/23-relatorios.png"
+            alt="Relatórios" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>23-relatorios.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Quadro de servidores: cargo, setor, vínculo e admissão</li>
+            <li>Folha de pagamento: proventos e descontos por competência</li>
+            <li>Atestados médicos: afastamentos por CID e período</li>
+            <li>Banco de horas e escalas por setor</li>
+            <li>Progressão: elegíveis na rodada atual</li>
+            <li>eSocial: relatórios de consistência cadastral</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 9 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 10: #17 + #18 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-carreira">#17</div>
+          <div class="modulo-titulo">Progressão Funcional — RH</div>
+        </div>
+        <span class="modulo-badge bg-carreira">Carreira e Desempenho</span>
+      </div>
+      <div class="modulo-desc">Painel de gestão das rodadas de progressão com lista de elegíveis, impacto financeiro,
+        conformidade LRF e geração automática de minuta de portaria.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/30-progressao-admin.png"
+            alt="Progressão RH"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>30-progressao-admin.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Lista de elegíveis na rodada atual</li>
+            <li>Impacto financeiro total calculado automaticamente</li>
+            <li>Verificação do teto de 54% da RCL (LRF)</li>
+            <li>Aplicação individual ou em lote</li>
+            <li>Geração de minuta de portaria para publicação</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-carreira">#18</div>
+          <div class="modulo-titulo">Cargos e Salários</div>
+        </div>
+        <span class="modulo-badge bg-carreira">Carreira e Desempenho</span>
+      </div>
+      <div class="modulo-desc">Estrutura de cargos, carreiras e tabela salarial do município, base para todos os
+        cálculos de folha e progressão funcional.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/28-cargos-salarios.png"
+            alt="Cargos" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>28-cargos-salarios.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Cargos com CBO, escolaridade exigida e carga horária</li>
+            <li>Tabela salarial por referência e classe</li>
+            <li>PCCV: interstício, nota mínima e percentual de anuênio</li>
+            <li>Histórico de reajustes com data de vigência e base legal</li>
+            <li>Relatório de impacto orçamentário por cargo e setor</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 10 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 11: #19 + #20 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-carreira">#19</div>
+          <div class="modulo-titulo">Avaliação de Desempenho</div>
+        </div>
+        <span class="modulo-badge bg-carreira">Carreira e Desempenho</span>
+      </div>
+      <div class="modulo-desc">Avaliação formal de performance vinculada à elegibilidade de progressão funcional e ao
+        estágio probatório.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img
+            src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/47-avaliacao-desempenho.png"
+            alt="Avaliação"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>47-avaliacao-desempenho.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Critérios e pesos configuráveis pelo RH</li>
+            <li>Avaliação pelo gestor imediato com autoavaliação opcional</li>
+            <li>Ciclos configuráveis: semestral, anual ou por projeto</li>
+            <li>Nota calculada automaticamente com base nos pesos</li>
+            <li>Integração com progressão funcional</li>
+            <li>Histórico com evolução ao longo dos ciclos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-carreira">#20</div>
+          <div class="modulo-titulo">Treinamentos e Capacitações</div>
+        </div>
+        <span class="modulo-badge bg-carreira">Carreira e Desempenho</span>
+      </div>
+      <div class="modulo-desc">Plataforma de educação corporativa da inscrição ao certificado digital, com histórico
+        individual de capacitações.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/48-treinamentos.png"
+            alt="Treinamentos"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>48-treinamentos.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Cursos com carga horária, modalidade (presencial/EAD) e instrutor</li>
+            <li>Inscrição individual ou em lote por setor</li>
+            <li>Controle de presença, aprovação e nota obtida</li>
+            <li>Certificado digital em PDF ao concluir o treinamento</li>
+            <li>Histórico individual no perfil do servidor</li>
+            <li>Relatório de capacitações por setor</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 11 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 12: #21 + #22 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-saude">#21</div>
+          <div class="modulo-titulo">Medicina do Trabalho</div>
+        </div>
+        <span class="modulo-badge bg-saude">Saúde e Segurança</span>
+      </div>
+      <div class="modulo-desc">Controle dos exames ocupacionais periódicos (ASO) com alertas de vencimento e histórico
+        de laudos por servidor.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/44-medicina-trabalho.png"
+            alt="Medicina"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>44-medicina-trabalho.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Registro e acompanhamento de exames periódicos (ASO)</li>
+            <li>Alertas para exames vencidos ou próximos do vencimento</li>
+            <li>Histórico de exames com resultados e laudos</li>
+            <li>Agendamento de novos exames pelo sistema</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-saude">#22</div>
+          <div class="modulo-titulo">Benefícios</div>
+        </div>
+        <span class="modulo-badge bg-saude">Saúde e Segurança</span>
+      </div>
+      <div class="modulo-desc">Controle centralizado de todos os benefícios dos servidores com integração automática ao
+        cálculo da folha.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/45-beneficios.png"
+            alt="Benefícios" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>45-beneficios.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Plano de saúde, vale-transporte, vale-refeição, auxílio-creche e funeral</li>
+            <li>Dependentes por benefício com validade e documentação</li>
+            <li>Desconto proporcional calculado automaticamente em folha</li>
+            <li>Alertas de benefícios com validade próxima</li>
+            <li>Histórico de inclusões e exclusões com responsável</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 12 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 13: #23 + #24 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-saude">#23</div>
+          <div class="modulo-titulo">Segurança do Trabalho</div>
+        </div>
+        <span class="modulo-badge bg-saude">Saúde e Segurança</span>
+      </div>
+      <div class="modulo-desc">Conformidade com as NRs aplicáveis ao serviço público, com EPIs, laudos e acidentes de
+        trabalho integrados ao eSocial SST.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/49-seguranca-trabalho.png"
+            alt="Segurança"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>49-seguranca-trabalho.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Registro de EPIs: tipo, data, validade e assinatura de recebimento</li>
+            <li>Laudos de insalubridade e periculosidade por cargo e setor</li>
+            <li>Acidentes de trabalho com CAT integrada ao eSocial SST</li>
+            <li>Alertas de renovação de EPIs com vencimento próximo</li>
+            <li>Conformidade: NR-6, NR-7, NR-9, NR-15, NR-32, NR-35</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-clima">#24</div>
+          <div class="modulo-titulo">Pesquisa de Satisfação</div>
+        </div>
+        <span class="modulo-badge bg-clima">Clima e Comunicação</span>
+      </div>
+      <div class="modulo-desc">Ferramenta de escuta ativa para mensurar o clima organizacional, com respostas anônimas e
+        dashboard com evolução temporal.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/50-pesquisa-satisfacao.png"
+            alt="Pesquisa"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>50-pesquisa-satisfacao.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Pesquisas com período, público-alvo e categorias</li>
+            <li>Tipos: escala NPS (0–10), múltipla escolha e campo aberto</li>
+            <li>Respostas anônimas por padrão</li>
+            <li>Dashboard: NPS geral, promotores, neutros e detratores</li>
+            <li>Histórico por ciclo e exportação em CSV ou PDF</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 13 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 14: #25 + #26 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-escalas">#25</div>
+          <div class="modulo-titulo">Escalas de Trabalho</div>
+        </div>
+        <span class="modulo-badge bg-escalas">Escalas e Jornada</span>
+      </div>
+      <div class="modulo-desc">Sistema completo para montagem visual de escalas mensais em qualquer regime de jornada,
+        com cobertura mínima, substituições e sobreaviso.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/16-escala-trabalho.png"
+            alt="Escala" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>16-escala-trabalho.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Grade mensal visual: servidores nas linhas, dias do mês nas colunas</li>
+            <li>Turnos: Manhã, Tarde, Noturno, 12x36, 6x1 e Sobreaviso</li>
+            <li>Validação automática de cobertura mínima por turno</li>
+            <li>Substituições com fluxo de aprovação</li>
+            <li>Sobreaviso com acionamentos e cálculo automático de pagamento</li>
+            <li>Plantões extras com validação e integração financeira</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-escalas">#26</div>
+          <div class="modulo-titulo">Escalas Hospitalares / Médicas</div>
+        </div>
+        <span class="modulo-badge bg-escalas">Escalas e Jornada</span>
+      </div>
+      <div class="modulo-desc">Módulo especializado para escalas em unidades de saúde, com múltiplos setores, turnos
+        configuráveis e exportação em PDF.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/17-escala-matriz.png"
+            alt="Escalas Hospitalares"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>17-escala-matriz.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>UBS, UPA, hospitais municipais e pronto-atendimentos</li>
+            <li>Construção visual por clique/arraste célula a célula</li>
+            <li>Contador automático de plantões por profissional</li>
+            <li>Múltiplos setores: UTI adulto, UTI pediátrica, Enfermaria</li>
+            <li>Salvar em tempo real sem recarregar a página</li>
+            <li>Exportação em PDF para afixação ou envio por e-mail</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 14 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 15: #27 + #28 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-estrutura">#27</div>
+          <div class="modulo-titulo">Organograma Interativo</div>
+        </div>
+        <span class="modulo-badge bg-estrutura">Estrutura Organizacional</span>
+      </div>
+      <div class="modulo-desc">Visualização hierárquica interativa da estrutura da prefeitura, com modo gestor e modo
+        servidor, editável pelo administrador.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/15-organograma.png"
+            alt="Organograma" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>15-organograma.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Hierarquia: diretorias, departamentos e setores</li>
+            <li>Modo gestor: gerenciamento de equipe</li>
+            <li>Modo servidor: consulta de estrutura e contatos</li>
+            <li>CRUD completo de setores pelo administrador</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-conformidade">#28</div>
+          <div class="modulo-titulo">Conformidade Legal e Tecnologia</div>
+        </div>
+        <span class="modulo-badge bg-conformidade">Conformidade e Tecnologia</span>
+      </div>
+      <div class="modulo-desc">Conformidade nativa com eSocial, LRF, LGPD e Portaria MTP 671/2021. Stack moderna com
+        suporte a nuvem e servidor local.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img
+            src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/55-configuracao-sistema.png"
+            alt="Conformidade"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>55-configuracao-sistema.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>eSocial: campos S-2200 completos (CPF, PIS, raça/cor, deficiência)</li>
+            <li>LRF: verificação automática do teto de 54% da RCL</li>
+            <li>LGPD: autenticação, perfis de acesso e logs de auditoria</li>
+            <li>Portaria MTP 671/2021: ponto eletrônico e arquivo AFD</li>
+            <li>Backend: Laravel 10 | Frontend: Vue.js 3 | Mobile: React Native</li>
+            <li>Nuvem ou on-premise — flexível para cada município</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 15 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 16: #29 + #30 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-fiscal">#29</div>
+          <div class="modulo-titulo">Contabilidade Pública</div>
+        </div>
+        <span class="modulo-badge bg-fiscal">Financeiro e Fiscal</span>
+      </div>
+      <div class="modulo-desc">Registro contábil completo de todas as operações do município seguindo o PCASP e as
+        normas do MCASP, com integração total entre contabilidade orçamentária, financeira e patrimonial.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/64-contabilidade-pcasp.png"
+            alt="Contabilidade"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>64-contabilidade-pcasp.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Plano de contas estruturado conforme PCASP — Tesouro Nacional</li>
+            <li>Lançamentos contábeis automáticos a partir da execução orçamentária</li>
+            <li>Balancetes mensais e balanços anuais (Balanço Geral do Município)</li>
+            <li>Demonstrações contábeis obrigatórias: BFO, BPF, DVP e DMPL</li>
+            <li>Conciliação entre contabilidade orçamentária, financeira e patrimonial</li>
+            <li>Integração nativa com folha de pagamento e empenhos do GENTE v3</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-fiscal">#30</div>
+          <div class="modulo-titulo">Execução Orçamentária</div>
+        </div>
+        <span class="modulo-badge bg-fiscal">Financeiro e Fiscal</span>
+      </div>
+      <div class="modulo-desc">Controle integral do ciclo orçamentário municipal, da aprovação da LOA até a apuração do
+        resultado, com saldo de dotação em tempo real.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/63-execucao-despesa.png"
+            alt="Execução"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>63-execucao-despesa.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>LOA — cadastro de programas, ações e dotações aprovadas</li>
+            <li>Créditos adicionais: suplementares, especiais e extraordinários</li>
+            <li>Bloqueios e desbloqueios orçamentários por decreto</li>
+            <li>Execução da despesa por unidade gestora e fonte de recurso</li>
+            <li>Relatório de execução orçamentária por secretaria e projeto</li>
+            <li>Controle do saldo de dotação disponível em tempo real</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 16 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 17: #31 + #32 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-fiscal">#31</div>
+          <div class="modulo-titulo">Empenho / Liquidação / Pagamento</div>
+        </div>
+        <span class="modulo-badge bg-fiscal">Financeiro e Fiscal</span>
+      </div>
+      <div class="modulo-desc">Gestão do fluxo completo da despesa pública nas três fases exigidas pela Lei 4.320/64,
+        com rastreabilidade total de cada centavo gasto.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/62-orcamento.png"
+            alt="Empenho" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>62-orcamento.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Empenho ordinário, global e estimativo por dotação</li>
+            <li>Reforço e anulação de empenhos com justificativa registrada</li>
+            <li>Liquidação com conferência de nota fiscal, contrato e entrega</li>
+            <li>Ordem de pagamento vinculada ao empenho liquidado</li>
+            <li>Controle de restos a pagar processados e não processados</li>
+            <li>Ciclo completo da despesa conforme Lei 4.320/64, art. 58–64</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-fiscal">#32</div>
+          <div class="modulo-titulo">Tesouraria Pública</div>
+        </div>
+        <span class="modulo-badge bg-fiscal">Financeiro e Fiscal</span>
+      </div>
+      <div class="modulo-desc">Controle financeiro real do caixa municipal com gestão de contas bancárias, movimentações
+        e projeção de fluxo de caixa.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/65-tesouraria.png"
+            alt="Tesouraria" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>65-tesouraria.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Cadastro e controle de todas as contas bancárias da prefeitura</li>
+            <li>Registro de pagamentos e recebimentos com conciliação automática</li>
+            <li>Fluxo de caixa diário, semanal e mensal projetado</li>
+            <li>Importação de extratos bancários (OFX/CNAB 240)</li>
+            <li>Identificação de divergências entre sistema e extrato</li>
+            <li>Relatório de disponibilidade financeira por fonte de recurso</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 17 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 18: #33 + #34 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-fiscal">#33</div>
+          <div class="modulo-titulo">Receita Municipal</div>
+        </div>
+        <span class="modulo-badge bg-fiscal">Financeiro e Fiscal</span>
+      </div>
+      <div class="modulo-desc">Controle de toda a arrecadação do município, abrangendo tributos próprios, transferências
+        constitucionais e outras receitas, com previsão vs. realizado.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/66-receita-municipal.png"
+            alt="Receita"
+            onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>66-receita-municipal.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>ISS — Imposto Sobre Serviços: lançamento e arrecadação</li>
+            <li>IPTU — Imposto Predial e Territorial Urbano</li>
+            <li>Taxas municipais: coleta de lixo, licenciamento, alvará</li>
+            <li>Transferências constitucionais: FPM, ICMS, IPVA, FUNDEB</li>
+            <li>Receitas patrimoniais: aluguéis, dividendos, aplicações</li>
+            <li>Previsão vs. realizado com alerta de desvio orçamentário</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-patrimonio">#34</div>
+          <div class="modulo-titulo">Patrimônio Público</div>
+        </div>
+        <span class="modulo-badge bg-patrimonio">Patrimônio e Estoque</span>
+      </div>
+      <div class="modulo-desc">Gestão completa dos bens móveis e imóveis do município, do tombamento ao desfazimento, em
+        conformidade com NBC TSP 07.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/57-tabelas-auxiliares.png"
+            alt="Patrimônio" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>patrimonio.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Tombamento de bens com número patrimonial único e QR Code</li>
+            <li>Inventário patrimonial anual por unidade gestora</li>
+            <li>Depreciação automática conforme vida útil e NBC TSP 07</li>
+            <li>Reavaliação e redução ao valor recuperável (impairment)</li>
+            <li>Transferências entre setores com registro de responsável</li>
+            <li>Baixas patrimoniais: sucata, doação, extravio e leilão</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 18 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 19: #35 + #36 + #37 ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-patrimonio">#35</div>
+          <div class="modulo-titulo">Almoxarifado</div>
+        </div>
+        <span class="modulo-badge bg-patrimonio">Patrimônio e Estoque</span>
+      </div>
+      <div class="modulo-desc">Controle de estoque de materiais de consumo e permanentes da administração municipal, com
+        rastreabilidade de cada movimentação.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/61-eventos-folha.png"
+            alt="Almoxarifado" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>almoxarifado.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Entrada de materiais vinculada à nota fiscal e empenho</li>
+            <li>Saída por requisição interna com aprovação do gestor</li>
+            <li>Controle de saldo por item, lote e data de validade</li>
+            <li>Inventário periódico com ajuste de estoque</li>
+            <li>Ponto de reposição automático com alerta de estoque mínimo</li>
+            <li>Integração com compras: solicitação gerada automaticamente</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-compras">#36</div>
+          <div class="modulo-titulo">Compras e Licitações</div>
+        </div>
+        <span class="modulo-badge bg-compras">Compras e Contratos</span>
+      </div>
+      <div class="modulo-desc">Gestão dos processos de aquisição pública em conformidade com a Nova Lei de Licitações
+        (Lei 14.133/2021).</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/42-pss-concurso.png"
+            alt="Compras" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>compras.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Pregão eletrônico e presencial com sessão pública registrada</li>
+            <li>Concorrência, tomada de preços e convite</li>
+            <li>Dispensas de licitação com fundamentação legal obrigatória</li>
+            <li>Inexigibilidade com justificativa de singularidade ou exclusividade</li>
+            <li>Controle de contratos, aditivos, vigência e valores</li>
+            <li>Base legal: Lei 14.133/2021 — Nova Lei de Licitações</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 19 / 20</span></div>
+  </div>
+
+  <!-- ════ PÁG 20: #37 + DIFERENCIAIS ════ -->
+  <div class="page">
+    <div class="topbar"><span class="topbar-left">GENTE v3 — Sistema de Gestão de Pessoas</span><span
+        class="topbar-logo-text"><em>RR</em> Tecnol</span></div>
+
+    <div class="modulo-page">
+      <div class="modulo-header">
+        <div>
+          <div class="modulo-num cat-fiscal">#37</div>
+          <div class="modulo-titulo">Integração Tribunal de Contas</div>
+        </div>
+        <span class="modulo-badge bg-fiscal">Financeiro e Fiscal</span>
+      </div>
+      <div class="modulo-desc">Prestação de contas automática para TCE/TCM e SICONFI, eliminando o trabalho manual de
+        exportação e reduzindo o risco de glosas por inconsistência.</div>
+      <div class="modulo-body">
+        <div class="modulo-screenshot">
+          <img src="file:///C:/Users/joaob/OneDrive/Desktop/sisgep-job-main/docs/screenshots/67-controle-externo.png"
+            alt="TCE" onerror="this.outerHTML='<div class=\'screenshot-placeholder\'>67-controle-externo.png</div>'">
+        </div>
+        <div class="modulo-bullets">
+          <ul>
+            <li>Exportação para TCE/TCM no layout e prazo exigidos</li>
+            <li>SICONFI — Sistema de Informações Contábeis e Fiscais (STN)</li>
+            <li>RGF — Relatório de Gestão Fiscal (LRF art. 54–55)</li>
+            <li>RREO — Relatório Resumido da Execução Orçamentária</li>
+            <li>Validação prévia dos dados antes do envio ao órgão de controle</li>
+            <li>Histórico de transmissões com protocolo e comprovante</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:3px solid #f1f5f9"></div>
+
+    <!-- DIFERENCIAIS -->
+    <div class="diferenciais-page" style="padding-top:24px">
+      <div class="diferenciais-title">Diferenciais Competitivos</div>
+      <div class="diferenciais-grid">
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">100% Digital</div>
+            <div class="diferencial-desc">Elimina papelóis, planilhas e processos manuais.</div>
+          </div>
+        </div>
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">App Mobile com Biometria</div>
+            <div class="diferencial-desc">Ponto facial sem custo de equipamento REP.</div>
+          </div>
+        </div>
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">Onboarding Digital</div>
+            <div class="diferencial-desc">Servidor preenche dados pelo link, sem ir ao RH.</div>
+          </div>
+        </div>
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">Progressão Automatizada</div>
+            <div class="diferencial-desc">Calcula elegíveis, impacto LRF e gera portaria.</div>
+          </div>
+        </div>
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">Remessa CNAB 240</div>
+            <div class="diferencial-desc">5 bancos suportados. Integração direta com o banco.</div>
+          </div>
+        </div>
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">eSocial Completo</div>
+            <div class="diferencial-desc">Cadastro com todos os campos obrigatórios S-2200.</div>
+          </div>
+        </div>
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">Escalas Inteligentes</div>
+            <div class="diferencial-desc">Médica, sobreaviso e substituições em grade visual.</div>
+          </div>
+        </div>
+        <div class="diferencial-card"><span class="diferencial-check">✅</span>
+          <div>
+            <div class="diferencial-name">Central de Relatórios</div>
+            <div class="diferencial-desc">Todos os dados exportáveis sem depender de TI.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer"><span>GENTE v3 — Sistema de Gestão de Pessoas</span><span>RR Tecnol</span><span>Documento
+        Confidencial</span><span>Pág. 20 / 20</span></div>
+  </div>
+
+</body>
+
+</html>

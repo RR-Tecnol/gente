@@ -1,0 +1,60 @@
+{
+    "expo": {
+        "name": "Ponto GENTE",
+        "slug": "ponto-gente",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#1a56db"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": false,
+            "bundleIdentifier": "br.gov.pontoGente",
+            "infoPlist": {
+                "NSCameraUsageDescription": "Necessário para o reconhecimento facial no registro de ponto.",
+                "NSLocationWhenInUseUsageDescription": "Necessário para validar a localização no registro de ponto."
+            }
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#1a56db"
+            },
+            "package": "br.gov.pontoGente",
+            "permissions": [
+                "CAMERA",
+                "ACCESS_FINE_LOCATION",
+                "ACCESS_COARSE_LOCATION"
+            ]
+        },
+        "plugins": [
+            "expo-router",
+            "expo-secure-store",
+            [
+                "expo-camera",
+                {
+                    "cameraPermission": "Permite capturar selfie para reconhecimento facial no ponto."
+                }
+            ],
+            [
+                "expo-location",
+                {
+                    "locationAlwaysAndWhenInUsePermission": "Permite validar sua localização ao bater ponto."
+                }
+            ]
+        ],
+        "scheme": "ponto-gente",
+        "extra": {
+            "eas": {
+                "projectId": "SEU_PROJECT_ID_EAS"
+            }
+        }
+    }
+}

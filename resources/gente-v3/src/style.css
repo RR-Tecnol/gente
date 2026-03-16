@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@source "./index.html";
+@source "./src/**/*.{vue,js,ts,jsx,tsx}";
+
+@theme {
+  --color-navy: #0F172A;
+  --color-navy-blue: #1E3A8A;
+
+  --color-leaf: #22C55E;
+  --color-leaf-green: #A3E635;
+
+  --animate-blob: blob 9s infinite;
+  --animate-gradient-x: gradient-x 15s ease infinite;
+
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+
+  @keyframes gradient-x {
+
+    0%,
+    100% {
+      background-size: 200% 200%;
+      background-position: left center;
+    }
+
+    50% {
+      background-size: 200% 200%;
+      background-position: right center;
+    }
+  }
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #0F172A;
+}
+
+/* Glassmorphism Premium */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-input:focus-within {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(163, 230, 53, 0.5);
+  box-shadow: 0 0 20px rgba(163, 230, 53, 0.2);
+}
+
+.delay-2000 {
+  animation-delay: 2s;
+}
+
+.delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Força herança de fontes nos compontes base */
+.v-application {
+  font-family: inherit !important;
+}

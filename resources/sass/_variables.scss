@@ -1,0 +1,22 @@
+// ============================================================
+// GENTE Design System — Variáveis SCSS
+// RR Tecnol — Gestão de Pessoas
+// ============================================================
+
+// Paleta principal
+$gente-navy:    #1a2a5e;
+$gente-cyan:    #00b4d8;
+$gente-navy-lt: #2d4080;
+$gente-cyan-dk: #0090ae;
+
+// Vuetify overrides
+$primary:   $gente-navy !default;
+$secondary: $gente-cyan !default;
+$accent:    $gente-cyan !default;
+
+// Tipografia
+$body-font-family:   'Inter', 'Roboto', sans-serif !default;
+$heading-font-family: 'Inter', 'Roboto', sans-serif !default;
+
+// Bordas
+$border-radius-root: 6px !default;

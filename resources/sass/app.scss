@@ -1,0 +1,182 @@
+// ============================================================
+// GENTE — Design System Global
+// RR Tecnol — Gestão de Pessoas
+// ============================================================
+
+// ── Fontes ──────────────────────────────────────────────────
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+// ── Variáveis SCSS ───────────────────────────────────────────
+@import 'variables';
+
+// ── CSS Custom Properties (Tokens) ──────────────────────────
+:root {
+    --gente-navy: #1a2a5e;
+    --gente-navy-lt: #2d4080;
+    --gente-cyan: #00b4d8;
+    --gente-cyan-dk: #0090ae;
+    --gente-gradient: linear-gradient(135deg, #1a2a5e 0%, #00b4d8 100%);
+    --gente-surface: #f4f6fb;
+    --gente-border: #e2e8f0;
+    --gente-text: #1e293b;
+    --gente-text-muted: #64748b;
+    --gente-radius: 8px;
+    --gente-shadow: 0 2px 12px rgba(26, 42, 94, 0.10);
+    --gente-shadow-lg: 0 8px 32px rgba(26, 42, 94, 0.16);
+}
+
+// ── Reset & Base ─────────────────────────────────────────────
+* {
+    font-family: 'Inter', 'Roboto', sans-serif !important;
+}
+
+body {
+    background: var(--gente-surface);
+    color: var(--gente-text);
+}
+
+// ── Vuetify Overrides ────────────────────────────────────────
+.v-application {
+    font-family: 'Inter', 'Roboto', sans-serif !important;
+}
+
+// AppBar com gradiente GENTE
+.v-app-bar.primary {
+    background: var(--gente-gradient) !important;
+    box-shadow: 0 2px 8px rgba(26, 42, 94, 0.25) !important;
+}
+
+// Cards com sombra suave
+.v-card {
+    border-radius: var(--gente-radius) !important;
+    box-shadow: var(--gente-shadow) !important;
+}
+
+// Navigation drawer
+.v-navigation-drawer {
+    border-right: 1px solid var(--gente-border) !important;
+
+    .v-list-item--active {
+        background: rgba(0, 180, 216, 0.10) !important;
+        color: var(--gente-navy) !important;
+        border-right: 3px solid var(--gente-cyan);
+        font-weight: 600;
+    }
+}
+
+// Botões primários
+.v-btn.primary {
+    background: var(--gente-gradient) !important;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+// Campos de form
+.v-input .v-label {
+    font-size: 13px;
+}
+
+// Data tables com listras sutis
+.v-data-table>.v-data-table__wrapper>table>tbody>tr:nth-child(even) {
+    background: rgba(26, 42, 94, 0.025);
+}
+
+.v-data-table>.v-data-table__wrapper>table>tbody>tr>td,
+.v-data-table>.v-data-table__wrapper>table>thead>tr>th {
+    font-size: 13px !important;
+}
+
+.v-data-table>.v-data-table__wrapper>table>thead>tr>th {
+    font-weight: 600 !important;
+    color: var(--gente-navy) !important;
+    background: rgba(26, 42, 94, 0.04) !important;
+}
+
+// ── Utilitários do Design System ─────────────────────────────
+
+// Badge de status
+.gente-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &--cadastrada {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+
+    &--atualizada {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    &--avaliada {
+        background: #ede9fe;
+        color: #5b21b6;
+    }
+
+    &--deferida {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    &--indeferida {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    &--clonada {
+        background: #f1f5f9;
+        color: #475569;
+    }
+}
+
+// Card seção
+.gente-section-card {
+    background: #fff;
+    border-radius: var(--gente-radius);
+    box-shadow: var(--gente-shadow);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+
+    &__title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--gente-navy);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--gente-cyan);
+        display: inline-block;
+    }
+}
+
+// Page header
+.gente-page-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+
+    &__title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--gente-navy);
+    }
+
+    &__subtitle {
+        font-size: 13px;
+        color: var(--gente-text-muted);
+        margin-left: 8px;
+    }
+}
+
+// Cursor
+.cursor-pointer {
+    cursor: pointer;
+}
