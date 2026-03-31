@@ -27,12 +27,12 @@ $getSalarioBase = function ($func) {
 // ── Helper: calcula verbas rescisórias ────────────────────────────
 $calcularRescisao = function ($func, $dataExoneracao, $salarioBase) {
     $dataAdmissao = $func->FUNCIONARIO_DATA_INICIO ?? null;
-    $dataExon = Carbon::parse($dataExoneracao);
+    $dataExon = \Carbon\Carbon::parse($dataExoneracao);
     $hoje = $dataExon; // data base = data exoneração
 
     // ── Dias trabalhados no período aquisitivo atual ──────────────
     // Período aquisitivo começa no aniversário de admissão mais recente
-    $admissao = $dataAdmissao ? Carbon::parse($dataAdmissao) : $hoje;
+    $admissao = $dataAdmissao ? \Carbon\Carbon::parse($dataAdmissao) : $hoje;
     $anosCompletos = (int) $admissao->diffInYears($hoje);
     $inicioAquisitivo = $admissao->copy()->addYears($anosCompletos);
     $diasPeriodo = (int) $inicioAquisitivo->diffInDays($hoje);
