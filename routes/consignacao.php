@@ -1,9 +1,9 @@
-<?php
-// ══════════════════════════════════════════════════════════════════
-// CONSIGNAÇÕES EM FOLHA — rotas sem use statements
-// ══════════════════════════════════════════════════════════════════
+﻿<?php
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// CONSIGNAÃ‡Ã•ES EM FOLHA â€” rotas sem use statements
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// ── GET: lista de convênios ──────────────────────────────────────
+// â”€â”€ GET: lista de convÃªnios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Route::get('/consignacao/convenios', function () {
     try {
         $convenios = DB::table('CONSIG_CONVENIO')->orderBy('CONVENIO_TIPO')->orderBy('CONVENIO_NOME')->get();
@@ -13,8 +13,8 @@ Route::get('/consignacao/convenios', function () {
     }
 });
 
-// ── POST: criar convênio ──────────────────────────────────────────
-Route::post('/consignacao/convenios', function (Request $request) {
+// â”€â”€ POST: criar convÃªnio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+Route::post('/consignacao/convenios', function (\Illuminate\Http\Request $request) {
     try {
         $id = DB::table('CONSIG_CONVENIO')->insertGetId([
             'CONVENIO_NOME' => $request->convenio_nome,
@@ -32,8 +32,8 @@ Route::post('/consignacao/convenios', function (Request $request) {
     }
 });
 
-// ── GET: contratos de um ou todos os servidores ──────────────────
-Route::get('/consignacao', function (Request $request) {
+// â”€â”€ GET: contratos de um ou todos os servidores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+Route::get('/consignacao', function (\Illuminate\Http\Request $request) {
     try {
         $query = DB::table('CONSIG_CONTRATO as c')
             ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'c.FUNCIONARIO_ID')
@@ -74,15 +74,15 @@ Route::get('/consignacao', function (Request $request) {
     }
 });
 
-// ── POST: registrar contrato ──────────────────────────────────────
-Route::post('/consignacao', function (Request $request) {
+// â”€â”€ POST: registrar contrato â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+Route::post('/consignacao', function (\Illuminate\Http\Request $request) {
     try {
         $user = Auth::user();
         if (!$request->funcionario_id || !$request->convenio_id || !$request->valor_parcela)
-            return response()->json(['erro' => 'Campos obrigatórios faltando.'], 422);
+            return response()->json(['erro' => 'Campos obrigatÃ³rios faltando.'], 422);
 
-        // Verificar margem consignável — BUG-01 corrigido: usar DETALHE_FOLHA_LIQUIDO
-        // §12 das regras: margem separada 30% empréstimo / 5% cartão
+        // Verificar margem consignÃ¡vel â€” BUG-01 corrigido: usar DETALHE_FOLHA_LIQUIDO
+        // Â§12 das regras: margem separada 30% emprÃ©stimo / 10% cartÃ£o
         $folha = DB::table('DETALHE_FOLHA as df')
             ->join('FOLHA as fo', 'fo.FOLHA_ID', '=', 'df.FOLHA_ID')
             ->where('df.FUNCIONARIO_ID', $request->funcionario_id)
@@ -92,7 +92,7 @@ Route::post('/consignacao', function (Request $request) {
 
         $liquido = $folha ? max(0, (float) $folha->liquido) : 0;
 
-        // Buscar tipo do convênio para aplicar margem correta
+        // Buscar tipo do convÃªnio para aplicar margem correta
         $convenio = DB::table('CONSIG_CONVENIO')->where('CONVENIO_ID', $request->convenio_id)->first();
         $tipos_emp = ['BANCO', 'SINDICATO', 'COOPERATIVA'];
         $isCartao = $convenio && $convenio->CONVENIO_TIPO === 'CARTAO';
@@ -112,12 +112,12 @@ Route::post('/consignacao', function (Request $request) {
             ->sum('c.VALOR_PARCELA');
 
         $margem_emp = $liquido * 0.30;
-        $margem_cartao = $liquido * 0.05;
+        $margem_cartao = $liquido * 0.10;
 
         if ($isCartao) {
             if ($request->valor_parcela > ($margem_cartao - $usado_cartao) && $liquido > 0) {
                 return response()->json([
-                    'aviso' => 'Margem cartão insuficiente (5%)',
+                    'aviso' => 'Margem cartão insuficiente (10%)',
                     'margem_disponivel' => round($margem_cartao - $usado_cartao, 2),
                     'margem_total' => round($margem_cartao, 2),
                     'liquido' => round($liquido, 2),
@@ -178,7 +178,7 @@ Route::post('/consignacao', function (Request $request) {
     }
 });
 
-// ── PATCH: alterar status do contrato (CONSIG-04 — com rastreabilidade) ─
+// â”€â”€ PATCH: alterar status do contrato (CONSIG-04 â€” com rastreabilidade) â”€
 Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
     try {
         $user = Auth::user();
@@ -186,7 +186,7 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
         $statusValidos = ['ATIVO', 'SUSPENSO', 'CANCELADO', 'QUITADO'];
 
         if (!in_array($novoStatus, $statusValidos)) {
-            return response()->json(['erro' => 'Status inválido. Use: ' . implode(', ', $statusValidos)], 422);
+            return response()->json(['erro' => 'Status invÃ¡lido. Use: ' . implode(', ', $statusValidos)], 422);
         }
 
         DB::table('CONSIG_CONTRATO')->where('CONTRATO_ID', $id)->update([
@@ -209,7 +209,7 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
                 ->update(['STATUS' => 'PENDENTE', 'updated_at' => now()]);
         }
 
-        // Registrar ocorrência
+        // Registrar ocorrÃªncia
         try {
             DB::table('CONSIG_OCORRENCIA')->insert([
                 'CONTRATO_ID' => $id,
@@ -222,7 +222,7 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        } catch (\Throwable $oe) { /* tabela pode não existir ainda — silenciar */
+        } catch (\Throwable $oe) { /* tabela pode nÃ£o existir ainda â€” silenciar */
         }
 
         return response()->json(['ok' => true]);
@@ -231,7 +231,7 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
     }
 });
 
-// ── PATCH: autorizar contrato (CONSIG-02) ────────────────────────
+// â”€â”€ PATCH: autorizar contrato (CONSIG-02) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Route::patch('/consignacao/{id}/autorizar', function ($id) {
     try {
         $user = Auth::user();
@@ -259,7 +259,7 @@ Route::patch('/consignacao/{id}/autorizar', function ($id) {
     }
 });
 
-// ── PATCH: rejeitar contrato (CONSIG-02) ─────────────────────────
+// â”€â”€ PATCH: rejeitar contrato (CONSIG-02) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Route::patch('/consignacao/{id}/rejeitar', function (Request $request, $id) {
     try {
         $user = Auth::user();
@@ -287,7 +287,7 @@ Route::patch('/consignacao/{id}/rejeitar', function (Request $request, $id) {
     }
 });
 
-// ── GET: margem consignável de um servidor ───────────────────────
+// â”€â”€ GET: margem consignÃ¡vel de um servidor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Route::get('/consignacao/margem/{funcionario_id}', function ($funcionario_id) {
     // BUG-01 corrigido: campos reais + margem separada 30%/5%
     try {
@@ -322,7 +322,7 @@ Route::get('/consignacao/margem/{funcionario_id}', function ($funcionario_id) {
             ->sum('c.VALOR_PARCELA');
 
         $margem_emp = round($liquido * 0.30, 2);
-        $margem_cartao = round($liquido * 0.05, 2);
+        $margem_cartao = round($liquido * 0.10, 2);
 
         $ativos = DB::table('CONSIG_CONTRATO')
             ->where('FUNCIONARIO_ID', $funcionario_id)
@@ -351,7 +351,7 @@ Route::get('/consignacao/margem/{funcionario_id}', function ($funcionario_id) {
 });
 
 
-// ── GET: parcelas de um contrato ─────────────────────────────────
+// â”€â”€ GET: parcelas de um contrato â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Route::get('/consignacao/{id}/parcelas', function ($id) {
     try {
         $parcelas = DB::table('CONSIG_PARCELA')->where('CONTRATO_ID', $id)->orderBy('NUMERO_PARCELA')->get();
@@ -361,8 +361,8 @@ Route::get('/consignacao/{id}/parcelas', function ($id) {
     }
 });
 
-// ── GET: relatório de descontos por competência ─────────────────
-Route::get('/consignacao/relatorio', function (Request $request) {
+// â”€â”€ GET: relatÃ³rio de descontos por competÃªncia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+Route::get('/consignacao/relatorio', function (\Illuminate\Http\Request $request) {
     try {
         $comp = $request->competencia ?? now()->format('Y-m');
         $por_convenio = DB::table('CONSIG_PARCELA as cp')
@@ -388,7 +388,7 @@ Route::get('/consignacao/relatorio', function (Request $request) {
     }
 });
 
-// ── GET: histórico de ocorrências de um contrato ─────────────────
+// â”€â”€ GET: histÃ³rico de ocorrÃªncias de um contrato â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Route::get('/consignacao/{id}/ocorrencias', function ($id) {
     try {
         $ocs = DB::table('CONSIG_OCORRENCIA as o')
@@ -403,9 +403,9 @@ Route::get('/consignacao/{id}/ocorrencias', function ($id) {
     }
 });
 
-// ── GET: relatório analítico por servidor/parcela (CONSIG-05) ────
-// Granularidade exigida TCE-MA e CGM — permite exportação CSV no frontend
-Route::get('/consignacao/relatorio-analitico', function (Request $request) {
+// â”€â”€ GET: relatÃ³rio analÃ­tico por servidor/parcela (CONSIG-05) â”€â”€â”€â”€
+// Granularidade exigida TCE-MA e CGM â€” permite exportaÃ§Ã£o CSV no frontend
+Route::get('/consignacao/relatorio-analitico', function (\Illuminate\Http\Request $request) {
     try {
         $comp = $request->competencia ?? now()->format('Y-m');
 

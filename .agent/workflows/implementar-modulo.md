@@ -6,6 +6,8 @@ description: Como implementar um novo módulo no GENTE v3 (backend + frontend)
 
 Use este workflow ao criar qualquer backend + frontend novo. Siga os passos em ordem — não pule etapas.
 
+**ANTES DE QUALQUER VIEW:** ler `docs/DESIGN_SYSTEM_GENTE_V3.md`. Todas as views devem seguir os padrões de cor, tipografia, componentes e animações definidos naquele documento.
+
 ---
 
 ## Passo 1 — Verificar o que já existe

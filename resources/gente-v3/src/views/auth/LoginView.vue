@@ -135,16 +135,72 @@
       </div>
 
     </div>
+
+    <!-- Modal de Troca de Senha -->
+    <div v-if="showChangePasswordModal" class="login-modal-overlay">
+      <div class="login-modal">
+        <div class="form-header" style="margin-bottom: 20px;">
+          <h2>Criar Nova Senha</h2>
+          <p>Por medida de segurança, você precisa atualizar sua senha</p>
+        </div>
+
+        <transition name="fade-up">
+          <div v-if="changePasswordError" class="error-alert">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>{{ changePasswordError }}</span>
+          </div>
+        </transition>
+
+        <form @submit.prevent="submitChangePassword" class="login-form">
+          <div class="field-group">
+            <label>Nova Senha</label>
+            <div class="input-wrap">
+              <input v-model="newPasswordForm.new" type="password" required />
+            </div>
+          </div>
+
+          <div class="pwd-strength" v-if="newPasswordForm.new.length > 0">
+            <div class="strength-bar">
+              <div class="strength-fill" :style="{ width: (pwdCriteria.score * 20) + '%', backgroundColor: pwdStrengthColor }"></div>
+            </div>
+            <ul class="strength-criteria">
+              <li :class="{ met: pwdCriteria.length }">Mínimo 8 caracteres</li>
+              <li :class="{ met: pwdCriteria.upper }">Uma letra maiúscula</li>
+              <li :class="{ met: pwdCriteria.num }">Pelo menos um número</li>
+              <li :class="{ met: pwdCriteria.spec }">Um caractere especial (!@#$%)</li>
+              <li :class="{ met: pwdCriteria.noRepeat }">Sem repetição consecutiva (ex: aaaa)</li>
+            </ul>
+          </div>
+
+          <div class="field-group" style="margin-top: 10px;">
+            <label>Confirmar Senha</label>
+            <div class="input-wrap">
+              <input v-model="newPasswordForm.confirm" type="password" required />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-login" :disabled="changingPassword || pwdCriteria.score < 5">
+            <span v-if="!changingPassword">Atualizar Senha e Entrar</span>
+            <svg v-else class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10" stroke-opacity="0.2"/>
+              <path d="M12 2a10 10 0 0110 10" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import api from '@/plugins/axios'
 import { useAuthStore } from '@/store/auth'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const showPassword = ref(false)
 const errorMessage = ref('')
@@ -153,18 +209,95 @@ const focusPwd = ref(false)
 
 const credentials = reactive({ cpf: '', password: '' })
 
+// SEC-PROD-04: Variáveis para troca de senha
+const showChangePasswordModal = ref(false)
+const newPasswordForm = reactive({ current: '', new: '', confirm: '' })
+const changePasswordError = ref('')
+const changingPassword = ref(false)
+
+const pwdCriteria = computed(() => {
+  const pwd = newPasswordForm.new || ''
+  const criteria = {
+    length: pwd.length >= 8,
+    upper: /[A-Z]/.test(pwd),
+    num: /[0-9]/.test(pwd),
+    spec: /[!@#$%^&*]/.test(pwd),
+    noRepeat: !/^(.)\1+$/.test(pwd) && pwd.length > 0
+  }
+  const score = Object.values(criteria).filter(Boolean).length
+  return { ...criteria, score }
+})
+
+const pwdStrengthColor = computed(() => {
+  const score = pwdCriteria.value.score
+  if (score <= 2) return '#ef4444' // vermelho
+  if (score <= 4) return '#eab308' // amarelo
+  return '#22c55e' // verde
+})
+
+const submitChangePassword = async () => {
+  if (newPasswordForm.new !== newPasswordForm.confirm) {
+    changePasswordError.value = 'A confirmação não confere'
+    return
+  }
+  if (pwdCriteria.value.score < 5) {
+    changePasswordError.value = 'A senha não atende a todos os critérios'
+    return
+  }
+  
+  changingPassword.value = true
+  changePasswordError.value = ''
+  try {
+    await api.post('/api/auth/change-password', {
+      senha_atual: newPasswordForm.current,
+      senha_nova: newPasswordForm.new
+    })
+    showChangePasswordModal.value = false
+    authStore.clearCache()
+    router.push('/dashboard')
+  } catch (err) {
+    changePasswordError.value = err.response?.data?.error || 'Erro ao alterar a senha'
+  } finally {
+    changingPassword.value = false
+  }
+}
+
 const authStore = useAuthStore()
+
+onMounted(() => {
+  if (route.query.sessao_expirada) {
+    errorMessage.value = 'Sessão expirada. Por favor, faça login novamente.'
+  }
+  const script = document.createElement('script')
+  script.src = `https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`
+  document.head.appendChild(script)
+})
 
 const handleLogin = async () => {
   if (!credentials.cpf || !credentials.password) return
   loading.value = true
   errorMessage.value = ''
   try {
+    const token = await new Promise(resolve =>
+      window.grecaptcha.ready(() =>
+        window.grecaptcha.execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'login' })
+          .then(resolve)
+      )
+    )
+
     await api.get('/csrf-cookie')
-    await api.post('/api/auth/login', {
+    const resp = await api.post('/api/auth/login', {
       USUARIO_LOGIN: credentials.cpf,
-      USUARIO_SENHA: credentials.password
+      USUARIO_SENHA: credentials.password,
+      recaptcha_token: token
     })
+
+    if (resp.data.user?.alterar_senha) {
+      newPasswordForm.current = credentials.password
+      showChangePasswordModal.value = true
+      return
+    }
+
     authStore.clearCache() // BUG-03: invalida cache para forçar fetchUser no guard
     router.push('/dashboard')
   } catch (err) {
@@ -566,4 +699,43 @@ const handleLogin = async () => {
   .brand-headline h1 { font-size: 28px; }
   .side-right { padding: 28px 28px 32px; }
 }
+
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.login-modal {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(20, 26, 40, 0.95);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.pwd-strength { margin-top: 6px; }
+.strength-bar {
+  height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.1); overflow: hidden;
+  margin-bottom: 8px;
+}
+.strength-fill { height: 100%; transition: width 0.3s ease, background-color 0.3s ease; }
+.strength-criteria {
+  list-style: none; padding: 0; margin: 0;
+  font-size: 11px; color: rgba(255,255,255,0.4);
+}
+.strength-criteria li { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.strength-criteria li::before {
+  content: ''; display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; border: 1px solid rgba(255,255,255,0.3);
+}
+.strength-criteria li.met { color: #22c55e; }
+.strength-criteria li.met::before { background: #22c55e; border-color: #22c55e; }
+
 </style>

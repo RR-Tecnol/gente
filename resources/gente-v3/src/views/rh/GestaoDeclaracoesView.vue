@@ -446,6 +446,21 @@ const selecionarModelo = async (m) => {
       htmlAtivo.value = body
       if (editorRef.value) editorRef.value.innerHTML = body
     } catch { htmlAtivo.value = ''; if (editorRef.value) editorRef.value.innerHTML = '' }
+  } else {
+    // Template inicial para novos modelos - editor nao fica bloqueado
+    const templateInicial = '<div class="topo"><h1>PREFEITURA MUNICIPAL DE SAO LUIS</h1>'
+      + '<p>Departamento de Gestao de Pessoas - Sistema GENTE v3</p></div>'
+      + '<div class="titulo">' + m.tipo + '</div>'
+      + '<div class="corpo">'
+      + '<p>Declaramos, para os devidos fins de direito, que <strong>{{NOME}}</strong>,'
+      + ' servidor(a) com matricula <strong>{{MATRICULA}}</strong>,'
+      + ' portador(a) do CPF <strong>{{CPF}}</strong>,'
+      + ' encontra-se regularmente vinculado(a) ao quadro de pessoal desta instituicao.</p>'
+      + '<p>Por ser verdade, firmamos a presente declaracao.</p>'
+      + '<p>Sao Luis, {{DATA_HOJE}}.</p>'
+      + '</div>'
+    htmlAtivo.value = templateInicial
+    if (editorRef.value) editorRef.value.innerHTML = templateInicial
   }
 }
 

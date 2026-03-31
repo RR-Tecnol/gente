@@ -152,7 +152,7 @@
     {{-- HEADER --}}
     <div class="header">
         <div>
-            <div class="sub">GENTE — Sistema de Gestão de Pessoas</div>
+            <div class="sub">GENTE &mdash; Sistema de Gestão de Pessoas</div>
             <h1>HOLERITE / CONTRACHEQUE</h1>
             <div class="sub">Competência: {{ $competencia }}</div>
         </div>
@@ -167,14 +167,14 @@
         <div class="section-title">Dados do Servidor</div>
         <div class="info-grid">
             <div class="info-item"><label>Nome</label><span>{{ $servidor['nome'] }}</span></div>
-            <div class="info-item"><label>Matrícula</label><span>{{ $servidor['matricula'] ?? '—' }}</span></div>
-            <div class="info-item"><label>CPF</label><span>{{ $servidor['cpf'] ?? '—' }}</span></div>
-            <div class="info-item"><label>Cargo</label><span>{{ $servidor['cargo'] ?? '—' }}</span></div>
-            <div class="info-item"><label>Lotação</label><span>{{ $servidor['lotacao'] ?? '—' }}</span></div>
-            <div class="info-item"><label>Regime Prev.</label><span>{{ $servidor['regime_prev'] ?? '—' }}</span></div>
-            <div class="info-item"><label>Banco</label><span>{{ $servidor['banco'] ?? '—' }}</span></div>
-            <div class="info-item"><label>Agência</label><span>{{ $servidor['agencia'] ?? '—' }}</span></div>
-            <div class="info-item"><label>Conta</label><span>{{ $servidor['conta'] ?? '—' }}</span></div>
+            <div class="info-item"><label>Matrícula</label><span>{{ $servidor['matricula'] ?? '-' }}</span></div>
+            <div class="info-item"><label>CPF</label><span>{{ $servidor['cpf'] ?? '-' }}</span></div>
+            <div class="info-item"><label>Cargo</label><span>{{ $servidor['cargo'] ?? '-' }}</span></div>
+            <div class="info-item"><label>Lotação</label><span>{{ $servidor['lotacao'] ?? '-' }}</span></div>
+            <div class="info-item"><label>Regime Prev.</label><span>{{ $servidor['regime_prev'] ?? '-' }}</span></div>
+            <div class="info-item"><label>Banco</label><span>{{ $servidor['banco'] ?? '-' }}</span></div>
+            <div class="info-item"><label>Agência</label><span>{{ $servidor['agencia'] ?? '-' }}</span></div>
+            <div class="info-item"><label>Conta</label><span>{{ $servidor['conta'] ?? '-' }}</span></div>
         </div>
     </div>
 
@@ -194,7 +194,7 @@
             <tbody>
                 @forelse($rubricas as $r)
                     <tr>
-                        <td>{{ $r['codigo'] ?? '—' }}</td>
+                        <td>{{ $r['codigo'] ?? '&mdash;' }}</td>
                         <td>{{ $r['descricao'] }}</td>
                         <td class="valor">{{ $r['referencia'] ?? '' }}</td>
                         <td class="valor">{{ $r['tipo'] === 'P' ? number_format($r['valor'], 2, ',', '.') : '' }}</td>
@@ -243,7 +243,7 @@
     </div>
 
     <div class="footer">
-        Documento gerado eletronicamente — GENTE v3 — {{ $emitido_em }} |
+        Documento gerado eletronicamente &mdash; GENTE v3 &mdash; {{ $emitido_em }} |
         A autenticidade deste documento pode ser verificada no portal da Prefeitura.
     </div>
 </body>

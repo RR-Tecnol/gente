@@ -11,6 +11,7 @@ use App\Models\EventoDetalheFolha;
 use App\Models\Folha;
 use App\Models\Funcionario;
 use App\MyLibs\VinculoEnum;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -96,7 +97,7 @@ class FolhaParserService
             'DETALHE_FOLHA_DESCONTOS' => 0.0,
         ]);
 
-        $this->calcularRubricas($detalheFolha, $detalheEscala->FUNCIONARIO_ID, $diasTrabalhados, $faltas);
+        $this->calcularRubricas($detalheFolha, $detalheEscala->FUNCIONARIO_ID, $diasTrabalhados, $faltas, $folha->FOLHA_COMPETENCIA);
     }
 
     // =========================================================================
@@ -107,7 +108,8 @@ class FolhaParserService
         DetalheFolha $detalheFolha,
         int $funcionarioId,
         int $diasTrabalhados,
-        int $faltas
+        int $faltas,
+        string $competencia = ''
     ): void {
         // 1. Carrega o funcionário com sua lotação ativa e vínculo
         $funcionario = Funcionario::with([
@@ -132,14 +134,101 @@ class FolhaParserService
             $vinculo?->VINCULO_DESCRICAO
         );
 
-        Log::info("[FolhaParser] Func {$funcionarioId} | Vínculo: {$tipoVinculo} | Salário: {$salarioBase} | Dias: {$diasTrabalhados} | Faltas: {$faltas}");
+        // BUG-S2-07: abono por afastamentos remunerados (licença médica, maternidade, etc.)
+        $faltasEfetivas = $faltas;
+        if ($competencia && $faltas > 0) {
+            $compFormatada = strlen($competencia) === 6
+                ? substr($competencia, 0, 4) . '-' . substr($competencia, 4, 2)
+                : $competencia;
+            $diasAbonados = (int) DB::table('AFASTAMENTO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->whereIn('AFASTAMENTO_TIPO', [
+                    'LICENCA_MEDICA',
+                    'LICENCA_SAUDE',
+                    'LICENCA_MATERNIDADE',
+                    'LICENCA_PATERNIDADE',
+                    'LICENCA_NOJO',
+                    'LICENCA_GALA',
+                    'AFASTAMENTO_JUDICIAL',
+                    'AFASTAMENTO_REMUNERADO',
+                ])
+                ->where(function ($q) use ($compFormatada) {
+                    $q->whereRaw("strftime('%Y-%m', AFASTAMENTO_DATA_INICIO) = ?", [$compFormatada])
+                        ->orWhereRaw("strftime('%Y-%m', AFASTAMENTO_DATA_FIM) = ?", [$compFormatada]);
+                })
+                ->selectRaw("SUM(CASE WHEN AFASTAMENTO_DATA_FIM IS NULL THEN julianday('now') - julianday(AFASTAMENTO_DATA_INICIO) ELSE julianday(AFASTAMENTO_DATA_FIM) - julianday(AFASTAMENTO_DATA_INICIO) + 1 END) as total_dias")
+                ->value('total_dias') ?? 0;
+            $faltasEfetivas = max(0, $faltas - $diasAbonados);
+        }
+
+        // BUG-S2-05/06: dias reais do mês da competência (fevereiro=28/29, não 30)
+        $diasDoMes = 30;
+        if ($competencia) {
+            $ano = (int) substr($competencia, 0, 4);
+            $mes = (int) substr($competencia, strlen($competencia) === 6 ? 4 : 5, 2);
+            if ($ano > 0 && $mes >= 1 && $mes <= 12) {
+                $diasDoMes = cal_days_in_month(CAL_GREGORIAN, $mes, $ano);
+            }
+        }
+
+        // Carregar config do funcionário
+        $pontoConfig = \Illuminate\Support\Facades\DB::table('PONTO_CONFIG_FUNCIONARIO')
+            ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
+            ->first();
+
+        // Se há jornada financeira configurada (acordo informal), usar ela para fins de folha
+        // O ponto físico NÃO é alterado — só o cálculo de remuneração
+        if ($pontoConfig && $pontoConfig->JORNADA_FINANCEIRA_HORAS) {
+            // Substituir a carga horária do turno pela jornada acordada
+            $horasJornadaDia = (float) $pontoConfig->JORNADA_FINANCEIRA_HORAS;
+            // Log para auditoria
+            \Illuminate\Support\Facades\Log::info("Jornada financeira aplicada", [
+                'funcionario_id' => $funcionario->FUNCIONARIO_ID,
+                'jornada_financeira' => $horasJornadaDia,
+                'obs' => $pontoConfig->JORNADA_FINANCEIRA_OBS,
+            ]);
+        }
+
+        // TASK-A0: ajuste proporcional por admissão ou exoneração no mês de competência
+        if ($competencia) {
+            $anoComp = (int) substr($competencia, 0, 4);
+            $mesComp = (int) (strlen($competencia) === 6 ? substr($competencia, 4, 2) : substr($competencia, 5, 2));
+            $inicioMes = Carbon::create($anoComp, $mesComp, 1)->startOfDay();
+            $fimMes    = $inicioMes->copy()->endOfMonth()->startOfDay();
+
+            $dataAdmissao   = $funcionario->FUNCIONARIO_DATA_INICIO
+                ? Carbon::parse($funcionario->FUNCIONARIO_DATA_INICIO)->startOfDay()
+                : null;
+            $dataExoneracao = $funcionario->FUNCIONARIO_DATA_FIM
+                ? Carbon::parse($funcionario->FUNCIONARIO_DATA_FIM)->startOfDay()
+                : null;
+
+            // Admitido neste mês → contar a partir da admissão até o fim do mês
+            if ($dataAdmissao && $dataAdmissao->format('Ym') === (strlen($competencia) === 6 ? $competencia : str_replace('-', '', $competencia))) {
+                $diasTrabalhados = (int) $dataAdmissao->diffInDays($fimMes) + 1;
+                Log::info("[FolhaParser] TASK-A0 — Func {$funcionarioId} admitido em {$dataAdmissao->toDateString()} — proporcional: {$diasTrabalhados} dias.");
+            }
+
+            // Exonerado neste mês → contar do início do mês até a exoneração
+            if ($dataExoneracao && $dataExoneracao->format('Ym') === (strlen($competencia) === 6 ? $competencia : str_replace('-', '', $competencia))) {
+                $diasTrabalhados = (int) $inicioMes->diffInDays($dataExoneracao) + 1;
+                Log::info("[FolhaParser] TASK-A0 — Func {$funcionarioId} exonerado em {$dataExoneracao->toDateString()} — proporcional: {$diasTrabalhados} dias.");
+            }
+        }
+
+        Log::info("[FolhaParser] Func {$funcionarioId} | Vínculo: {$tipoVinculo} | Salário: {$salarioBase} | Dias: {$diasTrabalhados} | Faltas: {$faltasEfetivas} | DiasMes: {$diasDoMes}");
 
         // 3. Delega para o cálculo específico do vínculo
         $resultado = match ($tipoVinculo) {
-            VinculoEnum::SERVIDOR_EFETIVO => $this->calcularServidorEstatutario($salarioBase, $diasTrabalhados, $faltas),
-            VinculoEnum::CARGO_COMISSAO => $this->calcularCargoComissao($salarioBase, $diasTrabalhados, $faltas),
-            default => $this->calcularGenerico($salarioBase, $diasTrabalhados, $faltas),
+            VinculoEnum::SERVIDOR_EFETIVO => $this->calcularServidorEstatutario($salarioBase, $diasTrabalhados, $faltasEfetivas, $diasDoMes),
+            VinculoEnum::CARGO_COMISSAO => $this->calcularCargoComissao($salarioBase, $diasTrabalhados, $faltasEfetivas, $diasDoMes),
+            default => $this->calcularGenerico($salarioBase, $diasTrabalhados, $faltasEfetivas, $diasDoMes),
         };
+
+        // BUG-HE-02: incluir horas extras e plantões aprovados na competência
+        if ($competencia) {
+            $resultado = $this->incluirHorasExtras($resultado, $funcionarioId, $competencia, $tipoVinculo);
+        }
 
         // 4. Persiste os eventos (rubricas) individualmente
         $this->persistirRubricas($detalheFolha, $resultado['rubricas']);
@@ -147,6 +236,7 @@ class FolhaParserService
         // 5. Atualiza totais do cabeçalho
         $detalheFolha->DETALHE_FOLHA_PROVENTOS = $resultado['total_proventos'];
         $detalheFolha->DETALHE_FOLHA_DESCONTOS = $resultado['total_descontos'];
+        $detalheFolha->DETALHE_FOLHA_LIQUIDO = round($resultado['total_proventos'] - $resultado['total_descontos'], 2);
         $detalheFolha->save();
     }
 
@@ -165,10 +255,10 @@ class FolhaParserService
      *  - Falta: desconto proporcional (vencimento / 30 × faltas)
      *  - IRRF: sobre base (vencimento − INSS − deduções)
      */
-    private function calcularServidorEstatutario(float $salario, int $diasTrabalhados, int $faltas): array
+    private function calcularServidorEstatutario(float $salario, int $diasTrabalhados, int $faltas, int $diasMes = 30): array
     {
-        $vencimentoBruto = round($salario / 30 * ($diasTrabalhados + $faltas), 2); // base sobre mês cheio
-        $descontoFalta = round($salario / 30 * $faltas, 2);
+        $vencimentoBruto = round($salario / $diasMes * ($diasTrabalhados + $faltas), 2); // base sobre mês cheio (BUG-S2-06 corrigido)
+        $descontoFalta = round($salario / $diasMes * $faltas, 2);
         $inss = $this->impostos->calcularInssRpps($vencimentoBruto);
         $baseIrrf = max(0, $vencimentoBruto - $inss - $descontoFalta);
         $irrf = $this->impostos->calcularIrrf($baseIrrf);
@@ -226,10 +316,10 @@ class FolhaParserService
      *  - Falta: desconto proporcional
      *  - IRRF: sobre base (remuneração − INSS − falta)
      */
-    private function calcularCargoComissao(float $salario, int $diasTrabalhados, int $faltas): array
+    private function calcularCargoComissao(float $salario, int $diasTrabalhados, int $faltas, int $diasMes = 30): array
     {
-        $remuneracaoBruta = round($salario / 30 * ($diasTrabalhados + $faltas), 2);
-        $descontoFalta = round($salario / 30 * $faltas, 2);
+        $remuneracaoBruta = round($salario / $diasMes * ($diasTrabalhados + $faltas), 2); // BUG-S2-06 corrigido
+        $descontoFalta = round($salario / $diasMes * $faltas, 2);
         $inss = $this->impostos->calcularInssRgps($remuneracaoBruta);
         $fgts = round($remuneracaoBruta * 0.08, 2); // 8% — fica no FGTS, não desconta salário
         $baseIrrf = max(0, $remuneracaoBruta - $inss - $descontoFalta);
@@ -285,10 +375,10 @@ class FolhaParserService
      * Cálculo genérico para vínculos não mapeados.
      * Apenas vencimento proporcional sem descontos previdenciários.
      */
-    private function calcularGenerico(float $salario, int $diasTrabalhados, int $faltas): array
+    private function calcularGenerico(float $salario, int $diasTrabalhados, int $faltas, int $diasMes = 30): array
     {
-        $vencimento = round($salario / 30 * $diasTrabalhados, 2);
-        $descontoFalta = round($salario / 30 * $faltas, 2);
+        $vencimento = round($salario / $diasMes * $diasTrabalhados, 2); // BUG-S2-06 corrigido
+        $descontoFalta = round($salario / $diasMes * $faltas, 2);
 
         $rubricas = [];
 
@@ -342,6 +432,131 @@ class FolhaParserService
 
         Log::warning("[FolhaParser] Salário base não encontrado para lotação {$lotacaoAtiva->LOTACAO_ID}. Usando R$ 0.");
         return 0.0;
+    }
+
+    // =========================================================================
+    // BUG-HE-02 — HORAS EXTRAS E PLANTÕES NA FOLHA
+    // =========================================================================
+
+    /**
+     * Busca horas extras e plantões aprovados para o funcionário na competência
+     * e os inclui como proventos no resultado do cálculo.
+     *
+     * Recalcula o IRRF sobre a base acumulada (vencimento + horas extras).
+     * Marca os registros como INCLUIDA_FOLHA no banco.
+     *
+     * @param array  $resultado   resultado atual do calcularServidorEstatutario/calcularCargoComissao
+     * @param int    $funcionarioId
+     * @param string $competencia  AAAAMM ou AAAA-MM
+     * @param string $tipoVinculo  VinculoEnum::*
+     * @return array resultado atualizado com HE incluídas
+     */
+    private function incluirHorasExtras(array $resultado, int $funcionarioId, string $competencia, string $tipoVinculo): array
+    {
+        // Normalizar competência para AAAA-MM (formato das colunas COMPETENCIA)
+        $compFormatada = strlen($competencia) === 6
+            ? substr($competencia, 0, 4) . '-' . substr($competencia, 4, 2)
+            : $competencia;
+
+        $statusBusca = ['APROVADA', 'INCLUIDA_FOLHA'];
+
+        // ── Horas Extras ───────────────────────────────────────────────────────
+        $horasExtras = DB::table('HORA_EXTRA')
+            ->where('FUNCIONARIO_ID', $funcionarioId)
+            ->where('COMPETENCIA', $compFormatada)
+            ->whereIn('STATUS', $statusBusca)
+            ->get(['HORA_EXTRA_ID', 'TIPO_HORA_EXTRA', 'TOTAL_HORAS', 'PERCENTUAL', 'VALOR_CALCULADO']);
+
+        $idsHE = [];
+        foreach ($horasExtras as $he) {
+            $valor = (float) ($he->VALOR_CALCULADO ?? 0);
+            if ($valor <= 0)
+                continue;
+
+            $pct = (int) ($he->PERCENTUAL ?? 50);
+            $descricao = match (true) {
+                str_contains((string) $he->TIPO_HORA_EXTRA, '100') => "HORA EXTRA 100%",
+                str_contains((string) $he->TIPO_HORA_EXTRA, 'FERIADO') => "HORA EXTRA FERIADO",
+                default => "HORA EXTRA {$pct}%",
+            };
+
+            $resultado['rubricas'][] = [
+                'descricao' => $descricao,
+                'tipo' => 'P',
+                'valor' => $valor,
+            ];
+            $resultado['total_proventos'] += $valor;
+            $idsHE[] = $he->HORA_EXTRA_ID;
+        }
+
+        // ── Plantões Extras ────────────────────────────────────────────────────
+        $plantoes = DB::table('PLANTAO_EXTRA')
+            ->where('FUNCIONARIO_ID', $funcionarioId)
+            ->where('COMPETENCIA', $compFormatada)
+            ->whereIn('STATUS', $statusBusca)
+            ->get(['PLANTAO_EXTRA_ID', 'VALOR_CALCULADO', 'ADICIONAL_NOTURNO', 'VALOR_ADICIONAL_NOTURNO']);
+
+        $idsPE = [];
+        foreach ($plantoes as $pe) {
+            $valor = (float) ($pe->VALOR_CALCULADO ?? 0);
+            if ($valor <= 0)
+                continue;
+
+            $resultado['rubricas'][] = [
+                'descricao' => 'PLANTÃO EXTRA',
+                'tipo' => 'P',
+                'valor' => $valor,
+            ];
+            $resultado['total_proventos'] += $valor;
+            $idsPE[] = $pe->PLANTAO_EXTRA_ID;
+        }
+
+        // ── Recalcular IRRF sobre base acumulada (vencimento + HE + plantão) ──
+        if (!empty($idsHE) || !empty($idsPE)) {
+            // Remove IRRF anterior
+            $resultado['rubricas'] = array_filter(
+                $resultado['rubricas'],
+                fn($r) => $r['descricao'] !== 'IRRF'
+            );
+
+            // Base IRRF = proventos totais − INSS
+            $inssTotal = array_sum(
+                array_map(
+                    fn($r) => in_array($r['descricao'], ['INSS RPPS (14%)', 'INSS RGPS']) ? $r['valor'] : 0,
+                    $resultado['rubricas']
+                )
+            );
+            $baseIrrf = max(0, $resultado['total_proventos'] - $inssTotal);
+            $novoIrrf = $this->impostos->calcularIrrf($baseIrrf);
+
+            if ($novoIrrf > 0) {
+                $resultado['rubricas'][] = [
+                    'descricao' => 'IRRF',
+                    'tipo' => 'D',
+                    'valor' => $novoIrrf,
+                ];
+            }
+
+            // Recalcular totais corretamente
+            $resultado = $this->totalizarRubricas(array_values($resultado['rubricas']));
+
+            // Marcar como INCLUIDA_FOLHA
+            if (!empty($idsHE)) {
+                DB::table('HORA_EXTRA')
+                    ->whereIn('HORA_EXTRA_ID', $idsHE)
+                    ->update(['STATUS' => 'INCLUIDA_FOLHA', 'updated_at' => now()]);
+            }
+            if (!empty($idsPE)) {
+                DB::table('PLANTAO_EXTRA')
+                    ->whereIn('PLANTAO_EXTRA_ID', $idsPE)
+                    ->update(['STATUS' => 'INCLUIDA_FOLHA', 'updated_at' => now()]);
+            }
+
+            $qtd = count($idsHE) + count($idsPE);
+            Log::info("[FolhaParser] HE-02 — {$qtd} evento(s) de hora extra/plantão incluídos na folha do func {$funcionarioId}.");
+        }
+
+        return $resultado;
     }
 
     /**

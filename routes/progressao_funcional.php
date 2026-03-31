@@ -80,7 +80,8 @@ $avaliarEleg = function ($func, $cfg) use ($getVencBase) {
             ->where('CARREIRA_ID', $func->CARREIRA_ID)
             ->where('TABELA_CLASSE', $func->FUNCIONARIO_CLASSE)
             ->orderBy('TABELA_REFERENCIA_ORDEM')->get();
-        $idx = $ords->search(fn($r) => $r->TABELA_REFERENCIA === $func->FUNCIONARIO_REFERENCIA);
+        // BUG-PROG-01: usar == (não ===) para comparar strings/ints de referência
+        $idx = $ords->search(fn($r) => (string) $r->TABELA_REFERENCIA === (string) $func->FUNCIONARIO_REFERENCIA);
         if ($idx !== false && isset($ords[$idx + 1])) {
             $proxRef = $ords[$idx + 1]->TABELA_REFERENCIA;
             $novoVenc = (float) $ords[$idx + 1]->TABELA_VENCIMENTO_BASE;
@@ -364,6 +365,12 @@ Route::post('/progressao-funcional/aplicar/{id}', function (Request $request, $i
             return response()->json(['erro' => 'Servidor não encontrado.'], 404);
         $cfg = $getProgConfig($func->CARREIRA_ID);
         $eleg = $avaliarEleg($func, $cfg);
+        if ($eleg['elegivel_promocao'])
+            return response()->json([
+                'erro' => 'Servidor no teto da carreira.',
+                'teto' => true,
+                'bloqueios' => ['Servidor está na última referência da classe. É necessário promover de classe antes de progredir.'],
+            ], 409);
         if (!$eleg['elegivel'])
             return response()->json(['erro' => 'Não elegível.', 'bloqueios' => $eleg['bloqueios']], 422);
         $vencAt = $getVencBase($func);
@@ -451,6 +458,67 @@ Route::post('/progressao-funcional/promover/{id}', function (Request $request, $
     }
 });
 
+// BUG-EST-13: GET historico de aprovacoes de progressao
+Route::get('/progressao-funcional/historico', function () {
+    try {
+        $porPagina = min((int) request('per_page', 20), 100);
+        $pagina = max((int) request('page', 1), 1);
+        $setor = request('setor_id');
+        $busca = request('busca');
+
+        $query = DB::table('HISTORICO_FUNCIONAL as h')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'h.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
+            ->leftJoin('USUARIO as u', 'u.USUARIO_ID', '=', 'h.USUARIO_REGISTROU')
+            ->whereIn('h.HISTORICO_TIPO', ['progressao', 'promocao'])
+            ->select(
+                'h.HISTORICO_ID as id',
+                'h.HISTORICO_TIPO as tipo',
+                'p.PESSOA_NOME as servidor',
+                'c.CARGO_NOME as cargo',
+                'h.HISTORICO_CLASSE_ANTES as classe_de',
+                'h.HISTORICO_REFERENCIA_ANTES as ref_de',
+                'h.HISTORICO_CLASSE_DEPOIS as classe_para',
+                'h.HISTORICO_REFERENCIA_DEPOIS as ref_para',
+                'h.HISTORICO_SALARIO_ANTES as salario_de',
+                'h.HISTORICO_SALARIO_DEPOIS as salario_para',
+                'h.HISTORICO_ATO_ADMINISTRATIVO as ato',
+                'h.HISTORICO_DATA_EFEITO as data',
+                'u.USUARIO_NOME as aprovador',
+                'h.created_at'
+            )
+            ->orderByDesc('h.HISTORICO_DATA_EFEITO')
+            ->orderByDesc('h.HISTORICO_ID');
+
+        if ($busca) {
+            $query->where(function ($q) use ($busca) {
+                $q->whereRaw("LOWER(p.PESSOA_NOME) LIKE ?", ['%' . strtolower($busca) . '%'])
+                    ->orWhereRaw("LOWER(h.HISTORICO_ATO_ADMINISTRATIVO) LIKE ?", ['%' . strtolower($busca) . '%']);
+            });
+        }
+
+        if ($setor) {
+            $query->join('LOTACAO as lot', function ($j) {
+                $j->on('lot.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('lot.LOTACAO_DATA_FIM');
+            })->where('lot.SETOR_ID', $setor);
+        }
+
+        $total = $query->count();
+        $itens = $query->skip(($pagina - 1) * $porPagina)->take($porPagina)->get();
+
+        return response()->json([
+            'itens' => $itens,
+            'total' => $total,
+            'pagina' => $pagina,
+            'por_pagina' => $porPagina,
+            'total_paginas' => (int) ceil($total / $porPagina),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
 // -- Lista mensal de elegíveis (PERF-01: pré-fetch whereIn) --
 Route::get('/progressao-funcional/lista-elegiveis', function () use ($getProgConfig, $avaliarEleg, $getVencBase) {
     try {
@@ -484,16 +552,20 @@ Route::get('/progressao-funcional/lista-elegiveis', function () use ($getProgCon
             if (!$eleg['elegivel'])
                 return null;
             $venc = $getVencBase($func);
+            $anos = $func->FUNCIONARIO_DATA_INICIO ? (int) Carbon::now()->diffInYears(Carbon::parse($func->FUNCIONARIO_DATA_INICIO)) : 0;
+            $anu = $venc * (($cfg->CONFIG_ANUENIO_PCT / 100) * $anos);
             return [
                 'id' => $func->FUNCIONARIO_ID,
                 'nome' => $func->PESSOA_NOME,
                 'cargo' => $func->CARGO_NOME ?? '—',
                 'carreira' => $func->CARREIRA_NOME ?? '—',
                 'classe' => $func->FUNCIONARIO_CLASSE ?? '—',
+                // BUG-PROG-01: 'referencia' e 'salario_atual' são usados pela view
+                'referencia' => $func->FUNCIONARIO_REFERENCIA ?? '—',
                 'ref_atual' => $func->FUNCIONARIO_REFERENCIA ?? '—',
-                'ref_nova' => $eleg['proxima_referencia'],
-                'vencimento_atual' => $venc,
-                'vencimento_novo' => $eleg['novo_vencimento'],
+                'proxima_ref' => $eleg['proxima_referencia'],
+                'salario_atual' => round($venc + $anu, 2),
+                'novo_vencimento' => $eleg['novo_vencimento'],
                 'aumento' => round(($eleg['novo_vencimento'] ?? $venc) - $venc, 2),
                 'meses_na_ref' => $eleg['meses_na_referencia'],
                 'nota' => $eleg['nota_obtida'],

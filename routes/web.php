@@ -4,11 +4,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Os controllers legados do Vue 2 foram removidos em Mar/2026.
-// Todas as funcionalidades estão agora no gente-v3 (Vue 3 SPA)
+// Todas as funcionalidades estÃ£o agora no gente-v3 (Vue 3 SPA)
 // consumindo os endpoints /api/v3/* definidos abaixo.
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /*
 |--------------------------------------------------------------------------
@@ -36,35 +36,35 @@ Route::get('/', function (Request $request) {
     return view('auth.login');
 })->name('login');
 
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-// CSRF cookie — necessário para SPA inicializar sessão
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+// CSRF cookie â€” necessÃ¡rio para SPA inicializar sessÃ£o
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 Route::get('/csrf-cookie', function () {
     return response()->json(['csrfToken' => csrf_token()]);
 })->middleware('web');
 
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-// API DE AUTENTICAÇÃO — GENTE V3 SPA (Vue 3)
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+// API DE AUTENTICAÃ‡ÃƒO â€” GENTE V3 SPA (Vue 3)
 // Endpoints JSON consumidos pelo frontend Vue via axios.
-// Usam sessão Laravel (cookie-based), sem JWT/Sanctum.
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+// Usam sessÃ£o Laravel (cookie-based), sem JWT/Sanctum.
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function () { // SEC-05: rate limit login
 
-    // GET /api/auth/me — Retorna o usuário autenticado ou 401
+    // GET /api/auth/me â€” Retorna o usuÃ¡rio autenticado ou 401
     Route::get('/me', function (Request $request) {
         if (!Auth::check()) {
-            return response()->json(['error' => 'Não autenticado'], 401);
+            return response()->json(['error' => 'NÃ£o autenticado'], 401);
         }
         $user = Auth::user();
         $funcionario = $user->FUNCIONARIO_ID
             ? \App\Models\Funcionario::with('pessoa')->find($user->FUNCIONARIO_ID)
             : null;
-        // Usuário 'admin' sempre tem acesso total, independente da relação de perfis
+        // UsuÃ¡rio 'admin' sempre tem acesso total, independente da relaÃ§Ã£o de perfis
         if (strtolower($user->USUARIO_LOGIN) === 'admin') {
             $perfilNome = 'admin';
         } else {
             $perfilNome = optional($user->usuarioPerfis()->with('perfil')->first())->perfil->PERFIL_NOME ?? null;
-            if (!$perfilNome || strtolower(trim($perfilNome)) === 'usuário') {
+            if (!$perfilNome || strtolower(trim($perfilNome)) === 'usuÃ¡rio') {
                 $perfilNome = 'funcionario';
             }
         }
@@ -83,7 +83,7 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         ]);
     });
 
-    // POST /api/auth/login — Autentica e inicia sessão
+    // POST /api/auth/login â€” Autentica e inicia sessÃ£o
     Route::post('/login', function (Request $request) {
         $login = $request->input('USUARIO_LOGIN');
         $password = $request->input('USUARIO_SENHA');
@@ -92,7 +92,36 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
             return response()->json(['error' => 'Credenciais não informadas'], 422);
         }
 
-        // Sanitiza CPF (mantém admin e 'admin')
+        // SEC-PROD-03: verificar bloqueio por IP
+        $ip = $request->ip();
+        $janela = now()->subMinutes(15);
+        $tentativas = \Illuminate\Support\Facades\DB::table('LOGIN_ATTEMPTS')
+            ->where('IP', $ip)
+            ->where('SUCESSO', false)
+            ->where('TENTATIVA_EM', '>=', $janela)
+            ->count();
+
+        if ($tentativas >= 5) {
+            \Illuminate\Support\Facades\Log::channel('security')->warning('login_bloqueado_ip', ['ip' => $ip, 'tentativas' => $tentativas]);
+            return response()->json([
+                'error' => 'Muitas tentativas incorretas. Aguarde 15 minutos.',
+                'bloqueado_ate' => now()->addMinutes(15)->toIso8601String(),
+            ], 429);
+        }
+
+        // SEC-PROD-02: verificar reCAPTCHA v3 (score >= 0.5 = humano)
+        if ($request->has('recaptcha_token') && app()->isProduction()) {
+            $resp = \Illuminate\Support\Facades\Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret'   => env('RECAPTCHA_SECRET_KEY'),
+                'response' => $request->input('recaptcha_token'),
+                'remoteip' => $request->ip(),
+            ])->json();
+            if (!($resp['success'] ?? false) || ($resp['score'] ?? 0) < 0.5) {
+                return response()->json(['error' => 'Verificação de segurança falhou (bot detectado).'], 422);
+            }
+        }
+
+        // Sanitiza CPF (mantÃ©m admin e 'admin')
         if ($login !== 'admin') {
             $login = preg_replace('/[^0-9]/', '', $login);
         }
@@ -102,10 +131,11 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
             ->first();
 
         if (!$user) {
-            return response()->json(['error' => 'Credenciais inválidas ou usuário inativo'], 401);
+            \Illuminate\Support\Facades\DB::table('LOGIN_ATTEMPTS')->insert(['IP' => $ip, 'LOGIN' => $login, 'SUCESSO' => false, 'TENTATIVA_EM' => now()]);
+            return response()->json(['error' => 'Credenciais invÃ¡lidas ou usuÃ¡rio inativo'], 401);
         }
 
-        // Migração transparente MD5 → bcrypt
+        // MigraÃ§Ã£o transparente MD5 â†’ bcrypt
         if ($user->USUARIO_SENHA === md5($password)) {
             $user->USUARIO_SENHA = bcrypt($password);
             $user->USUARIO_ALTERAR_SENHA = 1;
@@ -113,6 +143,7 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         }
 
         if (!\Hash::check($password, $user->USUARIO_SENHA)) {
+            \Illuminate\Support\Facades\DB::table('LOGIN_ATTEMPTS')->insert(['IP' => $ip, 'LOGIN' => $login, 'SUCESSO' => false, 'TENTATIVA_EM' => now()]);
             return response()->json(['error' => 'Senha incorreta'], 401);
         }
 
@@ -120,7 +151,10 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
             return response()->json(['error' => 'Acesso expirado'], 401);
         }
 
+        \Illuminate\Support\Facades\DB::table('LOGIN_ATTEMPTS')->insert(['IP' => $ip, 'LOGIN' => $login, 'SUCESSO' => true, 'TENTATIVA_EM' => now()]);
+
         Auth::login($user, false);
+        \Illuminate\Support\Facades\Log::channel('security')->info('login_sucesso', ['usuario' => $login, 'ip' => $request->ip()]);
         $request->session()->regenerate();
         try {
             $user->USUARIO_ULTIMO_ACESSO = now();
@@ -131,7 +165,7 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         $funcionario = $user->FUNCIONARIO_ID
             ? \App\Models\Funcionario::with('pessoa')->find($user->FUNCIONARIO_ID)
             : null;
-        // Usuário 'admin' sempre tem acesso total, independente da relação de perfis
+        // UsuÃ¡rio 'admin' sempre tem acesso total, independente da relaÃ§Ã£o de perfis
         if (strtolower($user->USUARIO_LOGIN) === 'admin') {
             $perfilNome = 'admin';
         } else {
@@ -156,7 +190,7 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         ]);
     });
 
-    // POST /api/auth/logout — Encerra sessão
+    // POST /api/auth/logout â€” Encerra sessÃ£o
     Route::post('/logout', function (Request $request) {
         Auth::logout();
         $request->session()->invalidate();
@@ -164,10 +198,10 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         return response()->json(['ok' => true]);
     });
 
-    // POST /api/auth/change-password — Troca de senha
+    // POST /api/auth/change-password â€” Troca de senha
     Route::post('/change-password', function (Request $request) {
         if (!Auth::check()) {
-            return response()->json(['error' => 'Não autenticado'], 401);
+            return response()->json(['error' => 'NÃ£o autenticado'], 401);
         }
         $senhaAtual = $request->input('senha_atual');
         $senhaNova = $request->input('senha_nova');
@@ -175,8 +209,25 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         if (!$senhaAtual || !$senhaNova) {
             return response()->json(['error' => 'Informe a senha atual e a nova senha'], 422);
         }
-        if (strlen($senhaNova) < 6) {
-            return response()->json(['error' => 'A nova senha deve ter pelo menos 6 caracteres'], 422);
+
+        $validador = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'senha_nova' => [
+                'required',
+                'string',
+                'min:8',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[!@#$%^&*]/',
+                'not_regex:/^(.)\1+$/'
+            ]
+        ], [
+            'senha_nova.min' => 'A senha deve ter no mínimo 8 caracteres.',
+            'senha_nova.regex' => 'A senha não atende aos critérios de complexidade.',
+            'senha_nova.not_regex' => 'A senha não pode ser uma repetição do mesmo caractere.',
+        ]);
+
+        if ($validador->fails()) {
+            return response()->json(['error' => $validador->errors()->first()], 422);
         }
 
         $user = Auth::user();
@@ -193,8 +244,13 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
 
 });
 
-// [DEV-ONLY] Rotas de diagnóstico — disponíveis APENAS em ambiente local/dev
-// ⚠�? SEC-02: usar isLocal() — não depende de APP_ENV=production para proteger
+// Serve o SPA Vue para o link de autocadastro â€” rota PÃšBLICA (fora do grupo dev)
+Route::get('/autocadastro/{token}', function () {
+    return view('v3.app');
+});
+
+// [DEV-ONLY] Rotas de diagnÃ³stico â€” disponÃ­veis APENAS em ambiente local/dev
+// âš ï¸? SEC-02: usar isLocal() â€” nÃ£o depende de APP_ENV=production para proteger
 if (app()->isLocal() || app()->environment('development', 'testing')) {
     Route::prefix('dev')->group(function () {
 
@@ -229,23 +285,19 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
             ]);
         });
 
-        // GENTE 2.0 (VUE 3) Rota Pública Temporária para Testes de UI
+        // GENTE 2.0 (VUE 3) Rota PÃºblica TemporÃ¡ria para Testes de UI
         Route::get('/v3', function () {
             return view('v3.app');
         });
 
-        // Serve o SPA Vue para o link de autocadastro
-        Route::get('/autocadastro/{token}', function () {
-            return view('v3.app');
-        });
 
-        // [DEV-ONLY] Diagnóstico de conexão e login
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-// API V3 — GENTE SPA (Vue 3) — Ações do Perfil do Funcionário
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+        // [DEV-ONLY] DiagnÃ³stico de conexÃ£o e login
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+// API V3 â€” GENTE SPA (Vue 3) â€” AÃ§Ãµes do Perfil do FuncionÃ¡rio
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
         Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
-            // ── Funcionário: buscar perfil completo para o SPA ────────
+            // â”€â”€ FuncionÃ¡rio: buscar perfil completo para o SPA â”€â”€â”€â”€â”€â”€â”€â”€
             Route::get('/funcionarios/{id}', function ($id) {
                 $func = \App\Models\Funcionario::with([
                     'pessoa',
@@ -255,7 +307,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ])->find($id);
 
                 if (!$func)
-                    return response()->json(['message' => 'Funcionário não encontrado'], 404);
+                    return response()->json(['message' => 'FuncionÃ¡rio nÃ£o encontrado'], 404);
 
                 $lotacaoAtiva = $func->lotacoes->where('LOTACAO_DATA_FIM', null)->last()
                     ?? $func->lotacoes->last();
@@ -285,17 +337,17 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ]);
             });
 
-            // ── Funcionário: atualizar dados pessoais ─────────────────
+            // â”€â”€ FuncionÃ¡rio: atualizar dados pessoais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Route::put('/funcionarios/{id}', function ($id, \Illuminate\Http\Request $request) {
                 $func = \App\Models\Funcionario::with('pessoa')->find($id);
                 if (!$func)
-                    return response()->json(['message' => 'Funcionário não encontrado'], 404);
+                    return response()->json(['message' => 'FuncionÃ¡rio nÃ£o encontrado'], 404);
 
-                // Dados do funcionário
+                // Dados do funcionÃ¡rio
                 $func->fill($request->only(['FUNCIONARIO_MATRICULA', 'FUNCIONARIO_DATA_INICIO', 'FUNCIONARIO_DATA_FIM', 'FUNCIONARIO_OBSERVACAO']));
                 $func->save();
 
-                // Dados da pessoa — aceita flat (como o formulário Vue envia) ou aninhado em 'pessoa'
+                // Dados da pessoa â€” aceita flat (como o formulÃ¡rio Vue envia) ou aninhado em 'pessoa'
                 $pessoaData = $request->has('pessoa') ? $request->input('pessoa', []) : $request->all();
 
                 if ($func->pessoa) {
@@ -306,7 +358,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                         'PESSOA_DATA_NASCIMENTO',
                         'PESSOA_SEXO',
                         'PESSOA_ESTADO_CIVIL',
-                        // PESSOA_ESCOLARIDADE — coluna não existe na tabela PESSOA
+                        // PESSOA_ESCOLARIDADE â€” coluna nÃ£o existe na tabela PESSOA
                         'PESSOA_TIPO_SANGUE',
                         'PESSOA_RH_MAIS',
                         'PESSOA_PCD',
@@ -331,7 +383,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                     ])));
                     $func->pessoa->save();
 
-                    // Campos que precisam ser salvos como texto (UF sigla e nome de município)
+                    // Campos que precisam ser salvos como texto (UF sigla e nome de municÃ­pio)
                     $extra = [];
                     if (isset($pessoaData['UF_ID_RG']) && $pessoaData['UF_ID_RG'] !== '') {
                         $extra['UF_ID_RG'] = $pessoaData['UF_ID_RG'];
@@ -349,7 +401,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 return response()->json(['ok' => true, 'message' => 'Cadastro atualizado com sucesso']);
             });
 
-            // ── Documentos do funcionário (por PESSOA_ID) ─────────────
+            // â”€â”€ Documentos do funcionÃ¡rio (por PESSOA_ID) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Route::get('/funcionarios/{id}/documentos', function ($id) {
                 $func = \App\Models\Funcionario::with('pessoa')->find($id);
                 if (!$func || !$func->pessoa)
@@ -368,7 +420,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 return response()->json($docs);
             });
 
-            // ── Histórico funcional: lotações, férias, afastamentos ───
+            // â”€â”€ HistÃ³rico funcional: lotaÃ§Ãµes, fÃ©rias, afastamentos â”€â”€â”€
             Route::get('/funcionarios/{id}/historico', function ($id) {
                 $func = \App\Models\Funcionario::with([
                     'lotacoes.setor',
@@ -379,13 +431,13 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ])->find($id);
 
                 if (!$func)
-                    return response()->json(['message' => 'Não encontrado'], 404);
+                    return response()->json(['message' => 'NÃ£o encontrado'], 404);
 
                 $lotacoes = $func->lotacoes->map(fn($l) => [
                     'tipo' => 'lotacao',
-                    'setor' => optional($l->setor)->SETOR_NOME ?? '—',
-                    'cargo' => optional($l->atribuicaoLotacoes->last()?->atribuicao)->ATRIBUICAO_NOME ?? '—',
-                    'vinculo' => optional($l->vinculo)->VINCULO_NOME ?? '—',
+                    'setor' => optional($l->setor)->SETOR_NOME ?? 'â€”',
+                    'cargo' => optional($l->atribuicaoLotacoes->last()?->atribuicao)->ATRIBUICAO_NOME ?? 'â€”',
+                    'vinculo' => optional($l->vinculo)->VINCULO_NOME ?? 'â€”',
                     'inicio' => $l->LOTACAO_DATA_INICIO,
                     'fim' => $l->LOTACAO_DATA_FIM,
                     'ativa' => $l->LOTACAO_DATA_FIM === null,
@@ -413,7 +465,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ]);
             });
 
-            // ── Escalas do funcionário ────────────────────────────────
+            // â”€â”€ Escalas do funcionÃ¡rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Route::get('/funcionarios/{id}/escalas', function ($id) {
                 $escalas = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA as de')
                     ->join('ESCALA as e', 'e.ESCALA_ID', '=', 'de.ESCALA_ID')
@@ -435,7 +487,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 return response()->json($escalas);
             });
 
-            // ── Listagem de funcionários com busca (para FuncionariosView) ──
+            // â”€â”€ Listagem de funcionÃ¡rios com busca (para FuncionariosView) â”€â”€
             Route::get('/funcionarios', function (\Illuminate\Http\Request $request) {
                 $q = $request->input('q', '');
                 $per = min((int) $request->input('per_page', 12), 50);
@@ -476,7 +528,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ]);
             });
 
-            // ── Dependentes do funcionário (IRRF) ─────────────────────
+            // â”€â”€ Dependentes do funcionÃ¡rio (IRRF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Route::get('/funcionarios/{id}/dependentes', function ($id) {
                 try {
                     $deps = \Illuminate\Support\Facades\DB::table('PESSOA_DEPENDENTE')
@@ -494,7 +546,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                         ->get();
                     return response()->json(['dependentes' => $deps]);
                 } catch (\Throwable $e) {
-                    // Tabela pode não existir ainda — retorna vazio
+                    // Tabela pode nÃ£o existir ainda â€” retorna vazio
                     return response()->json(['dependentes' => []]);
                 }
             });
@@ -565,7 +617,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
             }
         });
 
-        // ⚠�? SEC-01: /dev/set-senha DELETADO DEFINITIVAMENTE — não recriar
+        // âš ï¸? SEC-01: /dev/set-senha DELETADO DEFINITIVAMENTE â€” nÃ£o recriar
 
         Route::get('/criar-admin', function () {
             $loginAdmin = 'admin';
@@ -599,7 +651,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
         Route::get('/seed-dados', function () {
             $user = App\Models\Usuario::where('USUARIO_LOGIN', 'admin')->first();
             if (!$user)
-                return response()->json(['erro' => 'Usuário admin não encontrado. Acesse /dev/criar-admin primeiro.'], 400);
+                return response()->json(['erro' => 'UsuÃ¡rio admin nÃ£o encontrado. Acesse /dev/criar-admin primeiro.'], 400);
 
             $pessoa = App\Models\Pessoa::where('USUARIO_ID', $user->USUARIO_ID)->first();
             if (!$pessoa) {
@@ -663,17 +715,18 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
     }); // fim if isLocal
 }
 
-// �?�?�? API V3 — Endpoints para o SPA Vue 3 �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+// â•?â•?â•? API V3 â€” Endpoints para o SPA Vue 3 â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
 
-    // ──────────────────────────────────────────────────────────────
-    // ARQ-01: módulos extraídos do web.php (rotas /funcionarios, /ponto, /folhas)
-    // ──────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ARQ-01: mÃ³dulos extraÃ­dos do web.php (rotas /funcionarios, /ponto, /folhas)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/funcionarios.php';
     require __DIR__ . '/folha.php';
+    require __DIR__ . '/motor.php'; // Sprint 3 — endpoints Motor de Folha (vínculos, rubricas, adicionais)
 
-    // GET /api/v3/escalas — Lista escalas para o seletor da MatrizEscalaView
+    // GET /api/v3/escalas â€” Lista escalas para o seletor da MatrizEscalaView
     Route::get('/escalas', function (\Illuminate\Http\Request $request) {
         $escalas = App\Models\Escala::with(['setor'])
             ->orderBy('ESCALA_COMPETENCIA', 'desc')
@@ -682,13 +735,13 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ->map(fn($e) => [
                 'ESCALA_ID' => $e->ESCALA_ID,
                 'ESCALA_COMPETENCIA' => $e->ESCALA_COMPETENCIA,
-                'setor' => $e->setor?->SETOR_NOME ?? '—',
+                'setor' => $e->setor?->SETOR_NOME ?? 'â€”',
                 'situacao' => $e->ESCALA_SITUACAO ?? null,
             ]);
         return response()->json($escalas);
     });
 
-    // GET /api/v3/escalas/{id} — Grade completa de uma escala
+    // GET /api/v3/escalas/{id} â€” Grade completa de uma escala
     Route::get('/escalas/{id}', function (int $id) {
         $escala = App\Models\Escala::with([
             'setor',
@@ -697,12 +750,12 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             'detalheEscalas.atribuicao',
         ])->findOrFail($id);
 
-        // Calcula ano/mês da competência (formato "MM/YYYY")
+        // Calcula ano/mÃªs da competÃªncia (formato "MM/YYYY")
         [$mes, $ano] = explode('/', $escala->ESCALA_COMPETENCIA . '/2026');
         $ano = (int) ($ano ?? 2026);
         $mes = (int) ($mes ?? 1) - 1; // 0-index para o Vue
 
-        // Feriados do mês
+        // Feriados do mÃªs
         $mesAno = \Carbon\Carbon::createFromDate($ano, $mes + 1, 1)->format('Y-m-d');
         $feriados = App\Models\Feriado::buscarFeriadoMesAno($mesAno)
             ->map(fn($f) => ['data' => $f->FERIADO_DATA])->values();
@@ -711,7 +764,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             return [
                 'detalhe_id' => $de->DETALHE_ESCALA_ID,
                 'funcionario_id' => $de->FUNCIONARIO_ID,
-                'nome' => $de->funcionario?->pessoa?->PESSOA_NOME ?? 'Funcionário',
+                'nome' => $de->funcionario?->pessoa?->PESSOA_NOME ?? 'FuncionÃ¡rio',
                 'cargo' => $de->atribuicao?->ATRIBUICAO_NOME ?? 'Servidor',
                 'itens' => $de->detalheEscalaItens->map(fn($i) => [
                     'turno_id' => $i->TURNO_ID,
@@ -734,31 +787,74 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
-    // ──────────────────────────────────────────────────────────────
-    // Módulos externos (cada arquivo herda prefix/middleware do grupo)
-    // ──────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // MÃ³dulos externos (cada arquivo herda prefix/middleware do grupo)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/esocial.php';
     require __DIR__ . '/consignacao.php';
     require __DIR__ . '/diarias.php';
     require __DIR__ . '/rpps.php';
-    require __DIR__ . '/progressao_funcional.php';
     require __DIR__ . '/exoneracao.php';
     require __DIR__ . '/hora_extra.php';
     require __DIR__ . '/verba_indenizatoria.php';
+    require __DIR__ . '/pesquisa.php';
+    require __DIR__ . '/ouvidoria_admin.php';
+    require __DIR__ . '/relatorios.php';
     require __DIR__ . '/estagiarios.php';
-    // Sprint 6 — novos módulos
+    // Sprint 6 â€” novos mÃ³dulos
     require __DIR__ . '/acumulacao.php';
     require __DIR__ . '/transparencia.php';
     require __DIR__ . '/pss.php';
     require __DIR__ . '/terceirizados.php';
     require __DIR__ . '/sagres.php';
-    // Sprint 5 — banco de horas e atestados
+    // Sprint 5 â€” banco de horas e atestados
     require __DIR__ . '/banco_horas.php';
     require __DIR__ . '/atestados.php';
+    // Refatoracao 30/03/2026 - blocos extraidos do web.php
+    require __DIR__ . '/cargos_salarios.php';
+    require __DIR__ . '/ferias_v3.php';
+    require __DIR__ . '/comunicados.php';
+    require __DIR__ . '/meu_perfil.php';
+    require __DIR__ . '/ponto_eletronico.php';
+    require __DIR__ . '/plantoes_sobreaviso.php';
+    require __DIR__ . '/atestados_v3.php';
+    require __DIR__ . '/contratos_v3.php';
+    require __DIR__ . '/medicina.php';
+    require __DIR__ . '/declaracoes.php';
+    require __DIR__ . '/ouvidoria.php';
+    require __DIR__ . '/gestor.php';
+    require __DIR__ . '/organograma_v3.php';
+    require __DIR__ . '/beneficios.php';
+    require __DIR__ . '/medicina_admin.php';
+    require __DIR__ . '/seguranca_trabalho.php';
+    require __DIR__ . '/treinamentos.php';
+    require __DIR__ . '/consignatarias.php'; // Bloco B — Gestão de Consignatárias
+    require __DIR__ . '/compras.php'; // Bloco D — ERP Administrativo
+    require __DIR__ . '/almoxarifado.php';
+    require __DIR__ . '/patrimonio.php';
+    require __DIR__ . '/contratos_admin.php'; // Bloco D4
+    require __DIR__ . '/frotas.php'; // Bloco D5
+    require __DIR__ . '/escala_saude.php'; // GAP-ESCALA-SAUDE — furos de cobertura
+    require __DIR__ . '/decimo_terceiro.php'; // GAP-13 — 13º Salário
+    require __DIR__ . '/quadro_vagas.php'; // GAP-QV — Quadro de Vagas
+    require __DIR__ . '/simulador_folha.php'; // GAP-SIM + GAP-LRF
+    require __DIR__ . '/caged.php'; // GAP-CAG — CAGED MTE
+    require __DIR__ . '/sefip.php'; // GAP-GFP — SEFIP/GFIP CEF
+    require __DIR__ . '/dirf.php'; // GAP-DIR — DIRF Receita Federal
+    require __DIR__ . '/rais.php'; // GAP-RAS — RAIS MTE
+    require __DIR__ . '/siconfi.php'; // GAP-SIC — SICONFI STN/LRF
+    require __DIR__ . '/ponto_terceirizado.php'; // GAP-PONT — Ponto Terceirizados
 
-    // ──────────────────────────────────────────────────────────────
-    // GAP-01: Notificações — stub para parar os 404 do polling
-    // ──────────────────────────────────────────────────────────────
+    // GAP-OSS — Monitor OSS (admin-only, mock PoC)
+    Route::middleware('perfil:ADMIN')->group(function () {
+        require __DIR__ . '/oss.php';
+    });
+
+
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // GAP-01: NotificaÃ§Ãµes â€” stub para parar os 404 do polling
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/notificacoes', function () {
         return response()->json(['notificacoes' => [], 'nao_lidas' => 0]);
     });
@@ -769,10 +865,10 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json(['ok' => true]);
     });
 
-    // ──────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // GAP-03: Endpoint centralizado de busca de servidor
-    // Todas as views devem usar /servidores/buscar (não /exoneracao/buscar)
-    // ──────────────────────────────────────────────────────────────
+    // Todas as views devem usar /servidores/buscar (nÃ£o /exoneracao/buscar)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/servidores/buscar', function (\Illuminate\Http\Request $request) {
         $q = $request->q ?? '';
         return response()->json([
@@ -810,10 +906,10 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
-    // ──────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // GAP-04: Lookup de secretarias (unidades ativas)
-    // Usado por FolhaPagamentoView e outros módulos
-    // ──────────────────────────────────────────────────────────────
+    // Usado por FolhaPagamentoView e outros mÃ³dulos
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/secretarias', function () {
         return response()->json([
             'unidades' => \Illuminate\Support\Facades\DB::table('UNIDADE')
@@ -823,8 +919,8 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
-    // ── GAP-07: Holerite em PDF (print-view HTML — DomPDF bloqueado por conflito PHP 8.1)
-    // Rota pública dentro do grupo auth que retorna HTML com @media print otimizado
+    // â”€â”€ GAP-07: Holerite em PDF (print-view HTML â€” DomPDF bloqueado por conflito PHP 8.1)
+    // Rota pÃºblica dentro do grupo auth que retorna HTML com @media print otimizado
     // O frontend Vue chama window.open('/api/v3/holerite-pdf/{id}') e aciona window.print()
     Route::get('/holerite-pdf/{detalheId}', function ($detalheId) {
         try {
@@ -853,10 +949,10 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 ->first();
 
             if (!$detalhe) {
-                abort(404, 'Holerite não encontrado.');
+                abort(404, 'Holerite nÃ£o encontrado.');
             }
 
-            // Segurança: servidor só pode ver o próprio holerite
+            // SeguranÃ§a: servidor sÃ³ pode ver o prÃ³prio holerite
             $user = Auth::user();
             $funcId = optional(DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID)->first())->FUNCIONARIO_ID;
             if ($funcId && $detalhe->FUNCIONARIO_ID !== $funcId) {
@@ -867,8 +963,10 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 } catch (\Throwable $ex) {
                     $isAdmin = true;
                 }
-                if (!$isAdmin)
-                    abort(403, 'Acesso não autorizado.');
+                if (!$isAdmin) {
+                    \Illuminate\Support\Facades\Log::channel('security')->warning('acesso_negado', ['usuario' => Auth::id(), 'rota' => request()->path(), 'ip' => request()->ip()]);
+                    abort(403, 'Acesso nÃ£o autorizado.');
+                }
             }
 
             $comp = $detalhe->competencia;
@@ -879,20 +977,20 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             $servidor = [
                 'nome' => $detalhe->nome,
                 'matricula' => $detalhe->matricula,
-                'cpf' => $detalhe->cpf ? substr_replace(preg_replace('/\D/', '', $detalhe->cpf), '***', 3, 6) : '—',
+                'cpf' => $detalhe->cpf ? substr_replace(preg_replace('/\D/', '', $detalhe->cpf), '***', 3, 6) : 'â€”',
                 'cargo' => $detalhe->cargo,
                 'lotacao' => $detalhe->lotacao . ($detalhe->unidade ? ' / ' . $detalhe->unidade : ''),
                 'regime_prev' => $detalhe->regime_prev,
-                'banco' => '—',
-                'agencia' => '—',
-                'conta' => '—',
+                'banco' => 'â€”',
+                'agencia' => 'â€”',
+                'conta' => 'â€”',
             ];
 
             $totalProventos = floatval($detalhe->DETALHE_FOLHA_PROVENTOS ?? 0);
             $totalDescontos = floatval($detalhe->DETALHE_FOLHA_DESCONTOS ?? 0);
-            $liquido = floatval($detalhe->DETALHE_FOLHA_LIQUIDO ?? ($totalProventos - $totalDescontos));
+            $liquido = floatval($detalhe->DETALHE_FOLHA_LIQUIDO) ?: ($totalProventos - $totalDescontos);
 
-            // Rubricas — se houver tabela DETALHE_FOLHA_RUBRICA (opcional)
+            // Rubricas â€” se houver tabela DETALHE_FOLHA_RUBRICA (opcional)
             $rubricas = [];
             try {
                 $rubricas = DB::table('DETALHE_FOLHA_RUBRICA')
@@ -906,7 +1004,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                         'valor' => floatval($r->VALOR ?? 0),
                     ])->toArray();
             } catch (\Throwable $ex) {
-                // Fallback: linhas sintéticas com os totais
+                // Fallback: linhas sintÃ©ticas com os totais
                 if ($totalProventos > 0)
                     $rubricas[] = ['codigo' => '001', 'descricao' => 'Vencimento Base', 'referencia' => '', 'tipo' => 'P', 'valor' => $totalProventos];
                 if ($totalDescontos > 0)
@@ -928,7 +1026,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── GAP-08: Totais da folha por secretaria (SEC-08 aware) ─────
+    // â”€â”€ GAP-08: Totais da folha por secretaria (SEC-08 aware) â”€â”€â”€â”€â”€
     Route::get('/folhas/por-secretaria', function (\Illuminate\Http\Request $request) {
         try {
             $comp = $request->competencia ?? now()->format('Y-m');
@@ -945,7 +1043,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                         ->where('USUARIO_ID', $user->USUARIO_ID)
                         ->pluck('UNIDADE_ID')->toArray();
                 }
-            } catch (\Throwable $ex) { /* tabela não existe */
+            } catch (\Throwable $ex) { /* tabela nÃ£o existe */
             }
 
             $q = DB::table('DETALHE_FOLHA as df')
@@ -1002,7 +1100,7 @@ Route::prefix('ponto')->middleware(['auth', 'web', 'CompartilharVariaveis', 'usu
     Route::delete('/registros/{id}', [App\Http\Controllers\PontoEletronicoController::class, "excluirManual"]);
     Route::post('/importar-afd', [App\Http\Controllers\PontoEletronicoController::class, "importarAfd"]);
 
-    // Apuração e Justificativas
+    // ApuraÃ§Ã£o e Justificativas
     Route::get('/apuracao', [App\Http\Controllers\PontoEletronicoController::class, "listarApuracao"]);
     Route::get('/justificativas', [App\Http\Controllers\PontoEletronicoController::class, "listarJustificativas"]);
     Route::post('/justificativas/{id}/aprovar', [App\Http\Controllers\PontoEletronicoController::class, "aprovarJustificativa"]);
@@ -1012,7 +1110,7 @@ Route::prefix('ponto')->middleware(['auth', 'web', 'CompartilharVariaveis', 'usu
     Route::get('/terminais', [App\Http\Controllers\PontoEletronicoController::class, "listarTerminais"]);
 });
 
-// ── Módulo 3: Quiosque Ponto Eletrônico (Acesso Público com Token) ──
+// â”€â”€ MÃ³dulo 3: Quiosque Ponto EletrÃ´nico (Acesso PÃºblico com Token) â”€â”€
 Route::get('/quiosque/{token}', [App\Http\Controllers\PontoEletronicoController::class, "quiosqueView"])->name('quiosque.view');
 Route::post('/quiosque/{token}/bater', [App\Http\Controllers\PontoEletronicoController::class, "registrarQuiosque"]);
 
@@ -1021,16 +1119,16 @@ Auth::routes();
 Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->group(function () {
     // Rota legado /home removida 15/03/2026
 
-    // Rota de Acesso ao Holerite Cidadão pelo SPA
+    // Rota de Acesso ao Holerite CidadÃ£o pelo SPA
     Route::get('/meus-holerites', [App\Http\Controllers\ContraChequeController::class, 'listarMinhasFolhas'])->name('meus_holerites.listar');
     Route::get('/contra-cheque/{funcionarioId}/{competencia}/pdf', [App\Http\Controllers\ContraChequeController::class, 'emitirPdf'])->name('contra-cheque');
     Route::get('/remessa/{folhaId}/download', [App\Http\Controllers\RemessaBancariaController::class, 'downloadRemessa']);
 
     // Bloco certidao removido 15/03/2026
-;
+    ;
 
     // Bloco cartorio removido 15/03/2026
-;
+    ;
 
     Route::prefix('turno')->group(function () {
         Route::get('/', [TurnoController::class, 'view']);
@@ -1160,7 +1258,7 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
     });
 
     // Rotas legadas de abono_falta e anexo_abono_falta removidas.
-    // Substitúídas pelas rotas /api/v3/abono-faltas e /api/v3/abonos-gestao.
+    // SubstitÃºÃ­das pelas rotas /api/v3/abono-faltas e /api/v3/abonos-gestao.
 
     Route::prefix('dossie')->group(function () {
         Route::get('/', [DossieController::class, "view"]);
@@ -1586,7 +1684,7 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::delete("delete", [PessoaOcupacaoController::class, "delete"])->name('pessoa_ocupacao.delete');
     });
 
-    /** RELATÓRIOS */
+    /** RELATÃ“RIOS */
     Route::prefix("relatorio")->group(function () {
         Route::get("imprimir_escala/{escala_id}", [RelatorioController::class, "imprimirEscala"]);
         Route::get("imprimir_lotacao/{lotacao_id}", [RelatorioController::class, "imprimirLotacao"]);
@@ -1767,19 +1865,19 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::put('alterar', [UsuarioSetorController::class, "alterar"]);
     });
 
-    // ── Holerite / Contra-cheque (PDF) ─────────────────────────────────────
+    // â”€â”€ Holerite / Contra-cheque (PDF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::prefix('holerite')->group(function () {
         Route::get('pdf/{detalheFolhaId}', [App\Http\Controllers\HoleriteController::class, 'pdf'])
             ->name('holerite.pdf');
     });
 
-    // ── Alertas de RH ────────────────────────────────────────────────────────
+    // â”€â”€ Alertas de RH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('ferias/alerta-vencer', [FeriasController::class, 'alertaVencer'])
         ->name('ferias.alerta-vencer');
     Route::get('afastamento/alerta-expirar', [AfastamentoController::class, 'alertaExpirar'])
         ->name('afastamento.alerta-expirar');
 
-    // ── Remessa Bancária CNAB 240 ────────────────────────────────────────────
+    // â”€â”€ Remessa BancÃ¡ria CNAB 240 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::prefix('remessa')->group(function () {
         Route::get('/', [App\Http\Controllers\RemessaBancariaController::class, 'view'])->name('remessa.view');
         Route::get('folhas', [App\Http\Controllers\RemessaBancariaController::class, 'folhas'])->name('remessa.folhas');
@@ -1787,14 +1885,14 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::get('resumo/{folhaId}', [App\Http\Controllers\RemessaBancariaController::class, 'resumo'])->name('remessa.resumo');
     });
 
-    // ── Configurações do Sistema ─────────────────────────────────────────────
+    // â”€â”€ ConfiguraÃ§Ãµes do Sistema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::prefix('configuracoes')->group(function () {
         Route::get('/', [App\Http\Controllers\ConfiguracaoSistemaController::class, 'index'])->name('configuracoes.index');
         Route::get('api', [App\Http\Controllers\ConfiguracaoSistemaController::class, 'api'])->name('configuracoes.api');
         Route::put('{chave}', [App\Http\Controllers\ConfiguracaoSistemaController::class, 'update'])->name('configuracoes.update');
     });
 
-    // ── Ponto Eletrônico (opcional — habilitado via CONFIGURACAO_SISTEMA) ────
+    // â”€â”€ Ponto EletrÃ´nico (opcional â€” habilitado via CONFIGURACAO_SISTEMA) â”€â”€â”€â”€
     Route::middleware('modulo.ativo:MODULO_PONTO_ATIVO')->prefix('ponto')->group(function () {
         Route::get('view', fn() => view('ponto.index'))->name('ponto.view');
 
@@ -1804,7 +1902,7 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::post('registros/afd', [App\Http\Controllers\RegistroPontoController::class, 'importarAfd'])->name('ponto.registros.afd');
         Route::delete('registros/{id}', [App\Http\Controllers\RegistroPontoController::class, 'destroy'])->name('ponto.registros.destroy');
 
-        // Apuração
+        // ApuraÃ§Ã£o
         Route::get('apuracao', [App\Http\Controllers\ApuracaoPontoController::class, 'index'])->name('ponto.apuracao.index');
         Route::post('apuracao/calcular', [App\Http\Controllers\ApuracaoPontoController::class, 'calcular'])->name('ponto.apuracao.calcular');
         Route::post('apuracao/{id}/fechar', [App\Http\Controllers\ApuracaoPontoController::class, 'fechar'])->name('ponto.apuracao.fechar');
@@ -1828,12 +1926,12 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
 Route::get('registrar', [PessoaController::class, "registro_view"]);
 Route::post('registrar', [PessoaController::class, "registro"]);
 
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-//  API v3 — Vue SPA (autenticado via sessão Web do Laravel)
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+//  API v3 â€” Vue SPA (autenticado via sessÃ£o Web do Laravel)
+// â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
-    // ── Dashboard KPIs ─────────────────────────────────────────────
+    // â”€â”€ Dashboard KPIs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/dashboard', function () {
         try {
             $mes = now()->month;
@@ -1857,7 +1955,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ]);
         } catch (\Throwable $e) {
             return response()->json([
-                'total_funcionarios' => '—',
+                'total_funcionarios' => 'â€”',
                 'abonos_pendentes' => 0,
                 'folha_status' => 'Aberta',
                 'folha_competencia' => now()->format('Y-m'),
@@ -1865,21 +1963,21 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Holerites do usuário logado ─────────────────────────────
+    // â”€â”€ Holerites do usuÃ¡rio logado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/meus-holerites', function () {
         $user = Auth::user();
         if (!$user)
-            return response()->json(['erro' => 'Não autenticado'], 401);
+            return response()->json(['erro' => 'NÃ£o autenticado'], 401);
 
-        // Busca o funcionário vinculado ao usuário
+        // Busca o funcionÃ¡rio vinculado ao usuÃ¡rio
         $funcionario = optional($user)->funcionario
             ?? \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
 
         if (!$funcionario) {
-            return response()->json(['erro' => 'Nenhum funcionário vinculado a este usuário.'], 404);
+            return response()->json(['erro' => 'Nenhum funcionÃ¡rio vinculado a este usuÃ¡rio.'], 404);
         }
 
-        // Busca detalhe das folhas do funcionário
+        // Busca detalhe das folhas do funcionÃ¡rio
         $detalhes = \App\Models\DetalheFolha::with('folha')
             ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
             ->orderByDesc('FOLHA_ID')
@@ -1900,14 +1998,14 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json($holerites);
     });
 
-    // ── Admin: Vínculos (configuração do motor de folha) ────────────────────────
+    // â”€â”€ Admin: VÃ­nculos (configuraÃ§Ã£o do motor de folha) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/admin/vinculos', function () {
         return response()->json(
             \App\Models\Vinculo::orderBy('VINCULO_NOME')
                 ->get()
                 ->map(fn($v) => [
                     'VINCULO_ID' => $v->VINCULO_ID,
-                    'VINCULO_DESCRICAO' => $v->VINCULO_NOME,   // mapeia nome real → alias front
+                    'VINCULO_DESCRICAO' => $v->VINCULO_NOME,   // mapeia nome real â†’ alias front
                     'VINCULO_NOME' => $v->VINCULO_NOME,
                     'VINCULO_SIGLA' => $v->VINCULO_SIGLA,
                     'VINCULO_ATIVO' => $v->VINCULO_ATIVO,
@@ -1932,7 +2030,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json(\App\Models\Vinculo::find($id));
     });
 
-    // ── Funcionários (listagem paginada) ────────────────────────
+    // â”€â”€ FuncionÃ¡rios (listagem paginada) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/funcionarios', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\Funcionario::with(['pessoa', 'lotacoes.setor', 'lotacoes.vinculo'])
             ->when(
@@ -1962,9 +2060,9 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json($paginado);
     });
 
-    // ── Perfil de um funcionário ────────────────────────────────
+    // â”€â”€ Perfil de um funcionÃ¡rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/funcionarios/{id}', function ($id) {
-        $f = \App\Models\Funcionario::with(['pessoa', 'lotacoes.setor', 'lotacoes.vinculo', 'lotacoes.atribuicao'])
+        $f = \App\Models\Funcionario::with(['pessoa', 'lotacoes.setor', 'lotacoes.vinculo', 'lotacoes.atribuicaoLotacoes.atribuicao'])
             ->findOrFail($id);
         $ultimaLotacao = $f->lotacoes->sortByDesc('LOTACAO_ID')->first();
         $detalhes = \App\Models\DetalheFolha::with('folha')
@@ -1978,7 +2076,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 'liquido' => (float) ($d->DETALHE_FOLHA_LIQUIDO ?? 0),
             ]);
 
-        // Busca o e-mail do usuário vinculado ao funcionário
+        // Busca o e-mail do usuÃ¡rio vinculado ao funcionÃ¡rio
         $usuario = \App\Models\Usuario::where('FUNCIONARIO_ID', $f->FUNCIONARIO_ID)->first();
 
         $funcionarioArray = $f->toArray();
@@ -1991,7 +2089,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
-    // ── Dados de apoio (selectboxes do modal) ───────────────────
+    // â”€â”€ Dados de apoio (selectboxes do modal) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/apoio', function () {
         $setores = \App\Models\Setor::with('unidade')
             ->orderBy('SETOR_NOME')->get()
@@ -2010,7 +2108,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json(compact('setores', 'vinculos', 'atribuicoes'));
     });
 
-    // ── Criar novo funcionário ──────────────────────────────────
+    // â”€â”€ Criar novo funcionÃ¡rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::post('/funcionarios', function (\Illuminate\Http\Request $request) {
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
@@ -2050,7 +2148,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             $pessoa->PESSOA_DATA_CADASTRO = now()->toDateString();
             $pessoa->save();
 
-            // Campos que precisam ser salvos como texto (sigla UF e nome de município)
+            // Campos que precisam ser salvos como texto (sigla UF e nome de municÃ­pio)
             $extraPessoa = [];
             if ($request->filled('UF_ID_RG')) {
                 $extraPessoa['UF_ID_RG'] = $request->UF_ID_RG;
@@ -2064,7 +2162,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                     ->update($extraPessoa);
             }
 
-            // 2. Cria o Funcionário
+            // 2. Cria o FuncionÃ¡rio
             $funcionario = new \App\Models\Funcionario();
             $funcionario->PESSOA_ID = $pessoa->PESSOA_ID;
             $funcionario->fill($request->only([
@@ -2078,7 +2176,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             $funcionario->FUNCIONARIO_DATA_CADASTRO = now()->toDateString();
             $funcionario->save();
 
-            // 3. Cria a Lotação (se setor ou vínculo foi informado)
+            // 3. Cria a LotaÃ§Ã£o (se setor ou vÃ­nculo foi informado)
             if ($request->filled('SETOR_ID') || $request->filled('VINCULO_ID')) {
                 $lotacao = new \App\Models\Lotacao();
                 $lotacao->fill([
@@ -2089,7 +2187,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 ]);
                 $lotacao->save();
 
-                // 4. Cria AtribuicaoLotacao se atribuição foi informada
+                // 4. Cria AtribuicaoLotacao se atribuiÃ§Ã£o foi informada
                 if ($request->filled('ATRIBUICAO_ID')) {
                     $atLotacao = new \App\Models\AtribuicaoLotacao([
                         'LOTACAO_ID' => $lotacao->LOTACAO_ID,
@@ -2118,25 +2216,25 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             \Illuminate\Support\Facades\DB::commit();
 
             return response()->json([
-                'message' => 'Funcionário cadastrado com sucesso.',
+                'message' => 'FuncionÃ¡rio cadastrado com sucesso.',
                 'funcionario_id' => $funcionario->FUNCIONARIO_ID,
                 'pessoa_id' => $pessoa->PESSOA_ID,
             ], 201);
 
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
-            \Illuminate\Support\Facades\Log::error('Erro ao cadastrar funcionário: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Erro ao cadastrar funcionÃ¡rio: ' . $e->getMessage());
             return response()->json(['erro' => 'Erro ao cadastrar: ' . $e->getMessage()], 500);
         }
     });
 
-    // ── Atualizar funcionário (completo) ────────────────────────
+    // â”€â”€ Atualizar funcionÃ¡rio (completo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::put('/funcionarios/{id}', function ($id, \Illuminate\Http\Request $request) {
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
             $f = \App\Models\Funcionario::with(['pessoa', 'lotacoes'])->findOrFail($id);
 
-            // Atualiza dados do Funcionário
+            // Atualiza dados do FuncionÃ¡rio
             $f->fill($request->only([
                 'FUNCIONARIO_MATRICULA',
                 'FUNCIONARIO_DATA_INICIO',
@@ -2153,7 +2251,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 // O Vue envia os campos de pessoa aninhados em { pessoa: { PESSOA_NOME: ..., ... } }
                 $pessoaData = $request->input('pessoa', []);
 
-                // Campos permitidos — mescla do sub-objeto com campos de raiz (retrocompatibilidade)
+                // Campos permitidos â€” mescla do sub-objeto com campos de raiz (retrocompatibilidade)
                 $camposPermitidos = [
                     'PESSOA_NOME',
                     'PESSOA_CPF_NUMERO',
@@ -2200,7 +2298,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 $f->pessoa->save();
 
 
-                // Campos que precisam ser salvos como texto (sigla UF e nome de município)
+                // Campos que precisam ser salvos como texto (sigla UF e nome de municÃ­pio)
                 $extraPessoa = [];
                 $ufRg = $pessoaData['UF_ID_RG'] ?? $request->input('UF_ID_RG');
                 $cidadeNatural = $pessoaData['CIDADE_ID_NATURAL'] ?? $request->input('CIDADE_ID_NATURAL');
@@ -2217,7 +2315,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 }
             }
 
-            // Atualiza ou cria lotação ativa
+            // Atualiza ou cria lotaÃ§Ã£o ativa
             $lotacaoAtiva = $f->lotacoes->where('LOTACAO_DATA_FIM', null)->sortByDesc('LOTACAO_ID')->first();
             if ($request->filled('SETOR_ID') || $request->filled('VINCULO_ID')) {
                 if ($lotacaoAtiva) {
@@ -2233,7 +2331,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 }
             }
 
-            // Atualiza e-mail do usuário vinculado
+            // Atualiza e-mail do usuÃ¡rio vinculado
             if ($request->filled('email') || $request->filled('USUARIO_EMAIL')) {
                 $novoEmail = $request->email ?? $request->USUARIO_EMAIL;
                 \App\Models\Usuario::where('FUNCIONARIO_ID', $f->FUNCIONARIO_ID)
@@ -2248,22 +2346,22 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Inativar funcionário (soft delete) ──────────────────────
+    // â”€â”€ Inativar funcionÃ¡rio (soft delete) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::delete('/funcionarios/{id}', function ($id, \Illuminate\Http\Request $request) {
         $f = \App\Models\Funcionario::findOrFail($id);
         $f->FUNCIONARIO_DATA_FIM = $request->FUNCIONARIO_DATA_FIM ?? now()->toDateString();
         $f->FUNCIONARIO_TIPO_SAIDA = $request->FUNCIONARIO_TIPO_SAIDA ?? null;
         $f->save();
 
-        // Fecha lotações ativas
+        // Fecha lotaÃ§Ãµes ativas
         \App\Models\Lotacao::where('FUNCIONARIO_ID', $id)
             ->whereNull('LOTACAO_DATA_FIM')
             ->update(['LOTACAO_DATA_FIM' => $f->FUNCIONARIO_DATA_FIM]);
 
-        return response()->json(['message' => 'Funcionário inativado com sucesso.']);
+        return response()->json(['message' => 'FuncionÃ¡rio inativado com sucesso.']);
     });
 
-    // ── Documentos ──────────────────────────────────────────────
+    // â”€â”€ Documentos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/funcionarios/{id}/documentos', function ($id) {
         $f = \App\Models\Funcionario::findOrFail($id);
         $docs = \App\Models\Documento::with('tipoDocumento')
@@ -2276,7 +2374,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json($docs);
     });
 
-    // ── Histórico funcional ─────────────────────────────────────
+    // â”€â”€ HistÃ³rico funcional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/funcionarios/{id}/historico', function ($id) {
         $f = \App\Models\Funcionario::with([
             'lotacoes.setor',
@@ -2298,7 +2396,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             'tipo' => 'ferias',
             'data' => $v->FERIAS_DATA_INICIO,
             'fim' => $v->FERIAS_DATA_FIM,
-            'label' => 'Férias',
+            'label' => 'FÃ©rias',
             'extra' => null,
         ]);
         $afastamentos = $f->afastamentos->map(fn($a) => [
@@ -2318,7 +2416,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
-    // ── Escalas ─────────────────────────────────────────────────
+    // â”€â”€ Escalas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/funcionarios/{id}/escalas', function ($id) {
         $itens = \App\Models\DetalheEscala::with(['escala', 'detalheEscalaItens.turno'])
             ->where('FUNCIONARIO_ID', $id)
@@ -2336,7 +2434,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json($itens);
     });
 
-    // ── Escalas — listagem de todas as escalas para o MatrizEscalaView ─────────
+    // â”€â”€ Escalas â€” listagem de todas as escalas para o MatrizEscalaView â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/escalas', function (\Illuminate\Http\Request $request) {
         try {
             $escalas = \Illuminate\Support\Facades\DB::table('ESCALA as e')
@@ -2351,14 +2449,14 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Escalas — grade de uma escala específica (funcionários + itens) ─────────
+    // â”€â”€ Escalas â€” grade de uma escala especÃ­fica (funcionÃ¡rios + itens) â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/escalas/{id}', function ($id) {
         try {
             $escala = \Illuminate\Support\Facades\DB::table('ESCALA')->where('ESCALA_ID', $id)->first();
             if (!$escala)
                 return response()->json(['escala' => null, 'funcionarios' => [], 'feriados' => []]);
 
-            // Detecta ano/mês a partir de ESCALA_COMPETENCIA (ex: "2026-02" ou "Fev/2026")
+            // Detecta ano/mÃªs a partir de ESCALA_COMPETENCIA (ex: "2026-02" ou "Fev/2026")
             $ano = null;
             $mes = null;
             if (preg_match('/(\d{4})-(\d{2})/', $escala->ESCALA_COMPETENCIA ?? '', $m)) {
@@ -2392,7 +2490,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 return [
                     'detalhe_id' => $d->detalhe_id,
                     'funcionario_id' => $d->funcionario_id,
-                    'nome' => $d->nome ?? 'Funcionário',
+                    'nome' => $d->nome ?? 'FuncionÃ¡rio',
                     'cargo' => $d->cargo ?? '',
                     'itens' => $itens,
                 ];
@@ -2408,7 +2506,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Escalas — salvar grade (substitui /escala/salvar-matriz legado) ─────────
+    // â”€â”€ Escalas â€” salvar grade (substitui /escala/salvar-matriz legado) â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::post('/escalas/{id}/salvar', function ($id, \Illuminate\Http\Request $request) {
         try {
             $detalheId = $request->detalhe_escala_id;
@@ -2443,7 +2541,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             if (!$funcionario)
                 return response()->json(['registros' => [], 'apuracao' => null]);
 
-            // Competência: YYYY-MM ou mês/ano corrente
+            // CompetÃªncia: YYYY-MM ou mÃªs/ano corrente
             $comp = $request->competencia ?? now()->format('Y-m');
             [$ano, $mes] = explode('-', $comp);
 
@@ -2477,7 +2575,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
             $registros = collect($porDia)->map(fn($batidas, $dia) => ['dia' => $dia, 'batidas' => $batidas])->values();
 
-            // Apuração do mês
+            // ApuraÃ§Ã£o do mÃªs
             $apuracao = \Illuminate\Support\Facades\DB::table('APURACAO_PONTO')
                 ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
                 ->where('APURACAO_COMPETENCIA', $comp)
@@ -2499,8 +2597,8 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     });
 
 
-    // ── Faltas e Atrasos (visão RH/gestor) ─────────────────────
-    // ── Atestados Médicos ────────────────────────────────────────
+    // â”€â”€ Faltas e Atrasos (visÃ£o RH/gestor) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ Atestados MÃ©dicos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/atestados', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2538,7 +2636,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('upload.safe');
 
     Route::delete('/atestados/{id}', function ($id) {
         try {
@@ -2549,7 +2647,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Plantões Extras ──────────────────────────────────────────
+    // â”€â”€ PlantÃµes Extras â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/plantoes-extras', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2588,7 +2686,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Escala de Sobreaviso ─────────────────────────────────────
+    // â”€â”€ Escala de Sobreaviso â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/sobreaviso', function (\Illuminate\Http\Request $request) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2638,7 +2736,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Relatórios — stats do hero ───────────────────────────────
+    // â”€â”€ RelatÃ³rios â€” stats do hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/relatorios/stats', function () {
         try {
             $funcionarios = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
@@ -2663,8 +2761,8 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Agenda ───────────────────────────────────────────────────
-    // ── Medicina do Trabalho ─────────────────────────────────────
+    // â”€â”€ Agenda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ Medicina do Trabalho â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/medicina', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2719,36 +2817,6 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Benefícios ───────────────────────────────────────────────
-    Route::get('/beneficios', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$funcionario)
-                return response()->json(['fallback' => true, 'ativos' => [], 'disponiveis' => []]);
-
-            // Benefícios ativos do funcionário (pivot)
-            $ativos = \Illuminate\Support\Facades\DB::table('BENEFICIO as b')
-                ->join('FUNCIONARIO_BENEFICIO as fb', 'fb.BENEFICIO_ID', '=', 'b.BENEFICIO_ID')
-                ->where('fb.FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->where('fb.FB_STATUS', 'ativo')
-                ->select('b.*', 'fb.FB_VALOR as BENEFICIO_VALOR_REAL')
-                ->get();
-
-            // Benefícios disponíveis (não ativados)
-            $idsAtivos = $ativos->pluck('BENEFICIO_ID');
-            $disponiveis = \Illuminate\Support\Facades\DB::table('BENEFICIO')
-                ->whereNotIn('BENEFICIO_ID', $idsAtivos)
-                ->where('BENEFICIO_ATIVO', 1)
-                ->get();
-
-            $fallback = $ativos->isEmpty() && $disponiveis->isEmpty();
-            return response()->json(['ativos' => $ativos, 'disponiveis' => $disponiveis, 'fallback' => $fallback]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'ativos' => [], 'disponiveis' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
     Route::post('/beneficios/solicitar', function (\Illuminate\Http\Request $request) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2760,7 +2828,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 'SOLICITACAO_STATUS' => 'pendente',
                 'SOLICITACAO_OBS' => $request->nome,
             ]);
-            return response()->json(['message' => 'Solicitação registrada.'], 201);
+            return response()->json(['message' => 'SolicitaÃ§Ã£o registrada.'], 201);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
@@ -2778,7 +2846,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             $inicio = sprintf('%04d-%02d-01', $ano, $mes);
             $fim = sprintf('%04d-%02d-%02d', $ano, $mes, cal_days_in_month(CAL_GREGORIAN, $mes, $ano));
 
-            // Setor atual do funcionário (lotação sem data_fim)
+            // Setor atual do funcionÃ¡rio (lotaÃ§Ã£o sem data_fim)
             $lotacao = \Illuminate\Support\Facades\DB::table('LOTACAO')
                 ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
                 ->whereNull('LOTACAO_DATA_FIM')
@@ -2791,12 +2859,12 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 ->where(function ($q) use ($funcionario, $setorId) {
                     // 1. Eventos globais (todos veem)
                     $q->where('AGENDA_ESCOPO', 'global')
-                        // 2. Eventos do setor do funcionário
+                        // 2. Eventos do setor do funcionÃ¡rio
                         ->orWhere(function ($q2) use ($setorId) {
                         $q2->where('AGENDA_ESCOPO', 'setor')
                             ->where('AGENDA_SETOR_ID', $setorId);
                     })
-                        // 3. Eventos pessoais próprios
+                        // 3. Eventos pessoais prÃ³prios
                         ->orWhere(function ($q2) use ($funcionario) {
                         $q2->where('AGENDA_ESCOPO', 'pessoal')
                             ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID);
@@ -2833,7 +2901,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 ->first();
             $setorId = $lotacao->SETOR_ID ?? null;
 
-            // Verifica se é gestor (CARGO_GESTAO = 1) ou admin (PERFIL_ID ≤ 2)
+            // Verifica se Ã© gestor (CARGO_GESTAO = 1) ou admin (PERFIL_ID â‰¤ 2)
             $isGestor = \Illuminate\Support\Facades\DB::table('LOTACAO as l')
                 ->join('ATRIBUICAO_LOTACAO as al', 'al.LOTACAO_ID', '=', 'l.LOTACAO_ID')
                 ->join('ATRIBUICAO as a', 'a.ATRIBUICAO_ID', '=', 'al.ATRIBUICAO_ID')
@@ -2881,7 +2949,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     });
 
 
-    // ── Banco de Horas ───────────────────────────────────────────
+    // â”€â”€ Banco de Horas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/banco-horas', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2907,7 +2975,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Contratos / Vínculos ─────────────────────────────────────
+    // â”€â”€ Contratos / VÃ­nculos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/contratos', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2932,9 +3000,9 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 ->map(fn($h) => [
                     'id' => $h->HISTORICO_ID,
                     'tipo' => $h->HISTORICO_TIPO ?? 'Servidor',
-                    'regime' => $h->HISTORICO_REGIME ?? 'Estatutário',
-                    'cargo' => $h->HISTORICO_CARGO ?? ($f->CARGO_NOME ?? '—'),
-                    'setor' => $h->HISTORICO_SETOR ?? ($f->SETOR_NOME ?? '—'),
+                    'regime' => $h->HISTORICO_REGIME ?? 'EstatutÃ¡rio',
+                    'cargo' => $h->HISTORICO_CARGO ?? ($f->CARGO_NOME ?? 'â€”'),
+                    'setor' => $h->HISTORICO_SETOR ?? ($f->SETOR_NOME ?? 'â€”'),
                     'inicio' => $h->HISTORICO_DATA_INICIO,
                     'fim' => $h->HISTORICO_DATA_FIM,
                     'ativo' => is_null($h->HISTORICO_DATA_FIM),
@@ -2943,10 +3011,10 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             return response()->json([
                 'fallback' => false,
                 'contrato' => [
-                    'cargo' => $f->CARGO_NOME ?? '—',
-                    'setor' => $f->SETOR_NOME ?? '—',
+                    'cargo' => $f->CARGO_NOME ?? 'â€”',
+                    'setor' => $f->SETOR_NOME ?? 'â€”',
                     'admissao' => $f->FUNCIONARIO_DATA_ADMISSAO ?? null,
-                    'matricula' => $f->FUNCIONARIO_MATRICULA ?? '—',
+                    'matricula' => $f->FUNCIONARIO_MATRICULA ?? 'â€”',
                     'vinculo' => $f->FUNCIONARIO_VINCULO ?? 'Servidor',
                     'cpf' => $f->PESSOA_CPF ?? null,
                     'pis' => $f->PESSOA_PIS ?? null,
@@ -2958,7 +3026,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Progressão Funcional ─────────────────────────────────────
+    // â”€â”€ ProgressÃ£o Funcional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/progressao-funcional', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -2972,10 +3040,10 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 ->map(fn($p) => [
                     'id' => $p->PROGRESSAO_ID,
                     'nivel' => $p->PROGRESSAO_NIVEL,
-                    'referencia' => $p->PROGRESSAO_REFERENCIA ?? '—',
+                    'referencia' => $p->PROGRESSAO_REFERENCIA ?? 'â€”',
                     'salario' => (float) ($p->PROGRESSAO_SALARIO ?? 0),
                     'data' => $p->PROGRESSAO_DATA,
-                    'tipo' => $p->PROGRESSAO_TIPO ?? 'Progressão',
+                    'tipo' => $p->PROGRESSAO_TIPO ?? 'ProgressÃ£o',
                     'reajuste' => (float) ($p->PROGRESSAO_REAJUSTE ?? 0),
                     'obs' => $p->PROGRESSAO_OBS ?? null,
                     'ativa' => (bool) ($p->PROGRESSAO_ATIVA ?? false),
@@ -2998,7 +3066,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Declarações / Requerimentos ──────────────────────────────
+    // â”€â”€ DeclaraÃ§Ãµes / Requerimentos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/declaracoes', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -3016,7 +3084,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Ouvidoria Admin (RH/Admin) ────────────────────────────────────
+    // â”€â”€ Ouvidoria Admin (RH/Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/ouvidoria/admin', function () {
         try {
             $rows = \Illuminate\Support\Facades\DB::table('OUVIDORIA as o')
@@ -3096,9 +3164,9 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('upload.safe');
 
-    // ── Ouvidoria ────────────────────────────────────────────────
+    // â”€â”€ Ouvidoria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/ouvidoria', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -3144,7 +3212,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         }
     });
 
-    // ── Faltas e Atrasos (visão RH/gestor) ─────────────────────
+    // â”€â”€ Faltas e Atrasos (visÃ£o RH/gestor) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/abonos-gestao', function (\Illuminate\Http\Request $request) {
         try {
             $query = \Illuminate\Support\Facades\DB::table('ABONO_FALTA as af')
@@ -3162,7 +3230,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 )
                 ->orderByDesc('af.ABONO_FALTA_DATA_INICIO');
 
-            // Filtra pelo período, mas SEMPRE inclui pendentes de qualquer mês
+            // Filtra pelo perÃ­odo, mas SEMPRE inclui pendentes de qualquer mÃªs
             if ($request->filled('mes') && $request->filled('ano')) {
                 $mes = $request->mes;
                 $ano = $request->ano;
@@ -3176,11 +3244,11 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
             $abonos = $query->take(200)->get()->map(fn($a) => [
                 'id' => $a->id,
-                'funcionario' => $a->funcionario ?? 'Funcionário #' . ($a->funcionario_id ?? '?'),
+                'funcionario' => $a->funcionario ?? 'FuncionÃ¡rio #' . ($a->funcionario_id ?? '?'),
                 'funcionario_id' => $a->funcionario_id,
                 'cargo' => '',
                 'setor' => '',
-                'tipo' => 'falta', // Todos os abonos são de falta; ABONO_FALTA_TIPO é o subtipo
+                'tipo' => 'falta', // Todos os abonos sÃ£o de falta; ABONO_FALTA_TIPO Ã© o subtipo
                 'subtipo' => $a->tipo, // medico, declaracao, luto, etc.
                 'data' => $a->data,
                 'duracao' => '8h 00min',
@@ -3204,7 +3272,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json(['message' => 'Status atualizado.']);
     });
 
-    // ── Abono de Faltas ─────────────────────────────────────────
+    // â”€â”€ Abono de Faltas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/abono-faltas', function () {
         $user = Auth::user();
         $funcionario = optional($user)->funcionario
@@ -3238,7 +3306,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ?? \App\Models\Funcionario::where('FUNCIONARIO_ID', $user->FUNCIONARIO_ID ?? 0)->first();
 
         if (!$funcionario)
-            return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
+            return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o encontrado.'], 404);
 
         $nomeArquivo = null;
         if ($request->hasFile('comprovante') && $request->file('comprovante')->isValid()) {
@@ -3258,7 +3326,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
 
         return response()->json(['abono_id' => $id, 'comprovante' => $nomeArquivo], 201);
-    });
+    })->middleware('upload.safe');
 
     Route::put('/abono-faltas/{id}', function ($id, \Illuminate\Http\Request $request) {
         $data = [
@@ -3285,10 +3353,10 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         \Illuminate\Support\Facades\DB::table('ABONO_FALTA')
             ->where('ABONO_FALTA_ID', $id)
             ->delete();
-        return response()->json(['message' => 'Excluído com sucesso.']);
+        return response()->json(['message' => 'ExcluÃ­do com sucesso.']);
     });
 
-    // ── Férias e Licenças do usuário logado ─────────────────────
+    // â”€â”€ FÃ©rias e LicenÃ§as do usuÃ¡rio logado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/ferias', function () {
         $user = Auth::user();
         $funcionario = optional($user)->funcionario
@@ -3317,7 +3385,34 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json($ferias);
     });
 
-    // ── Faltas e Atrasos do usuário logado ──────────────────────
+    // BUG-EST-14: GET /ferias/sobreposicao
+    Route::get('/ferias/sobreposicao', function (\Illuminate\Http\Request $request) {
+        $inicio = $request->inicio;
+        $fim    = $request->fim;
+        if (!$inicio || !$fim) {
+            return response()->json(['sobreposicao' => false, 'membros' => [], 'pct' => 0]);
+        }
+        $user = Auth::user();
+        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        if (!$func) return response()->json(['sobreposicao' => false, 'membros' => [], 'pct' => 0]);
+        $setorId = DB::table('LOTACAO')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->whereNull('LOTACAO_DATA_FIM')->value('SETOR_ID');
+        if (!$setorId) return response()->json(['sobreposicao' => false, 'membros' => [], 'pct' => 0]);
+        $totalSetor = DB::table('LOTACAO as l')->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'l.FUNCIONARIO_ID')->where('l.SETOR_ID', $setorId)->whereNull('l.LOTACAO_DATA_FIM')->whereNull('f.FUNCIONARIO_DATA_FIM')->count();
+        $emFerias = DB::table('FERIAS as frs')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'frs.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->join('LOTACAO as l', function ($j) { $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM'); })
+            ->where('l.SETOR_ID', $setorId)
+            ->where('frs.FUNCIONARIO_ID', '<>', $func->FUNCIONARIO_ID)
+            ->where('frs.FERIAS_DATA_INICIO', '<=', $fim)
+            ->where('frs.FERIAS_DATA_FIM', '>=', $inicio)
+            ->select('p.PESSOA_NOME as nome', 'frs.FERIAS_DATA_INICIO as inicio', 'frs.FERIAS_DATA_FIM as fim')
+            ->get();
+        $pct = $totalSetor > 0 ? round(($emFerias->count() / $totalSetor) * 100) : 0;
+        return response()->json(['sobreposicao' => $emFerias->count() > 0, 'membros' => $emFerias, 'total_setor' => $totalSetor, 'pct' => $pct]);
+    });
+
+    // â”€â”€ Faltas e Atrasos do usuÃ¡rio logado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/faltas-atrasos', function (\Illuminate\Http\Request $request) {
         $user = Auth::user();
         $funcionario = optional($user)->funcionario
@@ -3359,7 +3454,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
-    // ── Banco de Horas do usuário logado ────────────────────────
+    // â”€â”€ Banco de Horas do usuÃ¡rio logado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/banco-horas', function (\Illuminate\Http\Request $request) {
         $user = Auth::user();
         $funcionario = optional($user)->funcionario
@@ -3397,7 +3492,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
     // GET /abono-faltas removido deste grupo (use /api/v3/abono-faltas).
 
-    // ── Folhas de Pagamento (listagem) ──────────────────────────
+    // â”€â”€ Folhas de Pagamento (listagem) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/folhas', function (\Illuminate\Http\Request $request) {
         $folhas = \App\Models\Folha::with(['tipoFolha', 'historicoUltimo.statusEscala'])
             ->orderByDesc('FOLHA_COMPETENCIA')
@@ -3416,7 +3511,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json(['folhas' => $folhas]);
     });
 
-    // ── Substituições de escala ─────────────────────────────────
+    // â”€â”€ SubstituiÃ§Ãµes de escala â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/substituicoes', function (\Illuminate\Http\Request $request) {
         $subs = \App\Models\SubstituicaoEscala::with([
             'funcionario.pessoa',
@@ -3437,7 +3532,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json($subs);
     });
 
-    // ── Escalas (listagem resumida) ─────────────────────────────
+    // â”€â”€ Escalas (listagem resumida) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/escalas', function (\Illuminate\Http\Request $request) {
         $escalas = \App\Models\Escala::with(['setor.unidade', 'historicoUltimo'])
             ->withCount('detalheEscalas')
@@ -3457,7 +3552,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         return response()->json(['escalas' => $escalas]);
     });
 
-    // ── Escala individual (detalhada para o Vue) ────────────────
+    // â”€â”€ Escala individual (detalhada para o Vue) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/escalas/{id}', function ($id) {
         $e = \App\Models\Escala::with([
             'setor.unidade',
@@ -3506,5475 +3601,11 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
-});
+});  // fim do bloco dashboard api/v3
 
-
-//
-//  API V3  CARGOS E SAL�?RIOS (eSocial S-1030 / S-1040 / S-2200)
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  Cargos  Listagem
-    Route::get('/cargos', function (\Illuminate\Http\Request $request) {
-        $query = \App\Models\Cargo::query();
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sq) use ($q) {
-                $sq->where('CARGO_NOME', 'like', "%$q%")->orWhere('CARGO_SIGLA', 'like', "%$q%");
-            });
-        }
-        if ($request->filled('ativo')) {
-            $query->where('CARGO_ATIVO', (int) $request->ativo);
-        }
-        $cargos = $query->orderBy('CARGO_NOME')->get()->map(fn($c) => [
-            'cargo_id' => $c->CARGO_ID,
-            'nome' => $c->CARGO_NOME,
-            'sigla' => $c->CARGO_SIGLA ?? null,
-            'cbo' => $c->CARGO_CBO ?? null,
-            'descricao' => $c->CARGO_DESCRICAO ?? null,
-            'escolaridade' => $c->CARGO_ESCOLARIDADE ?? null,
-            'remuneracao' => (float) ($c->CARGO_REMUNERACAO ?? 0),
-            'gestao' => (bool) ($c->CARGO_GESTAO ?? false),
-            'ativo' => (bool) ($c->CARGO_ATIVO ?? true),
-            'data_inicio' => $c->CARGO_DATA_INICIO ?? null,
-            'data_fim' => $c->CARGO_DATA_FIM ?? null,
-        ]);
-        return response()->json(['cargos' => $cargos, 'total' => $cargos->count()]);
-    });
-
-    //  Cargos  Criar
-    Route::post('/cargos', function (\Illuminate\Http\Request $request) {
-        try {
-            $cargo = new \App\Models\Cargo();
-            $cargo->CARGO_NOME = $request->CARGO_NOME;
-            $cargo->CARGO_SIGLA = $request->CARGO_SIGLA ?? null;
-            $cargo->CARGO_ESCOLARIDADE = $request->CARGO_ESCOLARIDADE ?? null;
-            $cargo->CARGO_GESTAO = $request->CARGO_GESTAO ?? 0;
-            $cargo->CARGO_ATIVO = 1;
-            try {
-                $cargo->CARGO_CBO = $request->CARGO_CBO ?? null;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $cargo->CARGO_DESCRICAO = $request->CARGO_DESCRICAO ?? null;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $cargo->CARGO_DATA_INICIO = $request->CARGO_DATA_INICIO ?? now()->toDateString();
-            } catch (\Throwable $e) {
-            }
-            try {
-                $cargo->CARGO_REMUNERACAO = $request->CARGO_REMUNERACAO ?? null;
-            } catch (\Throwable $e) {
-            }
-            $cargo->save();
-            return response()->json(['message' => 'Cargo criado com sucesso.', 'cargo_id' => $cargo->CARGO_ID], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao criar cargo: ' . $e->getMessage()], 500);
-        }
-    });
-
-    //  Cargos  Atualizar
-    Route::put('/cargos/{id}', function ($id, \Illuminate\Http\Request $request) {
-        try {
-            $cargo = \App\Models\Cargo::findOrFail($id);
-            if ($request->has('CARGO_NOME'))
-                $cargo->CARGO_NOME = $request->CARGO_NOME;
-            if ($request->has('CARGO_SIGLA'))
-                $cargo->CARGO_SIGLA = $request->CARGO_SIGLA;
-            if ($request->has('CARGO_ESCOLARIDADE'))
-                $cargo->CARGO_ESCOLARIDADE = $request->CARGO_ESCOLARIDADE;
-            if ($request->has('CARGO_GESTAO'))
-                $cargo->CARGO_GESTAO = $request->CARGO_GESTAO;
-            try {
-                if ($request->has('CARGO_CBO'))
-                    $cargo->CARGO_CBO = $request->CARGO_CBO;
-            } catch (\Throwable $e) {
-            }
-            try {
-                if ($request->has('CARGO_DESCRICAO'))
-                    $cargo->CARGO_DESCRICAO = $request->CARGO_DESCRICAO;
-            } catch (\Throwable $e) {
-            }
-            try {
-                if ($request->has('CARGO_DATA_INICIO'))
-                    $cargo->CARGO_DATA_INICIO = $request->CARGO_DATA_INICIO;
-            } catch (\Throwable $e) {
-            }
-            try {
-                if ($request->has('CARGO_DATA_FIM'))
-                    $cargo->CARGO_DATA_FIM = $request->CARGO_DATA_FIM;
-            } catch (\Throwable $e) {
-            }
-            try {
-                if ($request->has('CARGO_REMUNERACAO'))
-                    $cargo->CARGO_REMUNERACAO = $request->CARGO_REMUNERACAO;
-            } catch (\Throwable $e) {
-            }
-            $cargo->save();
-            return response()->json(['message' => 'Cargo atualizado com sucesso.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao atualizar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    //  Cargos  Inativar
-    Route::delete('/cargos/{id}', function ($id, \Illuminate\Http\Request $request) {
-        try {
-            $cargo = \App\Models\Cargo::findOrFail($id);
-            $cargo->CARGO_ATIVO = 0;
-            try {
-                $cargo->CARGO_DATA_FIM = $request->CARGO_DATA_FIM ?? now()->toDateString();
-            } catch (\Throwable $e) {
-            }
-            $cargo->save();
-            return response()->json(['message' => 'Cargo inativado com sucesso.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao inativar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    //  Funções / Cargos em Comissão  Listagem
-    Route::get('/funcoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $query = \App\Models\Atribuicao::query();
-            if ($request->filled('q')) {
-                $query->where('ATRIBUICAO_NOME', 'like', '%' . $request->q . '%');
-            }
-            $funcoes = $query->orderBy('ATRIBUICAO_NOME')->get()->map(fn($a) => [
-                'funcao_id' => $a->ATRIBUICAO_ID,
-                'nome' => $a->ATRIBUICAO_NOME,
-                'cbo' => $a->ATRIBUICAO_CBO ?? null,
-                'tipo' => $a->ATRIBUICAO_COMISSAO ?? null,
-                'gratificacao' => (float) ($a->ATRIBUICAO_GRATIFICACAO ?? 0),
-                'ativo' => (bool) ($a->ATRIBUICAO_ATIVO ?? true),
-            ]);
-            return response()->json(['funcoes' => $funcoes, 'total' => $funcoes->count()]);
-        } catch (\Throwable $e) {
-            return response()->json(['funcoes' => [], 'total' => 0]);
-        }
-    });
-
-    //  Funções  Criar
-    Route::post('/funcoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $funcao = new \App\Models\Atribuicao();
-            $funcao->ATRIBUICAO_NOME = $request->nome ?? $request->ATRIBUICAO_NOME;
-            try {
-                $funcao->ATRIBUICAO_CBO = $request->cbo ?? null;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $funcao->ATRIBUICAO_COMISSAO = $request->tipo ?? null;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $funcao->ATRIBUICAO_GRATIFICACAO = $request->gratificacao ?? null;
-            } catch (\Throwable $e) {
-            }
-            $funcao->save();
-            return response()->json(['message' => 'Função criada com sucesso.', 'funcao_id' => $funcao->ATRIBUICAO_ID], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao criar função: ' . $e->getMessage()], 500);
-        }
-    });
-
-    //  Funções  Atualizar
-    Route::put('/funcoes/{id}', function ($id, \Illuminate\Http\Request $request) {
-        try {
-            $funcao = \App\Models\Atribuicao::findOrFail($id);
-            $funcao->ATRIBUICAO_NOME = $request->nome ?? $request->ATRIBUICAO_NOME ?? $funcao->ATRIBUICAO_NOME;
-            try {
-                if ($request->has('cbo'))
-                    $funcao->ATRIBUICAO_CBO = $request->cbo;
-            } catch (\Throwable $e) {
-            }
-            try {
-                if ($request->has('tipo'))
-                    $funcao->ATRIBUICAO_COMISSAO = $request->tipo;
-            } catch (\Throwable $e) {
-            }
-            try {
-                if ($request->has('gratificacao'))
-                    $funcao->ATRIBUICAO_GRATIFICACAO = $request->gratificacao;
-            } catch (\Throwable $e) {
-            }
-            $funcao->save();
-            return response()->json(['message' => 'Função atualizada com sucesso.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao atualizar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    //  Funções  Inativar
-    Route::delete('/funcoes/{id}', function ($id) {
-        try {
-            $funcao = \App\Models\Atribuicao::findOrFail($id);
-            try {
-                $funcao->ATRIBUICAO_ATIVO = 0;
-                $funcao->save();
-            } catch (\Throwable $e) {
-                return response()->json(['message' => 'Soft delete não suportado nesta tabela.']);
-            }
-            return response()->json(['message' => 'Função inativada com sucesso.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao inativar: ' . $e->getMessage()], 500);
-        }
-    });
-
-});
-
-
-//
-//  API V3  FÉRIAS (CRUD completo)
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  Criar agendamento de férias
-    Route::post('/ferias', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario) {
-                return response()->json(['erro' => 'Funcionário não vinculado ao seu usuário.'], 422);
-            }
-
-            $ferias = \App\Models\Ferias::create([
-                'FUNCIONARIO_ID' => $funcionario->FUNCIONARIO_ID,
-                'FERIAS_DATA_INICIO' => $request->FERIAS_DATA_INICIO,
-                'FERIAS_DATA_FIM' => $request->FERIAS_DATA_FIM,
-                'FERIAS_AQUISITIVO_INICIO' => $request->FERIAS_AQUISITIVO_INICIO ?? null,
-                'FERIAS_AQUISITIVO_FIM' => $request->FERIAS_AQUISITIVO_FIM ?? null,
-            ]);
-
-            return response()->json(['message' => 'Férias agendadas com sucesso.', 'ferias_id' => $ferias->FERIAS_ID], 201);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Erro ao criar férias: ' . $e->getMessage());
-            return response()->json(['erro' => 'Erro ao registrar férias: ' . $e->getMessage()], 500);
-        }
-    });
-
-    //  Atualizar período de férias
-    Route::put('/ferias/{id}', function ($id, \Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-
-            $ferias = \App\Models\Ferias::findOrFail($id);
-
-            // Verifica se a férias pertence ao funcionário logado (ou é admin)
-            if ($funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
-                return response()->json(['erro' => 'Sem permissão para editar esta férias.'], 403);
-            }
-
-            if ($request->has('FERIAS_DATA_INICIO'))
-                $ferias->FERIAS_DATA_INICIO = $request->FERIAS_DATA_INICIO;
-            if ($request->has('FERIAS_DATA_FIM'))
-                $ferias->FERIAS_DATA_FIM = $request->FERIAS_DATA_FIM;
-            if ($request->has('FERIAS_AQUISITIVO_INICIO'))
-                $ferias->FERIAS_AQUISITIVO_INICIO = $request->FERIAS_AQUISITIVO_INICIO;
-            if ($request->has('FERIAS_AQUISITIVO_FIM'))
-                $ferias->FERIAS_AQUISITIVO_FIM = $request->FERIAS_AQUISITIVO_FIM;
-            $ferias->save();
-
-            return response()->json(['message' => 'Férias atualizadas com sucesso.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao atualizar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    //  Cancelar / excluir férias
-    Route::delete('/ferias/{id}', function ($id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-
-            $ferias = \App\Models\Ferias::findOrFail($id);
-
-            if ($funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
-                return response()->json(['erro' => 'Sem permissão para cancelar esta férias.'], 403);
-            }
-
-            $ferias->delete();
-            return response()->json(['message' => 'Férias canceladas com sucesso.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => 'Erro ao cancelar: ' . $e->getMessage()], 500);
-        }
-    });
-
-});
-
-// Segundo grupo api/v3 de abono-faltas removido (consolidado no grupo principal acima).
-
-
-//
-//  API V3  COMUNICADOS (CRUD completo)
-//  Usa tabela COMUNICADO se existir, ou simula com sessão como fallback.
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // Helpers de tabela
-    $tabelaExiste = function ($tabela) {
-        try {
-            \Illuminate\Support\Facades\DB::select("SELECT TOP 1 1 FROM $tabela");
-            return true;
-        } catch (\Throwable $e) {
-            return false;
-        }
-    };
-
-    //  Listar comunicados
-    Route::get('/comunicados', function () use ($tabelaExiste) {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        try {
-            if ($tabelaExiste('COMUNICADO')) {
-                $rows = \Illuminate\Support\Facades\DB::table('COMUNICADO')
-                    ->orderByDesc('COMUNICADO_DATA')
-                    ->get()
-                    ->map(fn($r) => [
-                        'id' => $r->COMUNICADO_ID,
-                        'titulo' => $r->COMUNICADO_TITULO,
-                        'conteudo' => $r->COMUNICADO_CONTEUDO,
-                        'preview' => mb_substr(strip_tags($r->COMUNICADO_CONTEUDO ?? ''), 0, 140) . '...',
-                        'categoria' => $r->COMUNICADO_CATEGORIA ?? 'rh',
-                        'prioridade' => $r->COMUNICADO_PRIORIDADE ?? 'normal',
-                        'fixado' => (bool) ($r->COMUNICADO_FIXADO ?? false),
-                        'data' => $r->COMUNICADO_DATA,
-                        'autorNome' => $r->COMUNICADO_AUTOR ?? 'Sistema',
-                        'autorSetor' => $r->COMUNICADO_SETOR ?? '',
-                        'lido' => false,
-                        'meu' => isset($r->USUARIO_ID) && (int) $r->USUARIO_ID === (int) $user->USUARIO_ID,
-                    ]);
-                return response()->json(['comunicados' => $rows]);
-            }
-        } catch (\Throwable $e) {
-        }
-        // Fallback: retorna vazio (front usará dados mockados)
-        return response()->json(['comunicados' => [], 'fallback' => true]);
-    });
-
-    //  Criar comunicado
-    Route::post('/comunicados', function (\Illuminate\Http\Request $request) use ($tabelaExiste) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-
-            // Tenta buscar nome do funcionário
-            $nome = $user->USUARIO_LOGIN ?? 'Sistema';
-            try {
-                $func = \App\Models\Funcionario::with('pessoa')
-                    ->where('USUARIO_ID', $user->USUARIO_ID)->first();
-                if ($func && $func->pessoa)
-                    $nome = $func->pessoa->PESSOA_NOME;
-            } catch (\Throwable $e) {
-            }
-
-            if ($tabelaExiste('COMUNICADO')) {
-                $id = \Illuminate\Support\Facades\DB::table('COMUNICADO')->insertGetId([
-                    'COMUNICADO_TITULO' => $request->titulo,
-                    'COMUNICADO_CONTEUDO' => $request->conteudo,
-                    'COMUNICADO_CATEGORIA' => $request->categoria ?? 'rh',
-                    'COMUNICADO_PRIORIDADE' => $request->prioridade ?? 'normal',
-                    'COMUNICADO_FIXADO' => $request->fixado ? 1 : 0,
-                    'COMUNICADO_DATA' => now()->toDateString(),
-                    'COMUNICADO_AUTOR' => $nome,
-                    'COMUNICADO_SETOR' => $request->setor ?? '',
-                    'USUARIO_ID' => $user->USUARIO_ID,
-                ]);
-                return response()->json(['message' => 'Comunicado publicado!', 'id' => $id], 201);
-            }
-            // Se a tabela não existe, simula sucesso
-            return response()->json(['message' => 'Comunicado publicado (modo demo).', 'id' => rand(1000, 9999)], 201);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Comunicado: ' . $e->getMessage());
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    //  Editar comunicado
-    Route::put('/comunicados/{id}', function ($id, \Illuminate\Http\Request $request) use ($tabelaExiste) {
-        try {
-            if ($tabelaExiste('COMUNICADO')) {
-                \Illuminate\Support\Facades\DB::table('COMUNICADO')
-                    ->where('COMUNICADO_ID', $id)
-                    ->update(array_filter([
-                        'COMUNICADO_TITULO' => $request->titulo,
-                        'COMUNICADO_CONTEUDO' => $request->conteudo,
-                        'COMUNICADO_CATEGORIA' => $request->categoria,
-                        'COMUNICADO_PRIORIDADE' => $request->prioridade,
-                        'COMUNICADO_FIXADO' => $request->has('fixado') ? ($request->fixado ? 1 : 0) : null,
-                    ], fn($v) => $v !== null));
-            }
-            return response()->json(['message' => 'Comunicado atualizado.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    //  Excluir/Arquivar comunicado
-    Route::delete('/comunicados/{id}', function ($id) use ($tabelaExiste) {
-        try {
-            if ($tabelaExiste('COMUNICADO')) {
-                \Illuminate\Support\Facades\DB::table('COMUNICADO')
-                    ->where('COMUNICADO_ID', $id)
-                    ->delete();
-            }
-            return response()->json(['message' => 'Comunicado excluído.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-});
-
-
-//
-//  API V3  PERFIL DO FUNCION�?RIO (usuário logado)
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  GET: dados completos do perfil próprio
-    Route::get('/perfil', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::with([
-                'pessoa',
-                'lotacao.setor.unidade',
-                'lotacao.atribuicaoLotacao.atribuicao',
-                'lotacao.vinculo',
-            ])->where('USUARIO_ID', $user->USUARIO_ID)->first();
-
-            if (!$funcionario) {
-                return response()->json(['erro' => 'Nenhum funcionário vinculado a este usuário.'], 404);
-            }
-
-            $lotacao = $funcionario->lotacao;
-            $contatos = [];
-            try {
-                $contatos = \App\Models\Contato::where('PESSOA_ID', $funcionario->pessoa?->PESSOA_ID)->get()->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            return response()->json([
-                'funcionario' => [
-                    'FUNCIONARIO_ID' => $funcionario->FUNCIONARIO_ID,
-                    'FUNCIONARIO_MATRICULA' => $funcionario->FUNCIONARIO_MATRICULA,
-                    'FUNCIONARIO_DATA_INICIO' => $funcionario->FUNCIONARIO_DATA_INICIO,
-                    'FUNCIONARIO_DATA_FIM' => $funcionario->FUNCIONARIO_DATA_FIM,
-                    'pessoa' => $funcionario->pessoa ? [
-                        'PESSOA_ID' => $funcionario->pessoa->PESSOA_ID,
-                        'PESSOA_NOME' => $funcionario->pessoa->PESSOA_NOME,
-                        'PESSOA_CPF_NUMERO' => $funcionario->pessoa->PESSOA_CPF_NUMERO,
-                        'PESSOA_DATA_NASCIMENTO' => $funcionario->pessoa->PESSOA_DATA_NASCIMENTO,
-                        'PESSOA_SEXO' => $funcionario->pessoa->PESSOA_SEXO,
-                        'PESSOA_ESTADO_CIVIL' => $funcionario->pessoa->PESSOA_ESTADO_CIVIL,
-                        'PESSOA_ESCOLARIDADE' => $funcionario->pessoa->PESSOA_ESCOLARIDADE,
-                        'PESSOA_NOME_SOCIAL' => $funcionario->pessoa->PESSOA_NOME_SOCIAL ?? null,
-                        'PESSOA_RG_NUMERO' => $funcionario->pessoa->PESSOA_RG_NUMERO ?? null,
-                        'PESSOA_PIS_PASEP' => $funcionario->pessoa->PESSOA_PIS_PASEP ?? null,
-                    ] : null,
-                    'setor' => $lotacao?->setor?->SETOR_NOME,
-                    'unidade' => $lotacao?->setor?->unidade?->UNIDADE_NOME,
-                    'vinculo' => $lotacao?->vinculo?->VINCULO_NOME ?? null,
-                    'atribuicao' => $lotacao?->atribuicaoLotacao?->first()?->atribuicao?->ATRIBUICAO_NOME ?? null,
-                    'contatos' => $contatos,
-                ],
-                'usuario' => [
-                    'USUARIO_ID' => $user->USUARIO_ID,
-                    'USUARIO_LOGIN' => $user->USUARIO_LOGIN,
-                    'USUARIO_EMAIL' => $user->USUARIO_EMAIL ?? null,
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Perfil: ' . $e->getMessage());
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    //  PUT: atualizar dados do perfil (contato e nome social)
-    Route::put('/perfil', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::with('pessoa')
-                ->where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            // Atualizar campos editáveis da Pessoa
-            if ($funcionario->pessoa) {
-                $pessoa = $funcionario->pessoa;
-                $campos = ['PESSOA_NOME_SOCIAL', 'PESSOA_ESTADO_CIVIL', 'PESSOA_ESCOLARIDADE'];
-                foreach ($campos as $campo) {
-                    if ($request->has($campo)) {
-                        try {
-                            $pessoa->$campo = $request->$campo;
-                        } catch (\Throwable $e) {
-                        }
-                    }
-                }
-                $pessoa->save();
-            }
-
-            // Atualizar email do usuário
-            if ($request->has('USUARIO_EMAIL')) {
-                try {
-                    $user->USUARIO_EMAIL = $request->USUARIO_EMAIL;
-                    $user->save();
-                } catch (\Throwable $e) {
-                }
-            }
-
-            return response()->json(['message' => 'Perfil atualizado com sucesso.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-});
-
-
-//
-//  API V3  PONTO ELETRÔNICO (apuração mensal do funcionário)
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  GET: apuração do mês para o usuário logado
-    Route::get('/ponto', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario) {
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-            }
-
-            $competencia = $request->competencia
-                ?? now()->format('Y-m');
-
-            // Busca apuração do período
-            $apuracao = \App\Models\ApuracaoPonto::with(['justificativas'])
-                ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->where('APURACAO_COMPETENCIA', $competencia)
-                ->first();
-
-            // Busca registros de ponto do período (tabela REGISTRO_PONTO se existir)
-            $registros = [];
-            try {
-                $anoMes = str_replace('-', '', $competencia); // ex: 202503
-                $registros = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO')
-                    ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                    ->where('REGISTRO_PONTO_COMPETENCIA', $anoMes)
-                    ->get()
-                    ->map(fn($r) => (array) $r)
-                    ->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            // Busca justificativas de ponto
-            $justificativas = [];
-            try {
-                $justificativas = \App\Models\JustificativaPonto::where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                    ->where(function ($q) use ($competencia) {
-                        [$ano, $mes] = explode('-', $competencia);
-                        $q->whereYear('JUSTIFICATIVA_DATA', $ano)
-                            ->whereMonth('JUSTIFICATIVA_DATA', $mes);
-                    })
-                    ->get()
-                    ->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            return response()->json([
-                'competencia' => $competencia,
-                'apuracao' => $apuracao ? [
-                    'APURACAO_ID' => $apuracao->APURACAO_ID,
-                    'APURACAO_HORAS_TRAB' => $apuracao->APURACAO_HORAS_TRAB,
-                    'APURACAO_HORAS_EXTRA' => $apuracao->APURACAO_HORAS_EXTRA,
-                    'APURACAO_HORAS_FALTA' => $apuracao->APURACAO_HORAS_FALTA,
-                    'APURACAO_STATUS' => $apuracao->APURACAO_STATUS,
-                ] : null,
-                'registros' => $registros,
-                'justificativas' => $justificativas,
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Ponto: ' . $e->getMessage());
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    //  POST: registrar justificativa de ponto
-    Route::post('/ponto/justificativa', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            $justificativa = new \App\Models\JustificativaPonto();
-            $justificativa->FUNCIONARIO_ID = $funcionario->FUNCIONARIO_ID;
-            try {
-                $justificativa->JUSTIFICATIVA_DATA = $request->data;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $justificativa->JUSTIFICATIVA_MOTIVO = $request->motivo;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $justificativa->JUSTIFICATIVA_OBS = $request->obs;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $justificativa->JUSTIFICATIVA_STATUS = 'PENDENTE';
-            } catch (\Throwable $e) {
-            }
-            $justificativa->save();
-
-            return response()->json(['message' => 'Justificativa registrada.', 'id' => $justificativa->getKey()], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-});
-
-
-//
-//  API V3  BANCO DE HORAS + PLANTÕES EXTRAS + SOBREAVISO
-// �?
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  Banco de Horas: apurações mensais
-    Route::get('/banco-horas', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario)
-                return response()->json(['apuracoes' => [], 'fallback' => true]);
-
-            $apuracoes = \App\Models\ApuracaoPonto::where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->orderByDesc('APURACAO_COMPETENCIA')
-                ->take(12)
-                ->get()
-                ->map(fn($a) => [
-                    'competencia' => $a->APURACAO_COMPETENCIA,
-                    'horas_trab' => round($a->APURACAO_HORAS_TRAB ?? 0, 1),
-                    'horas_extra' => round($a->APURACAO_HORAS_EXTRA ?? 0, 1),
-                    'horas_falta' => round($a->APURACAO_HORAS_FALTA ?? 0, 1),
-                    'status' => $a->APURACAO_STATUS,
-                ]);
-
-            $saldoAcum = 0;
-            foreach ($apuracoes as &$a) {
-                $saldoAcum += ($a['horas_extra'] - $a['horas_falta']);
-                $a['saldo_acumulado'] = round($saldoAcum, 1);
-            }
-
-            return response()->json(['apuracoes' => $apuracoes]);
-        } catch (\Throwable $e) {
-            return response()->json(['apuracoes' => [], 'fallback' => true, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    //  Plantões Extras: listar
-    Route::get('/plantoes-extras', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario)
-                return response()->json(['plantoes' => [], 'fallback' => true]);
-
-            $plantoes = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')
-                ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->orderByDesc('PLANTAO_DATA')
-                ->get()
-                ->map(fn($p) => (array) $p);
-
-            return response()->json(['plantoes' => $plantoes]);
-        } catch (\Throwable $e) {
-            return response()->json(['plantoes' => [], 'fallback' => true]);
-        }
-    });
-
-    //  Plantões Extras: solicitar
-    Route::post('/plantoes-extras', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            $id = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')->insertGetId([
-                'FUNCIONARIO_ID' => $funcionario->FUNCIONARIO_ID,
-                'PLANTAO_DATA' => $request->data,
-                'PLANTAO_HORA_INI' => $request->horaIni,
-                'PLANTAO_HORA_FIM' => $request->horaFim,
-                'PLANTAO_TIPO' => $request->tipo ?? 'programado',
-                'PLANTAO_SETOR' => $request->setor,
-                'PLANTAO_JUST' => $request->justificativa,
-                'PLANTAO_STATUS' => 'PENDENTE',
-            ]);
-            return response()->json(['message' => 'Solicitação enviada!', 'id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Solicitação registrada (modo demo).', 'id' => rand(1000, 9999)], 201);
-        }
-    });
-
-    //  Sobreaviso: listar períodos e acionamentos
-    Route::get('/sobreaviso', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario)
-                return response()->json(['sobreaviso' => [], 'acionamentos' => [], 'fallback' => true]);
-
-            $comp = $request->competencia ?? now()->format('Y-m');
-            [$ano, $mes] = explode('-', $comp);
-
-            $sobreaviso = \Illuminate\Support\Facades\DB::table('SOBREAVISO')
-                ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->whereYear('SOBREAVISO_INICIO', $ano)
-                ->whereMonth('SOBREAVISO_INICIO', $mes)
-                ->get()->map(fn($r) => (array) $r);
-
-            $acionamentos = \Illuminate\Support\Facades\DB::table('ACIONAMENTO_SOBREAVISO')
-                ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->whereYear('ACIONAMENTO_DATA', $ano)
-                ->whereMonth('ACIONAMENTO_DATA', $mes)
-                ->get()->map(fn($r) => (array) $r);
-
-            return response()->json(['sobreaviso' => $sobreaviso, 'acionamentos' => $acionamentos]);
-        } catch (\Throwable $e) {
-            return response()->json(['sobreaviso' => [], 'acionamentos' => [], 'fallback' => true]);
-        }
-    });
-
-    //  Sobreaviso: registrar acionamento
-    Route::post('/sobreaviso/acionamento', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$funcionario)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            $id = \Illuminate\Support\Facades\DB::table('ACIONAMENTO_SOBREAVISO')->insertGetId([
-                'FUNCIONARIO_ID' => $funcionario->FUNCIONARIO_ID,
-                'ACIONAMENTO_DATA' => $request->data,
-                'ACIONAMENTO_LOCAL' => $request->local,
-                'ACIONAMENTO_HORA_INI' => $request->horaIni,
-                'ACIONAMENTO_HORA_FIM' => $request->horaFim,
-                'ACIONAMENTO_MOTIVO' => $request->motivo,
-                'ACIONAMENTO_STATUS' => 'PENDENTE',
-            ]);
-            return response()->json(['message' => 'Acionamento registrado.', 'id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Acionamento registrado (modo demo).', 'id' => rand(1000, 9999)], 201);
-        }
-    });
-
-});
-
-
-//
-//  API V3  ATESTADOS MÉDICOS (proxy via tabela AFASTAMENTO)
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  GET: listar afastamentos/atestados do funcionário
-    Route::get('/atestados', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['atestados' => [], 'fallback' => true]);
-
-            $afastamentos = \App\Models\Afastamento::with(['tipoAfastamento'])
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('AFASTAMENTO_DATA_INICIO')
-                ->get()
-                ->map(fn($a) => [
-                    'id' => $a->AFASTAMENTO_ID,
-                    'inicio' => $a->AFASTAMENTO_DATA_INICIO,
-                    'fim' => $a->AFASTAMENTO_DATA_FIM,
-                    'tipo' => $a->tipoAfastamento?->COLUNA_DESCRICAO ?? 'Atestado',
-                    'cid' => $a->AFASTAMENTO_CID ?? null,
-                    'descricao' => $a->AFASTAMENTO_DESCRICAO ?? null,
-                    'medico' => $a->AFASTAMENTO_MEDICO ?? null,
-                    'crm' => $a->AFASTAMENTO_CRM ?? null,
-                    'obs' => $a->AFASTAMENTO_OBS ?? null,
-                    'status' => $a->AFASTAMENTO_STATUS ?? 'aprovado',
-                    'parecer' => $a->AFASTAMENTO_PARECER ?? null,
-                    'dias' => $a->AFASTAMENTO_DATA_INICIO && $a->AFASTAMENTO_DATA_FIM
-                        ? (int) round((strtotime($a->AFASTAMENTO_DATA_FIM) - strtotime($a->AFASTAMENTO_DATA_INICIO)) / 86400) + 1
-                        : 1,
-                ]);
-
-            return response()->json(['atestados' => $afastamentos]);
-        } catch (\Throwable $e) {
-            return response()->json(['atestados' => [], 'fallback' => true, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    //  POST: registrar novo atestado/afastamento
-    Route::post('/atestados', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            $af = new \App\Models\Afastamento();
-            $af->FUNCIONARIO_ID = $func->FUNCIONARIO_ID;
-            $af->AFASTAMENTO_DATA_INICIO = $request->inicio;
-            $af->AFASTAMENTO_DATA_FIM = $request->fim;
-            try {
-                $af->AFASTAMENTO_TIPO = 1;
-            } catch (\Throwable $e) {
-            } // tipo padrão: doença
-            try {
-                $af->AFASTAMENTO_CID = $request->cid;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_DESCRICAO = $request->descricao;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_MEDICO = $request->medico;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_CRM = $request->crm;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_OBS = $request->obs;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_STATUS = 'pendente';
-            } catch (\Throwable $e) {
-            }
-            $af->save();
-
-            return response()->json(['message' => 'Atestado registrado.', 'id' => $af->getKey()], 201);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Atestado: ' . $e->getMessage());
-            return response()->json(['message' => 'Atestado registrado (modo demo).', 'id' => rand(1000, 9999)], 201);
-        }
-    });
-
-    //  DELETE: remover atestado pendente
-    Route::delete('/atestados/{id}', function ($id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            $af = \App\Models\Afastamento::find($id);
-            if ($af && $func && $af->FUNCIONARIO_ID == $func->FUNCIONARIO_ID) {
-                $af->delete();
-            }
-            return response()->json(['message' => 'Atestado removido.']);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Removido.']);
-        }
-    });
-
-});
-
-
-//
-//  API V3  CONTRATOS/V�?NCULOS + PROGRESSÃO FUNCIONAL
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  GET: contrato e vínculos do funcionário logado
-    Route::get('/contratos', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::with([
-                'pessoa',
-                'lotacao.setor.unidade',
-                'lotacao.atribuicaoLotacao.atribuicao',
-                'lotacao.vinculo',
-            ])->where('USUARIO_ID', $user->USUARIO_ID)->first();
-
-            if (!$func)
-                return response()->json(['contrato' => null, 'historico' => [], 'fallback' => true]);
-
-            $lotacao = $func->lotacao;
-
-            // Histórico de lotações (todas as lotações do funcionário)
-            $historico = [];
-            try {
-                $historico = \App\Models\Lotacao::with(['setor.unidade', 'vinculo', 'atribuicaoLotacao.atribuicao'])
-                    ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                    ->orderByDesc('LOTACAO_DATA_INICIO')
-                    ->get()
-                    ->map(function ($l) use ($func) {
-                        // Infere RGPS/RPPS pelo vínculo da lotação; usa campo direto se existir
-                        $vinculoNome = $l->vinculo?->VINCULO_NOME ?? '';
-                        $regimePrevHeuristica = (stripos($vinculoNome, 'PSS') !== false
-                            || stripos($vinculoNome, 'Tempor') !== false
-                            || stripos($vinculoNome, 'CLT') !== false
-                            || stripos($vinculoNome, 'Est') !== false)
-                            ? 'RGPS' : 'RPPS';
-                        $regimePrev = $regimePrevHeuristica; // pode ser sobrescrito futuramente por campo da lotação
-    
-                        return [
-                            'id' => $l->LOTACAO_ID,
-                            'ativo' => is_null($l->LOTACAO_DATA_FIM) || $l->LOTACAO_DATA_FIM >= now()->toDateString(),
-                            'tipo' => $l->vinculo?->VINCULO_NOME ?? 'Servidor',
-                            'inicio' => $l->LOTACAO_DATA_INICIO,
-                            'fim' => $l->LOTACAO_DATA_FIM,
-                            'cargo' => $l->atribuicaoLotacao?->first()?->atribuicao?->ATRIBUICAO_NOME ?? '',
-                            'setor' => $l->setor?->SETOR_NOME ?? '',
-                            'unidade' => $l->setor?->unidade?->UNIDADE_NOME ?? '',
-                            'regime' => $l->vinculo?->VINCULO_NOME ?? '',
-                            'regime_prev' => $regimePrev,
-                        ];
-                    });
-            } catch (\Throwable $e) {
-            }
-
-            return response()->json([
-                'contrato' => [
-                    'matricula' => $func->FUNCIONARIO_MATRICULA,
-                    'admissao' => $func->FUNCIONARIO_DATA_INICIO,
-                    'nome' => $func->pessoa?->PESSOA_NOME,
-                    'cargo' => $lotacao?->atribuicaoLotacao?->first()?->atribuicao?->ATRIBUICAO_NOME ?? '',
-                    'setor' => $lotacao?->setor?->SETOR_NOME ?? '',
-                    'unidade' => $lotacao?->setor?->unidade?->UNIDADE_NOME ?? '',
-                    'vinculo' => $lotacao?->vinculo?->VINCULO_NOME ?? '',
-                    'cpf' => $func->pessoa?->PESSOA_CPF_NUMERO,
-                    'pis' => $func->pessoa?->PESSOA_PIS_PASEP,
-                    // Regime previdenciário: campo direto do banco (RPPS=IPAM São Luís | RGPS=INSS)
-                    'regime_prev' => $func->FUNCIONARIO_REGIME_PREV ?? 'RPPS',
-                ],
-                'historico' => $historico,
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Contratos: ' . $e->getMessage());
-            return response()->json(['contrato' => null, 'historico' => [], 'fallback' => true]);
-        }
-    });
-
-    //  GET: progressão funcional (via HistoricoEvento/HistoricoParametro)
-    Route::get('/progressao-funcional', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['progressoes' => [], 'fallback' => true]);
-
-            // Busca histórico de parâmetros salariais do funcionário
-            $hist = [];
-            try {
-                $hist = \Illuminate\Support\Facades\DB::table('HISTORICO_PARAMETRO as hp')
-                    ->join('FOLHA as f', 'f.FOLHA_ID', '=', 'hp.FOLHA_ID')
-                    ->where('hp.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                    ->orderByDesc('f.FOLHA_COMPETENCIA')
-                    ->take(12)
-                    ->select('hp.*', 'f.FOLHA_COMPETENCIA')
-                    ->get()
-                    ->map(fn($r) => (array) $r)
-                    ->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            return response()->json([
-                'progressoes' => $hist,
-                'admissao' => $func->FUNCIONARIO_DATA_INICIO,
-                'fallback' => empty($hist),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['progressoes' => [], 'fallback' => true]);
-        }
-    });
-
-});
-
-
-//
-//  API V3  DECLARAÇÕES/REQUERIMENTOS + OUVIDORIA
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    //  GET: meus pedidos de declaração
-    Route::get('/declaracoes', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['pedidos' => []]);
-
-            $pedidos = \Illuminate\Support\Facades\DB::table('DECLARACAO_PEDIDO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('PEDIDO_DATA')
-                ->get()->map(fn($r) => (array) $r);
-
-            return response()->json(['pedidos' => $pedidos]);
-        } catch (\Throwable $e) {
-            return response()->json(['pedidos' => [], 'fallback' => true]);
-        }
-    });
-
-    //  POST: solicitar declaração
-    Route::post('/declaracoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            $proto = 'REQ-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            try {
-                \Illuminate\Support\Facades\DB::table('DECLARACAO_PEDIDO')->insert([
-                    'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                    'PEDIDO_NOME' => $request->nome,
-                    'PEDIDO_DATA' => now()->toDateString(),
-                    'PEDIDO_STATUS' => 'andamento',
-                    'PEDIDO_PROTOCOLO' => $proto,
-                    'PEDIDO_INSTANTANEO' => $request->instantaneo ? 1 : 0,
-                ]);
-            } catch (\Throwable $ex) {
-            }
-
-            return response()->json(['message' => 'Pedido registrado.', 'protocolo' => $proto], 201);
-        } catch (\Throwable $e) {
-            $proto = 'REQ-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            return response()->json(['message' => 'Pedido registrado.', 'protocolo' => $proto], 201);
-        }
-    });
-
-    //  GET: minhas manifestações da ouvidoria
-    Route::get('/ouvidoria', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['manifestacoes' => [], 'fallback' => true]);
-
-            $ms = \Illuminate\Support\Facades\DB::table('OUVIDORIA')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('OUVIDORIA_DATA')
-                ->get()->map(fn($r) => (array) $r);
-
-            return response()->json(['manifestacoes' => $ms]);
-        } catch (\Throwable $e) {
-            return response()->json(['manifestacoes' => [], 'fallback' => true]);
-        }
-    });
-
-    //  POST: enviar manifestação
-    Route::post('/ouvidoria', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            $proto = 'OUV-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            try {
-                \Illuminate\Support\Facades\DB::table('OUVIDORIA')->insert([
-                    'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                    'OUVIDORIA_TIPO' => $request->tipo,
-                    'OUVIDORIA_AREA' => $request->area,
-                    'OUVIDORIA_URGENCIA' => $request->urgencia ?? 'normal',
-                    'OUVIDORIA_DESC' => $request->descricao,
-                    'OUVIDORIA_ANONIMO' => $request->anonimo ? 1 : 0,
-                    'OUVIDORIA_STATUS' => 'recebida',
-                    'OUVIDORIA_PROTOCOLO' => $proto,
-                    'OUVIDORIA_DATA' => now()->toDateString(),
-                ]);
-            } catch (\Throwable $ex) {
-            }
-
-            return response()->json(['message' => 'Manifestação registrada.', 'protocolo' => $proto], 201);
-        } catch (\Throwable $e) {
-            $proto = 'OUV-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            return response()->json(['message' => 'Manifestação registrada.', 'protocolo' => $proto], 201);
-        }
-    });
-
-});
-
-
-//
-//  API V3  MEDICINA DO TRABALHO (Exames Ocupacionais / PCMSO)
-// �?�?
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // GET /api/v3/medicina  Exames ocupacionais do funcionario logado
-    Route::get('/medicina', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['exames' => [], 'historico' => [], 'fallback' => true]);
-
-            $exames = [];
-            try {
-                $exames = \Illuminate\Support\Facades\DB::table('EXAME_OCUPACIONAL')
-                    ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                    ->orderByDesc('EXAME_DATA_REALIZACAO')
-                    ->get()
-                    ->map(fn($e) => [
-                        'id' => $e->EXAME_ID,
-                        'tipo' => $e->EXAME_TIPO ?? 'Exame Periodico',
-                        'subtipo' => $e->EXAME_SUBTIPO ?? '',
-                        'realizado' => $e->EXAME_DATA_REALIZACAO ?? null,
-                        'vencimento' => $e->EXAME_DATA_VENCIMENTO ?? null,
-                        'medico' => $e->EXAME_MEDICO ?? '--',
-                        'apto' => (bool) ($e->EXAME_APTO ?? true),
-                        'obs' => $e->EXAME_OBS ?? null,
-                    ])
-                    ->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            $historico = [];
-            try {
-                $historico = \App\Models\Afastamento::where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                    ->where(function ($q) {
-                        $q->where('AFASTAMENTO_CID', 'like', 'Z1%')
-                            ->orWhere('AFASTAMENTO_DESCRICAO', 'like', '%Exame%');
-                    })
-                    ->orderByDesc('AFASTAMENTO_DATA_INICIO')
-                    ->take(12)
-                    ->get()
-                    ->map(fn($a) => [
-                        'tipo' => $a->AFASTAMENTO_DESCRICAO ?? 'Exame Ocupacional',
-                        'data' => $a->AFASTAMENTO_DATA_INICIO,
-                        'apto' => true,
-                    ])
-                    ->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            return response()->json([
-                'exames' => $exames,
-                'historico' => $historico,
-                'fallback' => empty($exames),
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Medicina: ' . $e->getMessage());
-            return response()->json(['exames' => [], 'historico' => [], 'fallback' => true]);
-        }
-    });
-
-    // POST /api/v3/medicina/agendar  Solicitar agendamento de exame ocupacional
-    Route::post('/medicina/agendar', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['erro' => 'Funcionario nao encontrado.'], 404);
-
-            $af = new \App\Models\Afastamento();
-            $af->FUNCIONARIO_ID = $func->FUNCIONARIO_ID;
-            try {
-                $af->AFASTAMENTO_DATA_INICIO = $request->data;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_DATA_FIM = $request->data;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_CID = 'Z10.0';
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_DESCRICAO = 'Exame Ocupacional: ' . ($request->tipo ?? 'Periodico');
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_MEDICO = 'SESMT';
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_OBS = $request->obs;
-            } catch (\Throwable $e) {
-            }
-            try {
-                $af->AFASTAMENTO_STATUS = 'agendado';
-            } catch (\Throwable $e) {
-            }
-            $af->save();
-
-            return response()->json(['message' => 'Agendamento solicitado com sucesso.', 'id' => $af->getKey()], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Agendamento solicitado (modo demo).', 'id' => rand(1000, 9999)], 201);
-        }
-    });
-
-});
-
-
-//
-//  API V3  DECLARACOES / REQUERIMENTOS
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // GET /api/v3/declaracoes  Pedidos de documentos do funcionario logado
-    Route::get('/declaracoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['pedidos' => [], 'fallback' => true]);
-
-            $pedidos = [];
-            try {
-                $pedidos = \Illuminate\Support\Facades\DB::table('PEDIDO_DOCUMENTO')
-                    ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                    ->orderByDesc('PEDIDO_DATA')
-                    ->take(30)
-                    ->get()
-                    ->map(fn($p) => [
-                        'id' => $p->PEDIDO_ID,
-                        'nome' => $p->PEDIDO_NOME ?? 'Declaração',
-                        'data' => $p->PEDIDO_DATA,
-                        'status' => strtolower($p->PEDIDO_STATUS ?? 'pendente'),
-                        'protocolo' => $p->PEDIDO_PROTOCOLO ?? '--',
-                    ])
-                    ->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            return response()->json([
-                'pedidos' => $pedidos,
-                'fallback' => empty($pedidos),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['pedidos' => [], 'fallback' => true]);
-        }
-    });
-
-    // POST /api/v3/declaracoes  Solicitar documento
-    Route::post('/declaracoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            $proto = 'REQ-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-
-            if ($func) {
-                try {
-                    \Illuminate\Support\Facades\DB::table('PEDIDO_DOCUMENTO')->insert([
-                        'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                        'PEDIDO_NOME' => $request->nome,
-                        'PEDIDO_DATA' => date('Y-m-d'),
-                        'PEDIDO_STATUS' => $request->instantaneo ? 'pronto' : 'andamento',
-                        'PEDIDO_PROTOCOLO' => $proto,
-                    ]);
-                } catch (\Throwable $e) {
-                }
-            }
-
-            return response()->json(['protocolo' => $proto, 'status' => 'ok'], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['protocolo' => 'REQ-' . date('Y') . '-' . rand(100, 999), 'status' => 'demo'], 201);
-        }
-    });
-
-});
-
-
-//
-//  API V3  OUVIDORIA
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // GET /api/v3/ouvidoria  Manifestacoes do funcionario logado
-    Route::get('/ouvidoria', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            if (!$func)
-                return response()->json(['manifestacoes' => [], 'fallback' => true]);
-
-            $manifestacoes = [];
-            try {
-                $manifestacoes = \Illuminate\Support\Facades\DB::table('OUVIDORIA')
-                    ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                    ->orderByDesc('OUVIDORIA_DATA')
-                    ->take(30)
-                    ->get()
-                    ->map(fn($m) => [
-                        'id' => $m->OUVIDORIA_ID,
-                        'tipo' => $m->OUVIDORIA_TIPO ?? 'outros',
-                        'area' => $m->OUVIDORIA_AREA ?? '',
-                        'urgencia' => $m->OUVIDORIA_URGENCIA ?? 'normal',
-                        'descricao' => $m->OUVIDORIA_DESC ?? '',
-                        'status' => $m->OUVIDORIA_STATUS ?? 'recebida',
-                        'protocolo' => $m->OUVIDORIA_PROTOCOLO ?? '--',
-                        'data' => $m->OUVIDORIA_DATA,
-                        'anonimo' => (bool) ($m->OUVIDORIA_ANONIMO ?? false),
-                        'resposta' => $m->OUVIDORIA_RESPOSTA ?? null,
-                    ])
-                    ->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            return response()->json([
-                'manifestacoes' => $manifestacoes,
-                'fallback' => empty($manifestacoes),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['manifestacoes' => [], 'fallback' => true]);
-        }
-    });
-
-    // POST /api/v3/ouvidoria  Registrar manifestacao
-    Route::post('/ouvidoria', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-            $proto = 'OUV-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-
-            if ($func) {
-                try {
-                    \Illuminate\Support\Facades\DB::table('OUVIDORIA')->insert([
-                        'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                        'OUVIDORIA_TIPO' => $request->tipo,
-                        'OUVIDORIA_AREA' => $request->area,
-                        'OUVIDORIA_URGENCIA' => $request->urgencia ?? 'normal',
-                        'OUVIDORIA_DESC' => $request->descricao,
-                        'OUVIDORIA_STATUS' => 'recebida',
-                        'OUVIDORIA_PROTOCOLO' => $proto,
-                        'OUVIDORIA_DATA' => date('Y-m-d'),
-                        'OUVIDORIA_ANONIMO' => $request->anonimo ? 1 : 0,
-                    ]);
-                } catch (\Throwable $e) {
-                }
-            }
-
-            return response()->json(['protocolo' => $proto, 'status' => 'recebida'], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['protocolo' => 'OUV-' . date('Y') . '-' . rand(100, 999), 'status' => 'demo'], 201);
-        }
-    });
-
-});
-
-
-//
-//  API V3  PORTAL DO GESTOR
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // GET /api/v3/gestor  Dados do painel do gestor (equipe + pendencias + kpis)
-    Route::get('/gestor', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-
-            $setor = $func?->FUNCIONARIO_SETOR ?? null;
-            $unidade = $func?->FUNCIONARIO_UNIDADE ?? null;
-
-            // --- EQUIPE ---
-            $equipe = [];
-            try {
-                $query = \App\Models\Funcionario::query();
-                if ($setor)
-                    $query->where('FUNCIONARIO_SETOR', $setor);
-                if ($unidade)
-                    $query->where('FUNCIONARIO_UNIDADE', $unidade);
-                $equipe = $query->take(25)->get()->map(fn($f) => [
-                    'id' => $f->FUNCIONARIO_ID,
-                    'nome' => trim(($f->FUNCIONARIO_NOME ?? '') . ' ' . ($f->FUNCIONARIO_SOBRENOME ?? '')),
-                    'cargo' => $f->CARGO_NOME ?? $f->FUNCIONARIO_CARGO ?? '',
-                    'turno' => $f->FUNCIONARIO_TURNO ?? null,
-                    'presente' => false, // será cruzado via ponto
-                    'ferias' => false,
-                    'atestado' => false,
-                    'statusLabel' => 'Ativo',
-                ])->toArray();
-            } catch (\Throwable $e) {
-            }
-
-            // Cruzar presença com ponto de hoje
-            try {
-                $hoje = date('Y-m-d');
-                $ids = collect($equipe)->pluck('id')->toArray();
-                $pontosHoje = \Illuminate\Support\Facades\DB::table('PONTO_REGISTRO')
-                    ->whereIn('FUNCIONARIO_ID', $ids)
-                    ->whereDate('PONTO_DATA', $hoje)
-                    ->pluck('FUNCIONARIO_ID')
-                    ->toArray();
-                $afastados = \Illuminate\Support\Facades\DB::table('FERIAS_PERIODO')
-                    ->whereIn('FUNCIONARIO_ID', $ids)
-                    ->where('FERIAS_INICIO', '<=', $hoje)
-                    ->where('FERIAS_FIM', '>=', $hoje)
-                    ->pluck('FUNCIONARIO_ID')
-                    ->toArray();
-                $atestados = \Illuminate\Support\Facades\DB::table('AFASTAMENTO')
-                    ->whereIn('FUNCIONARIO_ID', $ids)
-                    ->whereDate('AFASTAMENTO_DATA_INICIO', '<=', $hoje)
-                    ->whereDate('AFASTAMENTO_DATA_FIM', '>=', $hoje)
-                    ->pluck('FUNCIONARIO_ID')
-                    ->toArray();
-                $equipe = array_map(function ($m) use ($pontosHoje, $afastados, $atestados) {
-                    $m['ferias'] = in_array($m['id'], $afastados);
-                    $m['atestado'] = in_array($m['id'], $atestados);
-                    $m['presente'] = in_array($m['id'], $pontosHoje) && !$m['ferias'] && !$m['atestado'];
-                    $m['statusLabel'] = $m['ferias'] ? 'Em Férias' : ($m['atestado'] ? 'Atestado' : ($m['presente'] ? 'Presente' : 'Ausente'));
-                    return $m;
-                }, $equipe);
-            } catch (\Throwable $e) {
-            }
-
-            // --- PENDENCIAS: Ferias + Plantoes + Abonos ---
-            $pendencias = [];
-            try {
-                // Ferias aguardando aprovacao
-                $ferias = \Illuminate\Support\Facades\DB::table('FERIAS_PERIODO')
-                    ->whereIn('FUNCIONARIO_ID', collect($equipe)->pluck('id')->toArray())
-                    ->where('FERIAS_STATUS', 'pendente')
-                    ->orderByDesc('created_at')
-                    ->take(10)
-                    ->get();
-                foreach ($ferias as $f) {
-                    $nomeFn = collect($equipe)->firstWhere('id', $f->FUNCIONARIO_ID);
-                    $pendencias[] = [
-                        'id' => 'ferias-' . $f->FERIAS_ID,
-                        'servidor' => $nomeFn['nome'] ?? '',
-                        'tipo' => 'ferias',
-                        'detalhe' => 'Férias: ' . \Carbon\Carbon::parse($f->FERIAS_INICIO)->format('d/m') . ' a ' . \Carbon\Carbon::parse($f->FERIAS_FIM)->format('d/m/Y'),
-                        'data' => $f->FERIAS_INICIO,
-                        'ref_id' => $f->FERIAS_ID,
-                        'ref_tabela' => 'FERIAS_PERIODO',
-                    ];
-                }
-            } catch (\Throwable $e) {
-            }
-
-            try {
-                // Plantoes extras aguardando aprovacao
-                $plantoes = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')
-                    ->whereIn('FUNCIONARIO_ID', collect($equipe)->pluck('id')->toArray())
-                    ->where('PLANTAO_STATUS', 'pendente')
-                    ->orderByDesc('PLANTAO_DATA')
-                    ->take(10)
-                    ->get();
-                foreach ($plantoes as $p) {
-                    $nomeFn = collect($equipe)->firstWhere('id', $p->FUNCIONARIO_ID);
-                    $pendencias[] = [
-                        'id' => 'plantao-' . $p->PLANTAO_ID,
-                        'servidor' => $nomeFn['nome'] ?? '',
-                        'tipo' => 'plantao',
-                        'detalhe' => 'Plantão: ' . \Carbon\Carbon::parse($p->PLANTAO_DATA)->format('d/m') . '  ' . ($p->PLANTAO_SETOR ?? ''),
-                        'data' => $p->PLANTAO_DATA,
-                        'ref_id' => $p->PLANTAO_ID,
-                        'ref_tabela' => 'PLANTAO_EXTRA',
-                    ];
-                }
-            } catch (\Throwable $e) {
-            }
-
-            // --- KPIs calculados ---
-            $total = count($equipe);
-            $presentes = count(array_filter($equipe, fn($m) => $m['presente']));
-            $emFerias = count(array_filter($equipe, fn($m) => $m['ferias']));
-            $pendQtd = count($pendencias);
-
-            return response()->json([
-                'equipe' => $equipe,
-                'pendencias' => $pendencias,
-                'kpis' => [
-                    'total' => $total,
-                    'presentes' => $presentes,
-                    'pendencias' => $pendQtd,
-                    'emFerias' => $emFerias,
-                ],
-                'fallback' => empty($equipe),
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Gestor: ' . $e->getMessage());
-            return response()->json(['equipe' => [], 'pendencias' => [], 'kpis' => [], 'fallback' => true]);
-        }
-    });
-
-    // POST /api/v3/gestor/aprovar  Aprovar/reprovar pendencia
-    Route::post('/gestor/aprovar', function (\Illuminate\Http\Request $request) {
-        try {
-            $acao = $request->acao; // 'aprovado' ou 'reprovado'
-            $tabela = $request->ref_tabela;
-            $id = $request->ref_id;
-            if ($tabela && $id) {
-                $tabelas = ['FERIAS_PERIODO' => 'FERIAS_STATUS', 'PLANTAO_EXTRA' => 'PLANTAO_STATUS'];
-                if (isset($tabelas[$tabela])) {
-                    try {
-                        \Illuminate\Support\Facades\DB::table($tabela)
-                            ->where(str_replace(['FERIAS_', 'PLANTAO_'], ['FERIAS_ID', 'PLANTAO_ID'], $tabela . '_STATUS') . '>=0', '1')
-                            ->update([$tabelas[$tabela] => $acao]);
-                    } catch (\Throwable $e) {
-                    }
-                }
-            }
-            return response()->json(['message' => 'Ação registrada: ' . $acao]);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Ação registrada (demo).']);
-        }
-    });
-
-});
-
-
-//
-//  API V3  ORGANOGRAMA  CRUD DE SETORES
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // GET /api/v3/organograma  Lista setores agrupados por unidade
-    Route::get('/organograma', function (\Illuminate\Http\Request $request) {
-        try {
-            // Buscar setores ativos
-            $setores = \Illuminate\Support\Facades\DB::table('SETOR')
-                ->where('SETOR_ATIVO', 1)
-                ->orderBy('SETOR_NOME')
-                ->get();
-
-            if ($setores->isEmpty()) {
-                return response()->json(['unidades' => [], 'setores_flat' => [], 'fallback' => true]);
-            }
-
-            // Contar funcionários por setor
-            $contagens = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                ->whereIn('SETOR_ID', $setores->pluck('SETOR_ID'))
-                ->whereNull('FUNCIONARIO_DATA_DEMISSAO')
-                ->select('SETOR_ID', \Illuminate\Support\Facades\DB::raw('COUNT(*) as total'))
-                ->groupBy('SETOR_ID')
-                ->pluck('total', 'SETOR_ID');
-
-            // Buscar funcionários por setor (nome + cargo)
-            $funcionarios = [];
-            $funcRows = \App\Models\Funcionario::whereIn('SETOR_ID', $setores->pluck('SETOR_ID'))
-                ->whereNull('FUNCIONARIO_DATA_DEMISSAO')
-                ->with('cargo')
-                ->get();
-            foreach ($funcRows as $f) {
-                $funcionarios[$f->SETOR_ID][] = [
-                    'nome' => trim(($f->FUNCIONARIO_NOME ?? '') . ' ' . ($f->FUNCIONARIO_SOBRENOME ?? '')),
-                    'cargo' => $f->cargo?->CARGO_NOME ?? $f->CARGO_NOME ?? '',
-                ];
-            }
-
-            // Tentar buscar unidades/diretorias
-            $unidadesNomes = [];
-            try {
-                $unidades = \Illuminate\Support\Facades\DB::table('UNIDADE')
-                    ->orderBy('UNIDADE_NOME')
-                    ->get(['UNIDADE_ID', 'UNIDADE_NOME', 'UNIDADE_SIGLA']);
-                foreach ($unidades as $u) {
-                    $unidadesNomes[$u->UNIDADE_ID] = ['nome' => $u->UNIDADE_NOME, 'sigla' => $u->UNIDADE_SIGLA ?? ''];
-                }
-            } catch (\Throwable $e) {
-            }
-
-            // Responsável: funcionário com cargo de chefia no setor
-            $responsaveis = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                ->whereIn('SETOR_ID', $setores->pluck('SETOR_ID'))
-                ->whereNull('FUNCIONARIO_DATA_DEMISSAO')
-                ->orderBy('FUNCIONARIO_ID')
-                ->take(200)
-                ->get(['SETOR_ID', 'FUNCIONARIO_NOME', 'FUNCIONARIO_SOBRENOME'])
-                ->groupBy('SETOR_ID')
-                ->map(fn($g) => trim(($g->first()->FUNCIONARIO_NOME ?? '') . ' ' . ($g->first()->FUNCIONARIO_SOBRENOME ?? '')))
-                ->toArray();
-
-            // Agrupar setores por UNIDADE_ID
-            $grupos = $setores->groupBy('UNIDADE_ID');
-            $unidadesList = [];
-            foreach ($grupos as $unidadeId => $setoresGrupo) {
-                $nomeUnidade = $unidadesNomes[$unidadeId]['nome']
-                    ?? ($unidadeId ? 'Unidade ' . $unidadeId : 'Sem Diretoria');
-                $unidadesList[] = [
-                    'id' => $unidadeId,
-                    'nome' => $nomeUnidade,
-                    'sigla' => $unidadesNomes[$unidadeId]['sigla'] ?? '',
-                    'setores' => $setoresGrupo->map(fn($s) => [
-                        'id' => $s->SETOR_ID,
-                        'nome' => $s->SETOR_NOME ?? '',
-                        'sigla' => $s->SETOR_SIGLA ?? null,
-                        'unidade_id' => $s->UNIDADE_ID,
-                        'responsavel' => $responsaveis[$s->SETOR_ID] ?? '',
-                        'total_funcionarios' => $contagens[$s->SETOR_ID] ?? 0,
-                        'funcionarios' => $funcionarios[$s->SETOR_ID] ?? [],
-                    ])->values()->toArray(),
-                ];
-            }
-
-            // Setores flat para montar selects de edição
-            $setoresFlat = $setores->map(fn($s) => [
-                'id' => $s->SETOR_ID,
-                'nome' => $s->SETOR_NOME,
-                'sigla' => $s->SETOR_SIGLA ?? null,
-                'unidade_id' => $s->UNIDADE_ID,
-            ])->values()->toArray();
-
-            // Unidades flat para selects
-            $unidadesFlat = [];
-            foreach ($unidadesNomes as $id => $u) {
-                $unidadesFlat[] = ['id' => $id, 'nome' => $u['nome'], 'sigla' => $u['sigla']];
-            }
-
-            return response()->json([
-                'unidades' => $unidadesList,
-                'setores_flat' => $setoresFlat,
-                'unidades_flat' => $unidadesFlat,
-                'fallback' => false,
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Organograma: ' . $e->getMessage());
-            return response()->json(['unidades' => [], 'setores_flat' => [], 'fallback' => true]);
-        }
-    });
-
-    // POST /api/v3/organograma/setor  Criar setor
-    Route::post('/organograma/setor', function (\Illuminate\Http\Request $request) {
-        try {
-            $nome = trim($request->nome ?? '');
-            $sigla = trim($request->sigla ?? '');
-            $unidade = $request->unidade_id ?? 0; // 0 é fallback seguro para NOT NULL
-
-            if (!$nome)
-                return response()->json(['error' => 'Nome é obrigatório.'], 422);
-
-            $id = \Illuminate\Support\Facades\DB::table('SETOR')->insertGetId([
-                'SETOR_NOME' => $nome,
-                'SETOR_SIGLA' => $sigla ?: null,
-                'UNIDADE_ID' => (int) $unidade,
-                'SETOR_ATIVO' => 1,
-            ]);
-
-            return response()->json([
-                'id' => $id,
-                'nome' => $nome,
-                'sigla' => $sigla ?: null,
-                'unidade_id' => $unidade,
-                'message' => 'Setor criado com sucesso!',
-            ], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Erro ao criar setor.'], 500);
-        }
-    });
-
-    // PUT /api/v3/organograma/setor/{id}  Editar setor
-    Route::put('/organograma/setor/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $nome = trim($request->nome ?? '');
-            $sigla = trim($request->sigla ?? '');
-            if (!$nome)
-                return response()->json(['error' => 'Nome é obrigatório.'], 422);
-
-            // Verifica se o setor existe antes de tentar atualizar
-            $setor = \Illuminate\Support\Facades\DB::table('SETOR')->where('SETOR_ID', $id)->first();
-            if (!$setor)
-                return response()->json(['error' => 'Setor não encontrado.'], 404);
-
-            // UNIDADE_ID não pode ser NULL (NOT NULL na tabela SETOR) — usa 0 como fallback
-            $unidadeId = $request->unidade_id ? (int) $request->unidade_id : ($setor->UNIDADE_ID ?? 0);
-
-            \Illuminate\Support\Facades\DB::table('SETOR')
-                ->where('SETOR_ID', $id)
-                ->update([
-                    'SETOR_NOME' => $nome,
-                    'SETOR_SIGLA' => $sigla ?: null,
-                    'UNIDADE_ID' => $unidadeId,
-                ]);
-
-            return response()->json(['message' => 'Setor atualizado!', 'id' => (int) $id]);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Erro ao editar setor: ' . $e->getMessage()], 500);
-        }
-    });
-
-    // DELETE /api/v3/organograma/setor/{id}  Excluir setor (soft-delete)
-    Route::delete('/organograma/setor/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('SETOR')
-                ->where('SETOR_ID', $id)
-                ->update(['SETOR_ATIVO' => 0]);
-
-            return response()->json(['message' => 'Setor removido!']);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Erro ao remover setor.'], 500);
-        }
-    });
-
-    // ── CRUD Diretorias (UNIDADE) ─────────────────────────────────────────
-    // POST /api/v3/organograma/diretoria  — Criar nova diretoria
-    Route::post('/organograma/diretoria', function (\Illuminate\Http\Request $request) {
-        try {
-            $nome = trim($request->nome ?? '');
-            if (!$nome)
-                return response()->json(['error' => 'Nome é obrigatório.'], 422);
-
-            $id = \Illuminate\Support\Facades\DB::table('UNIDADE')->insertGetId([
-                'UNIDADE_NOME' => $nome,
-                'UNIDADE_SIGLA' => trim($request->sigla ?? '') ?: null,
-                'UNIDADE_ATIVA' => 1,
-                'UNIDADE_TIPO' => 0,
-            ]);
-
-            return response()->json([
-                'id' => $id,
-                'nome' => $nome,
-                'sigla' => trim($request->sigla ?? '') ?: null,
-                'message' => 'Diretoria criada com sucesso!',
-            ], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Erro ao criar diretoria: ' . $e->getMessage()], 500);
-        }
-    });
-
-    // PUT /api/v3/organograma/diretoria/{id}  — Editar diretoria
-    Route::put('/organograma/diretoria/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $nome = trim($request->nome ?? '');
-            if (!$nome)
-                return response()->json(['error' => 'Nome é obrigatório.'], 422);
-
-            $diretoria = \Illuminate\Support\Facades\DB::table('UNIDADE')->where('UNIDADE_ID', $id)->first();
-            if (!$diretoria)
-                return response()->json(['error' => 'Diretoria não encontrada.'], 404);
-
-            \Illuminate\Support\Facades\DB::table('UNIDADE')
-                ->where('UNIDADE_ID', $id)
-                ->update([
-                    'UNIDADE_NOME' => $nome,
-                    'UNIDADE_SIGLA' => trim($request->sigla ?? '') ?: null,
-                ]);
-
-            return response()->json(['message' => 'Diretoria atualizada!', 'id' => (int) $id]);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Erro ao editar diretoria: ' . $e->getMessage()], 500);
-        }
-    });
-
-    // DELETE /api/v3/organograma/diretoria/{id}  — Excluir diretoria (soft-delete)
-    Route::delete('/organograma/diretoria/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('UNIDADE')
-                ->where('UNIDADE_ID', $id)
-                ->update(['UNIDADE_ATIVA' => 0]);
-
-            return response()->json(['message' => 'Diretoria removida!']);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Erro ao remover diretoria.'], 500);
-        }
-    });
-
-});
-
-
-//
-//  API V3  COMUNICADOS INTERNOS
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // GET /api/v3/comunicados  — Lista comunicados ativos
-    Route::get('/comunicados', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('COMUNICADO')
-                ->where('ATIVO', 1)
-                ->orderByDesc('FIXADO')
-                ->orderByDesc('created_at')
-                ->take(100)
-                ->get();
-
-            if ($rows->isEmpty()) {
-                return response()->json(['comunicados' => [], 'fallback' => true]);
-            }
-
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $comunicados = $rows->map(fn($c) => [
-                'id' => $c->COMUNICADO_ID,
-                'titulo' => $c->TITULO,
-                'conteudo' => $c->CONTEUDO,
-                'categoria' => $c->CATEGORIA ?? 'rh',
-                'prioridade' => $c->PRIORIDADE ?? 'normal',
-                'fixado' => (bool) ($c->FIXADO ?? false),
-                'autorNome' => $c->AUTOR_NOME ?? 'Administração',
-                'autorSetor' => $c->AUTOR_SETOR ?? '',
-                'data' => isset($c->created_at) ? \Carbon\Carbon::parse($c->created_at)->toDateString() : date('Y-m-d'),
-                'lido' => false,
-                'meu' => $user ? ($c->USUARIO_ID == $user->USUARIO_ID) : false,
-                'preview' => mb_substr(strip_tags($c->CONTEUDO ?? ''), 0, 140),
-            ])->values()->toArray();
-
-            return response()->json(['comunicados' => $comunicados, 'fallback' => false]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Comunicados GET: ' . $e->getMessage());
-            return response()->json(['comunicados' => [], 'fallback' => true]);
-        }
-    });
-
-    // POST /api/v3/comunicados  — Criar comunicado
-    Route::post('/comunicados', function (\Illuminate\Http\Request $request) {
-        try {
-            $titulo = trim($request->titulo ?? '');
-            if (!$titulo)
-                return response()->json(['erro' => 'Título é obrigatório.'], 422);
-
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = $user ? \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first() : null;
-
-            $autorNome = trim(($user->USUARIO_NOME ?? '') . ' ' . ($user->USUARIO_SOBRENOME ?? '')) ?: ($user->USUARIO_LOGIN ?? 'Usuário');
-            $autorSetor = '';
-            try {
-                if ($func?->SETOR_ID) {
-                    $nomeSetor = \Illuminate\Support\Facades\DB::table('SETOR')->where('SETOR_ID', $func->SETOR_ID)->value('SETOR_NOME');
-                    if ($nomeSetor)
-                        $autorSetor = $nomeSetor;
-                }
-            } catch (\Throwable $e) {
-            }
-
-            $id = \Illuminate\Support\Facades\DB::table('COMUNICADO')->insertGetId([
-                'TITULO' => $titulo,
-                'CONTEUDO' => $request->conteudo ?? '',
-                'CATEGORIA' => $request->categoria ?? 'rh',
-                'PRIORIDADE' => $request->prioridade ?? 'normal',
-                'FIXADO' => $request->fixado ? 1 : 0,
-                'ATIVO' => 1,
-                'USUARIO_ID' => $user?->USUARIO_ID,
-                'AUTOR_NOME' => $autorNome,
-                'AUTOR_SETOR' => $autorSetor,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            return response()->json(['id' => $id, 'autorNome' => $autorNome, 'autorSetor' => $autorSetor, 'message' => 'Comunicado publicado!'], 201);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Comunicados POST: ' . $e->getMessage());
-            return response()->json(['erro' => 'Erro ao publicar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    // PUT /api/v3/comunicados/{id}  — Editar / fixar (dono ou admin)
-    Route::put('/comunicados/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $com = \Illuminate\Support\Facades\DB::table('COMUNICADO')->where('COMUNICADO_ID', $id)->first();
-            if (!$com)
-                return response()->json(['erro' => 'Não encontrado.'], 404);
-
-            $isAdmin = (bool) ($user?->USUARIO_ADMIN ?? false);
-            if (!$isAdmin && $com->USUARIO_ID != $user?->USUARIO_ID)
-                return response()->json(['erro' => 'Sem permissão.'], 403);
-
-            $titulo = trim($request->titulo ?? '');
-            if (!$titulo)
-                return response()->json(['erro' => 'Título é obrigatório.'], 422);
-
-            \Illuminate\Support\Facades\DB::table('COMUNICADO')->where('COMUNICADO_ID', $id)->update([
-                'TITULO' => $titulo,
-                'CONTEUDO' => $request->conteudo ?? $com->CONTEUDO,
-                'CATEGORIA' => $request->categoria ?? $com->CATEGORIA,
-                'PRIORIDADE' => $request->prioridade ?? $com->PRIORIDADE,
-                'FIXADO' => $request->has('fixado') ? ($request->fixado ? 1 : 0) : $com->FIXADO,
-                'updated_at' => now(),
-            ]);
-
-            return response()->json(['message' => 'Comunicado atualizado!', 'id' => (int) $id]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Comunicados PUT: ' . $e->getMessage());
-            return response()->json(['erro' => 'Erro ao editar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    // DELETE /api/v3/comunicados/{id}  — Soft-delete (dono ou admin)
-    Route::delete('/comunicados/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $com = \Illuminate\Support\Facades\DB::table('COMUNICADO')->where('COMUNICADO_ID', $id)->first();
-            if (!$com)
-                return response()->json(['erro' => 'Não encontrado.'], 404);
-
-            $isAdmin = (bool) ($user?->USUARIO_ADMIN ?? false);
-            if (!$isAdmin && $com->USUARIO_ID != $user?->USUARIO_ID)
-                return response()->json(['erro' => 'Sem permissão.'], 403);
-
-            \Illuminate\Support\Facades\DB::table('COMUNICADO')->where('COMUNICADO_ID', $id)->update(['ATIVO' => 0, 'updated_at' => now()]);
-            return response()->json(['message' => 'Comunicado removido!']);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Comunicados DELETE: ' . $e->getMessage());
-            return response()->json(['erro' => 'Erro ao excluir.'], 500);
-        }
-    });
-
-});
-
-
-
-//
-//  API V3  PERFIL DO FUNCION�?RIO
-//
-Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
-
-    // GET /api/v3/perfil
-    Route::get('/perfil', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            if (!$user)
-                return response()->json(['erro' => 'Não autenticado.'], 401);
-
-            $func = \App\Models\Funcionario::with([
-                'pessoa.contatos',
-                'lotacoes' => fn($q) => $q->whereNull('LOTACAO_DATA_FIM'),
-                'lotacoes.setor.unidade',
-                'lotacoes.vinculo',
-                'lotacoes.atribuicaoLotacoes.atribuicao',
-            ])->where('USUARIO_ID', $user->USUARIO_ID)->whereNull('FUNCIONARIO_DATA_FIM')->first();
-
-            $lot = $func?->lotacoes?->first();
-            $funcData = $func ? [
-                'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                'FUNCIONARIO_MATRICULA' => $func->FUNCIONARIO_MATRICULA,
-                'FUNCIONARIO_DATA_INICIO' => $func->FUNCIONARIO_DATA_INICIO,
-                'FUNCIONARIO_DATA_FIM' => $func->FUNCIONARIO_DATA_FIM,
-                'setor' => $lot?->setor?->SETOR_NOME,
-                'unidade' => $lot?->setor?->unidade?->UNIDADE_NOME,
-                'vinculo' => $lot?->vinculo?->VINCULO_DESCRICAO,
-                'atribuicao' => $lot?->atribuicaoLotacoes?->first()?->atribuicao?->ATRIBUICAO_NOME,
-                'pessoa' => $func->pessoa ? [
-                    'PESSOA_ID' => $func->pessoa->PESSOA_ID,
-                    'PESSOA_NOME' => $func->pessoa->PESSOA_NOME,
-                    'PESSOA_NOME_SOCIAL' => $func->pessoa->PESSOA_NOME_SOCIAL ?? null,
-                    'PESSOA_CPF_NUMERO' => $func->pessoa->PESSOA_CPF_NUMERO,
-                    'PESSOA_DATA_NASCIMENTO' => $func->pessoa->PESSOA_DATA_NASCIMENTO,
-                    'PESSOA_SEXO' => $func->pessoa->PESSOA_SEXO,
-                    'PESSOA_ESTADO_CIVIL' => $func->pessoa->PESSOA_ESTADO_CIVIL,
-                    'PESSOA_ESCOLARIDADE' => $func->pessoa->PESSOA_ESCOLARIDADE,
-                    'PESSOA_RG_NUMERO' => $func->pessoa->PESSOA_RG_NUMERO,
-                    'PESSOA_PIS_PASEP' => $func->pessoa->PESSOA_PIS_PASEP ?? null,
-                ] : null,
-                'contatos' => $func->pessoa?->contatos?->map(fn($c) => [
-                    'CONTATO_ID' => $c->CONTATO_ID,
-                    'CONTATO_TIPO' => $c->CONTATO_TIPO,
-                    'CONTATO_VALOR' => $c->CONTATO_CONTEUDO ?? $c->CONTATO_TELEFONE ?? $c->CONTATO_EMAIL ?? null,
-                ])->values()->toArray() ?? [],
-            ] : null;
-
-            return response()->json([
-                'funcionario' => $funcData,
-                'usuario' => [
-                    'USUARIO_ID' => $user->USUARIO_ID,
-                    'USUARIO_LOGIN' => $user->USUARIO_LOGIN,
-                    'USUARIO_EMAIL' => $user->USUARIO_EMAIL ?? null,
-                    'USUARIO_NOME' => $user->USUARIO_NOME ?? null,
-                    'USUARIO_ADMIN' => (bool) ($user->USUARIO_ADMIN ?? false),
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Perfil GET: ' . $e->getMessage());
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // PUT /api/v3/perfil
-    Route::put('/perfil', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            if (!$user)
-                return response()->json(['erro' => 'Não autenticado.'], 401);
-
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->whereNull('FUNCIONARIO_DATA_FIM')->first();
-
-            if ($func?->PESSOA_ID) {
-                $upd = [];
-                if ($request->has('PESSOA_NOME_SOCIAL'))
-                    $upd['PESSOA_NOME_SOCIAL'] = $request->PESSOA_NOME_SOCIAL;
-                if ($request->filled('PESSOA_ESTADO_CIVIL'))
-                    $upd['PESSOA_ESTADO_CIVIL'] = (int) $request->PESSOA_ESTADO_CIVIL;
-                if ($request->filled('PESSOA_ESCOLARIDADE'))
-                    $upd['PESSOA_ESCOLARIDADE'] = (int) $request->PESSOA_ESCOLARIDADE;
-                if (!empty($upd))
-                    \Illuminate\Support\Facades\DB::table('PESSOA')->where('PESSOA_ID', $func->PESSOA_ID)->update($upd);
-            }
-
-            if ($request->filled('USUARIO_EMAIL'))
-                \Illuminate\Support\Facades\DB::table('USUARIO')->where('USUARIO_ID', $user->USUARIO_ID)->update(['USUARIO_EMAIL' => $request->USUARIO_EMAIL]);
-
-            return response()->json(['message' => 'Perfil atualizado com sucesso!']);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Perfil PUT: ' . $e->getMessage());
-            return response()->json(['erro' => 'Erro ao salvar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Setores (modal Nova Escala e outros selects)
-    Route::get('/setores', function () {
-        try {
-            $setores = \Illuminate\Support\Facades\DB::table('SETOR')
-                ->select('SETOR_ID', 'SETOR_NOME')
-                ->orderBy('SETOR_NOME')
-                ->get();
-            return response()->json(['setores' => $setores]);
-        } catch (\Throwable $e) {
-            return response()->json(['setores' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // API V3 — Gente V3 (portal do servidor) — rotas adicionais
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // (esse grupo herda o prefix api/v3 e middleware web+auth do grupo externo)
-
-    // ─ Dashboard principal
-    Route::get('/dashboard', function () {
-        try {
-            // KPIs básicos — usando colunas reais do banco
-            $ativos = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                ->whereNull('FUNCIONARIO_DATA_FIM')->where('FUNCIONARIO_ATIVO', 1)->count();
-
-            // Folha mais recente (tabela FOLHA, não FOLHA_PAGAMENTO)
-            $folha = \Illuminate\Support\Facades\DB::table('FOLHA')
-                ->orderByDesc('FOLHA_COMPETENCIA')->first();
-            $folhaStatus = $folha?->FOLHA_STATUS ?? 'Em aberto';
-            $folhaComp = $folha?->FOLHA_COMPETENCIA ?? now()->format('Y-m');
-            $folhaValor = $folha?->FOLHA_VALOR_TOTAL ?? 0;
-
-            // Abonos pendentes
-            $abonosPendentes = 0;
-            if (\Illuminate\Support\Facades\Schema::hasTable('ABONO_FALTA')) {
-                $abonosPendentes = \Illuminate\Support\Facades\DB::table('ABONO_FALTA')
-                    ->where('ABONO_STATUS', 'pendente')->count();
-            }
-
-            // Aniversariantes do mês (campo PESSOA_DATA_NASCIMENTO)
-            $mesHoje = now()->format('m');
-            $diaHoje = now()->format('d');
-            $aniversariantes = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->whereNull('f.FUNCIONARIO_DATA_FIM')
-                ->whereNotNull('p.PESSOA_DATA_NASCIMENTO')
-                ->whereRaw("strftime('%m', p.PESSOA_DATA_NASCIMENTO) = ?", [$mesHoje])
-                ->whereRaw("strftime('%d', p.PESSOA_DATA_NASCIMENTO) = ?", [$diaHoje])
-                ->select('p.PESSOA_NOME', 'f.FUNCIONARIO_MATRICULA')
-                ->take(5)->get()
-                ->map(fn($r) => ['nome' => $r->PESSOA_NOME, 'matricula' => $r->FUNCIONARIO_MATRICULA]);
-
-            // Últimas admissões (FUNCIONARIO_DATA_INICIO é o campo correto)
-            $ultimasAdmissoes = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->whereNull('f.FUNCIONARIO_DATA_FIM')
-                ->whereNotNull('f.FUNCIONARIO_DATA_INICIO')
-                ->orderByDesc('f.FUNCIONARIO_DATA_INICIO')
-                ->select('p.PESSOA_NOME', 'f.FUNCIONARIO_DATA_INICIO', 'f.FUNCIONARIO_MATRICULA')
-                ->take(5)->get()
-                ->map(fn($r) => [
-                    'nome' => $r->PESSOA_NOME,
-                    'cargo' => '—',
-                    'admissao' => $r->FUNCIONARIO_DATA_INICIO,
-                ]);
-
-            // Funcionários com lotação ativa por setor (adicional útil para dashboard)
-            $porSetor = \Illuminate\Support\Facades\DB::table('LOTACAO as l')
-                ->join('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
-                ->whereNull('l.LOTACAO_DATA_FIM')
-                ->select('s.SETOR_NOME', \Illuminate\Support\Facades\DB::raw('COUNT(l.FUNCIONARIO_ID) as qtd'))
-                ->groupBy('l.SETOR_ID', 's.SETOR_NOME')
-                ->orderByDesc('qtd')->take(5)->get()
-                ->map(fn($r) => ['setor' => $r->SETOR_NOME, 'qtd' => $r->qtd]);
-
-            return response()->json([
-                'fallback' => false,
-                'total_funcionarios' => $ativos,
-                'folha_status' => $folhaStatus,
-                'folha_competencia' => $folhaComp,
-                'folha_valor_total' => $folhaValor,
-                'abonos_pendentes' => $abonosPendentes,
-                'aniversariantes' => $aniversariantes,
-                'ultimas_admissoes' => $ultimasAdmissoes,
-                'por_setor' => $porSetor,
-                'alertas' => [],
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'fallback' => true,
-                'total_funcionarios' => 0,
-                'folha_status' => 'Em aberto',
-                'folha_competencia' => now()->format('Y-m'),
-                'folha_valor_total' => 0,
-                'abonos_pendentes' => 0,
-                'aniversariantes' => [],
-                'ultimas_admissoes' => [],
-                'por_setor' => [],
-                'alertas' => [],
-                'erro' => $e->getMessage(),
-            ]);
-        }
-    });
-
-    // ─ Dashboard KPIs (alias legado)
-    Route::get('/dashboard/kpis', function () {
-        return redirect('/api/v3/dashboard');
-    });
-
-    // ─ Atestados Médicos
-    Route::get('/atestados', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'atestados' => []]);
-            $rows = \Illuminate\Support\Facades\DB::table('AFASTAMENTO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->where(function ($q) {
-                    $q->whereRaw("LOWER(AFASTAMENTO_TIPO) LIKE '%atestado%'")->orWhereRaw("LOWER(AFASTAMENTO_TIPO) LIKE '%medic%'");
-                })
-                ->orderByDesc('AFASTAMENTO_DATA_INICIO')->take(20)->get();
-            return response()->json(['atestados' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'atestados' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/atestados', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('AFASTAMENTO')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'AFASTAMENTO_TIPO' => 'atestado', 'AFASTAMENTO_CID' => $request->cid, 'AFASTAMENTO_DATA_INICIO' => $request->inicio, 'AFASTAMENTO_DATA_FIM' => $request->fim, 'AFASTAMENTO_DIAS' => $request->dias, 'AFASTAMENTO_OBS' => $request->obs, 'AFASTAMENTO_STATUS' => 'pendente']);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::delete('/atestados/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('AFASTAMENTO')->where('AFASTAMENTO_ID', $id)->delete();
-            return response()->json(['message' => 'Removido.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Plantões Extras
-    Route::get('/plantoes-extras', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'plantoes' => []]);
-            $rows = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('PLANTAO_DATA')->take(20)->get();
-            return response()->json(['plantoes' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'plantoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/plantoes-extras', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'PLANTAO_DATA' => $request->data, 'PLANTAO_TIPO' => $request->tipo, 'PLANTAO_HORAS' => $request->horas, 'PLANTAO_STATUS' => 'pendente']);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Escala de Sobreaviso
-    Route::get('/sobreaviso', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'escalas' => []]);
-            $rows = \Illuminate\Support\Facades\DB::table('SOBREAVISO')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('SOBREAVISO_DATA_INICIO')->take(12)->get();
-            return response()->json(['escalas' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'escalas' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/sobreaviso/acionamento', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('ACIONAMENTO')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'ACIONAMENTO_DATA' => $request->data, 'ACIONAMENTO_HORA_INI' => $request->hora_inicio, 'ACIONAMENTO_HORA_FIM' => $request->hora_fim, 'ACIONAMENTO_OBS' => $request->obs]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Banco de Horas
-    Route::get('/banco-horas', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'apuracoes' => []]);
-            $rows = \Illuminate\Support\Facades\DB::table('APURACAO_PONTO')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('APURACAO_COMPETENCIA')->take(12)->get()
-                ->map(fn($a) => ['competencia' => $a->APURACAO_COMPETENCIA, 'saldo_acumulado' => $a->APURACAO_SALDO ?? $a->APURACAO_HORAS_EXTRA ?? 0, 'horas_trab' => $a->APURACAO_HORAS_TRAB ?? 0, 'horas_falta' => $a->APURACAO_HORAS_FALTA ?? 0, 'status' => $a->APURACAO_STATUS ?? 'aberta']);
-            return response()->json(['apuracoes' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'apuracoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Contratos / Vínculos
-    Route::get('/contratos', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true]);
-            $f = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')->leftJoin('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'f.SETOR_ID')->select('f.*', 'p.PESSOA_NOME', 'p.PESSOA_CPF', 'p.PESSOA_PIS', 'c.CARGO_NOME', 's.SETOR_NOME')->where('f.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->first();
-            if (!$f)
-                return response()->json(['fallback' => true]);
-            $historico = \Illuminate\Support\Facades\DB::table('HISTORICO_FUNCIONAL')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('HISTORICO_DATA_INICIO')->get()->map(fn($h) => ['id' => $h->HISTORICO_ID, 'tipo' => $h->HISTORICO_TIPO ?? 'Servidor', 'regime' => $h->HISTORICO_REGIME ?? 'Estatutário', 'cargo' => $h->HISTORICO_CARGO ?? ($f->CARGO_NOME ?? '—'), 'setor' => $h->HISTORICO_SETOR ?? ($f->SETOR_NOME ?? '—'), 'inicio' => $h->HISTORICO_DATA_INICIO, 'fim' => $h->HISTORICO_DATA_FIM, 'ativo' => is_null($h->HISTORICO_DATA_FIM)]);
-            return response()->json(['fallback' => false, 'contrato' => ['cargo' => $f->CARGO_NOME ?? '—', 'setor' => $f->SETOR_NOME ?? '—', 'admissao' => $f->FUNCIONARIO_DATA_ADMISSAO ?? null, 'matricula' => $f->FUNCIONARIO_MATRICULA ?? '—', 'vinculo' => $f->FUNCIONARIO_VINCULO ?? 'Servidor', 'cpf' => $f->PESSOA_CPF ?? null, 'pis' => $f->PESSOA_PIS ?? null], 'historico' => $historico]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Progressão Funcional
-    Route::get('/progressao-funcional', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true]);
-            $progressoes = \Illuminate\Support\Facades\DB::table('PROGRESSAO')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderBy('PROGRESSAO_DATA')->get()->map(fn($p) => ['id' => $p->PROGRESSAO_ID, 'nivel' => $p->PROGRESSAO_NIVEL, 'referencia' => $p->PROGRESSAO_REFERENCIA ?? '—', 'salario' => (float) ($p->PROGRESSAO_SALARIO ?? 0), 'data' => $p->PROGRESSAO_DATA, 'tipo' => $p->PROGRESSAO_TIPO ?? 'Progressão', 'reajuste' => (float) ($p->PROGRESSAO_REAJUSTE ?? 0), 'obs' => $p->PROGRESSAO_OBS ?? null, 'ativa' => (bool) ($p->PROGRESSAO_ATIVA ?? false), 'futura' => (bool) ($p->PROGRESSAO_FUTURA ?? false)]);
-            $salarioBase = \Illuminate\Support\Facades\DB::table('PROGRESSAO')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->where('PROGRESSAO_ATIVA', 1)->value('PROGRESSAO_SALARIO');
-            return response()->json(['fallback' => $progressoes->isEmpty(), 'progressoes' => $progressoes, 'admissao' => $func->FUNCIONARIO_DATA_ADMISSAO ?? null, 'salario_base' => $salarioBase]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'progressoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Declarações / Requerimentos
-    Route::get('/declaracoes', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'pedidos' => []]);
-            $pedidos = \Illuminate\Support\Facades\DB::table('PEDIDO_DOCUMENTO')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('PEDIDO_DATA')->take(20)->get();
-            return response()->json(['pedidos' => $pedidos, 'fallback' => $pedidos->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'pedidos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/declaracoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $seq = \Illuminate\Support\Facades\DB::table('PEDIDO_DOCUMENTO')->count() + 1;
-            $proto = 'REQ-' . now()->format('Y') . '-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
-            $id = \Illuminate\Support\Facades\DB::table('PEDIDO_DOCUMENTO')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'PEDIDO_NOME' => $request->nome, 'PEDIDO_DATA' => now()->toDateString(), 'PEDIDO_STATUS' => $request->instantaneo ? 'pronto' : 'andamento', 'PEDIDO_PROTOCOLO' => $proto]);
-            return response()->json(['id' => $id, 'protocolo' => $proto], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Ouvidoria
-    Route::get('/ouvidoria', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'manifestacoes' => []]);
-            $rows = \Illuminate\Support\Facades\DB::table('OUVIDORIA')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('OUVIDORIA_DATA')->take(20)->get();
-            return response()->json(['manifestacoes' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'manifestacoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/ouvidoria', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $seq = \Illuminate\Support\Facades\DB::table('OUVIDORIA')->count() + 1;
-            $proto = 'OUV-' . now()->format('Y') . '-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
-            $id = \Illuminate\Support\Facades\DB::table('OUVIDORIA')->insertGetId(['FUNCIONARIO_ID' => $request->anonimo ? null : ($func->FUNCIONARIO_ID ?? null), 'OUVIDORIA_TIPO' => $request->tipo, 'OUVIDORIA_AREA' => $request->area, 'OUVIDORIA_URGENCIA' => $request->urgencia ?? 'normal', 'OUVIDORIA_DESC' => $request->descricao, 'OUVIDORIA_STATUS' => 'recebida', 'OUVIDORIA_PROTOCOLO' => $proto, 'OUVIDORIA_DATA' => now()->toDateString(), 'OUVIDORIA_ANONIMO' => $request->anonimo ? 1 : 0]);
-            return response()->json(['id' => $id, 'protocolo' => $proto], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Agenda
-    Route::get('/agenda', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'eventos' => []]);
-            $comp = $request->competencia ?? now()->format('Y-m');
-            [$ano, $mes] = explode('-', $comp);
-            $inicio = sprintf('%04d-%02d-01', $ano, $mes);
-            $fim = sprintf('%04d-%02d-%02d', $ano, $mes, cal_days_in_month(CAL_GREGORIAN, $mes, $ano));
-            $rows = \Illuminate\Support\Facades\DB::table('AGENDA')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->whereBetween('AGENDA_DATA', [$inicio, $fim])->orderBy('AGENDA_DATA')->orderBy('AGENDA_HORA')->get()->map(fn($e) => ['AGENDA_ID' => $e->AGENDA_ID, 'AGENDA_TITULO' => $e->AGENDA_TITULO, 'AGENDA_TIPO' => $e->AGENDA_TIPO, 'AGENDA_DIA' => (int) \Carbon\Carbon::parse($e->AGENDA_DATA)->format('j'), 'AGENDA_HORA' => $e->AGENDA_HORA, 'AGENDA_LOCAL' => $e->AGENDA_LOCAL ?? null, 'AGENDA_DESC' => $e->AGENDA_DESC ?? null]);
-            return response()->json(['eventos' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'eventos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/agenda', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('AGENDA')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'AGENDA_TITULO' => $request->titulo, 'AGENDA_TIPO' => $request->tipo, 'AGENDA_DATA' => $request->data, 'AGENDA_HORA' => $request->hora, 'AGENDA_LOCAL' => $request->local, 'AGENDA_DESC' => $request->desc]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Medicina do Trabalho
-    Route::get('/medicina', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'exames' => [], 'historico' => []]);
-            $exames = \Illuminate\Support\Facades\DB::table('EXAME_OCUPACIONAL')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('EXAME_DATA_REALIZACAO')->get()->map(fn($e) => ['EXAME_ID' => $e->EXAME_ID, 'EXAME_TIPO' => $e->EXAME_TIPO, 'EXAME_SUBTIPO' => $e->EXAME_SUBTIPO ?? null, 'EXAME_DATA_REALIZACAO' => $e->EXAME_DATA_REALIZACAO, 'EXAME_DATA_VENCIMENTO' => $e->EXAME_DATA_VENCIMENTO ?? null, 'EXAME_MEDICO' => $e->EXAME_MEDICO ?? null, 'apto' => (bool) ($e->EXAME_APTO ?? true)]);
-            $historico = \Illuminate\Support\Facades\DB::table('HISTORICO_EXAME')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('HISTORICO_DATA')->take(10)->get()->map(fn($h) => ['tipo' => $h->HISTORICO_TIPO, 'data' => $h->HISTORICO_DATA, 'apto' => (bool) ($h->HISTORICO_APTO ?? true)]);
-            return response()->json(['exames' => $exames, 'historico' => $historico, 'fallback' => $exames->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'exames' => [], 'historico' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/medicina/agendar', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('AGENDAMENTO_EXAME')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'AGENDAMENTO_TIPO' => $request->tipo, 'AGENDAMENTO_DATA' => $request->data, 'AGENDAMENTO_OBS' => $request->obs, 'AGENDAMENTO_STATUS' => 'pendente', 'AGENDAMENTO_DT_SOLICITACAO' => now()->toDateString()]);
-            return response()->json(['id' => $id, 'message' => 'Agendamento registrado.'], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Benefícios
-    Route::get('/beneficios', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'ativos' => [], 'disponiveis' => []]);
-            $ativos = \Illuminate\Support\Facades\DB::table('BENEFICIO as b')->join('FUNCIONARIO_BENEFICIO as fb', 'fb.BENEFICIO_ID', '=', 'b.BENEFICIO_ID')->where('fb.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->where('fb.FB_STATUS', 'ativo')->select('b.*', 'fb.FB_VALOR as BENEFICIO_VALOR_REAL')->get();
-            $disponiveis = \Illuminate\Support\Facades\DB::table('BENEFICIO')->whereNotIn('BENEFICIO_ID', $ativos->pluck('BENEFICIO_ID'))->where('BENEFICIO_ATIVO', 1)->get();
-            return response()->json(['ativos' => $ativos, 'disponiveis' => $disponiveis, 'fallback' => $ativos->isEmpty() && $disponiveis->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'ativos' => [], 'disponiveis' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/beneficios/solicitar', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            \Illuminate\Support\Facades\DB::table('BENEFICIO_SOLICITACAO')->insert(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'BENEFICIO_ID' => $request->beneficio_id, 'SOLICITACAO_DATA' => now()->toDateString(), 'SOLICITACAO_STATUS' => 'pendente', 'SOLICITACAO_OBS' => $request->nome]);
-            return response()->json(['message' => 'Solicitação registrada.'], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Relatórios Stats
-    Route::get('/relatorios/stats', function () {
-        try {
-            $n = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->where(function ($q) {
-                $q->whereNull('FUNCIONARIO_DATA_DEMISSAO')->orWhere('FUNCIONARIO_DATA_DEMISSAO', '>', now()->toDateString());
-            })->count();
-            $comp = \Illuminate\Support\Facades\DB::table('FOLHA_PAGAMENTO')->orderByDesc('FOLHA_COMPETENCIA')->value('FOLHA_COMPETENCIA') ?? now()->format('Y-m');
-            return response()->json(['fallback' => false, 'funcionarios' => $n, 'competencia' => $comp]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ── RELATÓRIO: Quadro de Funcionários Ativos ──────────────────────────────
-    Route::get('/relatorios/funcionarios', function (Request $request) {
-        try {
-            $q = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->leftJoin('LOTACAO as l', function ($j) {
-                    $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM');
-                })
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
-                ->leftJoin('ATRIBUICAO_LOTACAO as al', 'al.LOTACAO_ID', '=', 'l.LOTACAO_ID')
-                ->leftJoin('ATRIBUICAO as a', 'a.ATRIBUICAO_ID', '=', 'al.ATRIBUICAO_ID')
-                ->whereNull('f.FUNCIONARIO_DATA_FIM')
-                ->when($request->setor_id, fn($q) => $q->where('l.SETOR_ID', $request->setor_id))
-                ->when($request->busca, function ($q) use ($request) {
-                    $b = '%' . $request->busca . '%';
-                    $q->where(fn($sq) => $sq->where('p.PESSOA_NOME', 'like', $b)->orWhere('f.FUNCIONARIO_MATRICULA', 'like', $b));
-                })
-                ->select(
-                    'f.FUNCIONARIO_ID as id',
-                    'f.FUNCIONARIO_MATRICULA as matricula',
-                    'p.PESSOA_NOME as nome',
-                    'a.ATRIBUICAO_NOME as cargo',
-                    's.SETOR_NOME as setor',
-                    'f.FUNCIONARIO_DATA_INICIO as admissao'
-                )
-                ->groupBy('f.FUNCIONARIO_ID', 'f.FUNCIONARIO_MATRICULA', 'p.PESSOA_NOME', 'a.ATRIBUICAO_NOME', 's.SETOR_NOME', 'f.FUNCIONARIO_DATA_INICIO')
-                ->orderBy('p.PESSOA_NOME')
-                ->paginate($request->get('per_page', 50));
-
-            return response()->json($q);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    });
-
-    // ── RELATÓRIO: Admissões por Período ─────────────────────────────────────
-    Route::get('/relatorios/admissoes', function (Request $request) {
-        try {
-            $inicio = $request->get('data_inicio', now()->startOfMonth()->toDateString());
-            $fim = $request->get('data_fim', now()->toDateString());
-
-            $dados = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->leftJoin('LOTACAO as l', fn($j) => $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM'))
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
-                ->whereNotNull('f.FUNCIONARIO_DATA_INICIO')
-                ->whereBetween('f.FUNCIONARIO_DATA_INICIO', [$inicio, $fim])
-                ->select('f.FUNCIONARIO_ID as id', 'f.FUNCIONARIO_MATRICULA as matricula', 'p.PESSOA_NOME as nome', 's.SETOR_NOME as setor', 'f.FUNCIONARIO_DATA_INICIO as admissao')
-                ->orderBy('f.FUNCIONARIO_DATA_INICIO', 'desc')
-                ->get();
-
-            return response()->json(['data' => $dados, 'total' => $dados->count(), 'periodo' => compact('inicio', 'fim')]);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    });
-
-    // ── RELATÓRIO: Frequência por Período ────────────────────────────────────
-    Route::get('/relatorios/frequencia', function (Request $request) {
-        try {
-            $inicio = $request->get('data_inicio', now()->startOfMonth()->toDateString());
-            $fim = $request->get('data_fim', now()->toDateString());
-
-            $dados = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO as rp')
-                ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'rp.FUNCIONARIO_ID')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->leftJoin('LOTACAO as l', fn($j) => $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM'))
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
-                ->whereBetween('rp.REGISTRO_DATA', [$inicio, $fim])
-                ->when($request->setor_id, fn($q) => $q->where('l.SETOR_ID', $request->setor_id))
-                ->select('f.FUNCIONARIO_ID as id', 'p.PESSOA_NOME as nome', 's.SETOR_NOME as setor', 'rp.REGISTRO_DATA as data', 'rp.REGISTRO_ENTRADA as entrada', 'rp.REGISTRO_SAIDA as saida', 'rp.REGISTRO_STATUS as status')
-                ->orderBy('rp.REGISTRO_DATA', 'desc')
-                ->limit(500)
-                ->get();
-
-            $resumo = $dados->groupBy('id')->map(function ($rows) {
-                return ['id' => $rows->first()->id, 'nome' => $rows->first()->nome, 'setor' => $rows->first()->setor, 'presencas' => $rows->where('status', 'PRESENTE')->count(), 'faltas' => $rows->where('status', 'FALTA')->count(), 'atrasos' => $rows->where('status', 'ATRASO')->count()];
-            })->values();
-
-            return response()->json(['resumo' => $resumo, 'detalhes' => $dados, 'periodo' => compact('inicio', 'fim')]);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    });
-
-    // ── RELATÓRIO: Folha por Competência ─────────────────────────────────────
-    Route::get('/relatorios/folha', function (Request $request) {
-        try {
-            $comp = str_replace('-', '', $request->get('competencia', now()->format('Ym')));
-            $busca = trim($request->get('busca', ''));
-
-            $q = \Illuminate\Support\Facades\DB::table('DETALHE_FOLHA as df')
-                ->join('FOLHA as fo', 'fo.FOLHA_ID', '=', 'df.FOLHA_ID')
-                ->join('FUNCIONARIO as fn', 'fn.FUNCIONARIO_ID', '=', 'df.FUNCIONARIO_ID')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'fn.PESSOA_ID')
-                ->leftJoin('LOTACAO as l', function ($j) {
-                    $j->on('l.FUNCIONARIO_ID', '=', 'fn.FUNCIONARIO_ID')
-                        ->whereNull('l.LOTACAO_DATA_FIM');
-                })
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
-                ->whereRaw("REPLACE(fo.FOLHA_COMPETENCIA, '-', '') = ?", [$comp])
-                ->whereNull('df.DETALHE_FOLHA_ERRO')
-                ->select(
-                    'fn.FUNCIONARIO_MATRICULA as matricula',
-                    'p.PESSOA_NOME as nome',
-                    's.SETOR_NOME as setor',
-                    \Illuminate\Support\Facades\DB::raw('COALESCE(df.DETALHE_FOLHA_PROVENTOS, 0) as bruto'),
-                    \Illuminate\Support\Facades\DB::raw('COALESCE(df.DETALHE_FOLHA_DESCONTOS, 0) as descontos'),
-                    \Illuminate\Support\Facades\DB::raw('COALESCE(df.DETALHE_FOLHA_PROVENTOS, 0) - COALESCE(df.DETALHE_FOLHA_DESCONTOS, 0) as liquido')
-                )
-                ->orderBy('p.PESSOA_NOME');
-
-            if ($busca) {
-                $q->where(function ($w) use ($busca) {
-                    $w->where('p.PESSOA_NOME', 'like', "%{$busca}%")
-                        ->orWhere('fn.FUNCIONARIO_MATRICULA', 'like', "%{$busca}%");
-                });
-            }
-
-            $folhas = $q->get();
-
-            return response()->json([
-                'data' => $folhas,
-                'totais' => [
-                    'bruto' => round((float) $folhas->sum('bruto'), 2),
-                    'descontos' => round((float) $folhas->sum('descontos'), 2),
-                    'liquido' => round((float) $folhas->sum('liquido'), 2),
-                    'servidores' => $folhas->count(),
-                ],
-                'competencia' => $comp,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage(), 'data' => [], 'totais' => null], 500);
-        }
-    });
-
-    // ─ Portal do Gestor
-    Route::get('/gestor', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $hoje = now()->toDateString();
-
-            // Descobre os setores do gestor
-            $setorIds = \Illuminate\Support\Facades\DB::table('USUARIO_SETOR')
-                ->where('USUARIO_ID', $user->USUARIO_ID)
-                ->pluck('SETOR_ID')
-                ->toArray();
-
-            // Se não tem setores definidos, pega pelo funcionário
-            if (empty($setorIds)) {
-                $func = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-                    ->join('LOTACAO as l', 'l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')
-                    ->where('f.USUARIO_ID', $user->USUARIO_ID)
-                    ->whereNull('l.LOTACAO_DATA_FIM')
-                    ->value('l.SETOR_ID');
-                if ($func)
-                    $setorIds = [$func];
-            }
-
-            // Equipe do setor
-            $equipe = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
-                ->join('LOTACAO as l', 'l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')
-                ->whereNull('f.FUNCIONARIO_DATA_FIM')
-                ->whereNull('l.LOTACAO_DATA_FIM')
-                ->when(!empty($setorIds), fn($q) => $q->whereIn('l.SETOR_ID', $setorIds))
-                ->select('f.FUNCIONARIO_ID as id', 'p.PESSOA_NOME as nome', 'c.CARGO_NOME as cargo', 'f.FUNCIONARIO_TURNO as turno')
-                ->get()
-                ->map(function ($m) use ($hoje) {
-                    $ferias = \Illuminate\Support\Facades\DB::table('FERIAS')
-                        ->where('FUNCIONARIO_ID', $m->id)
-                        ->where('FERIAS_DATA_INICIO', '<=', $hoje)
-                        ->where(fn($q) => $q->whereNull('FERIAS_DATA_FIM')->orWhere('FERIAS_DATA_FIM', '>=', $hoje))
-                        ->whereNotIn('FERIAS_STATUS', ['cancelado'])->exists();
-                    $atestado = \Illuminate\Support\Facades\DB::table('AFASTAMENTO')
-                        ->where('FUNCIONARIO_ID', $m->id)
-                        ->whereRaw("LOWER(AFASTAMENTO_TIPO) LIKE '%atestado%'")
-                        ->where('AFASTAMENTO_DATA_INICIO', '<=', $hoje)
-                        ->where(fn($q) => $q->whereNull('AFASTAMENTO_DATA_FIM')->orWhere('AFASTAMENTO_DATA_FIM', '>=', $hoje))
-                        ->exists();
-                    return [
-                        'id' => $m->id,
-                        'nome' => $m->nome,
-                        'cargo' => $m->cargo ?? '—',
-                        'turno' => $m->turno ?? null,
-                        'presente' => !$ferias && !$atestado,
-                        'ferias' => $ferias,
-                        'atestado' => $atestado,
-                        'statusLabel' => $ferias ? 'Em Férias' : ($atestado ? 'Atestado' : 'Presente'),
-                    ];
-                });
-
-            $funcIds = $equipe->pluck('id')->toArray();
-
-            // Pendências: férias aguardando
-            $pendFerias = \Illuminate\Support\Facades\DB::table('FERIAS as fe')
-                ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'fe.FUNCIONARIO_ID')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->whereIn('fe.FUNCIONARIO_ID', $funcIds)
-                ->where('fe.FERIAS_STATUS', 'agendado')
-                ->select('fe.FERIAS_ID as ref_id', 'p.PESSOA_NOME as servidor', 'fe.FERIAS_DATA_INICIO', 'fe.FERIAS_DATA_FIM', 'fe.FERIAS_DATA_SOLICITACAO as data')
-                ->get()->map(fn($r) => [
-                    'id' => 'ferias_' . $r->ref_id,
-                    'ref_id' => $r->ref_id,
-                    'ref_tabela' => 'FERIAS',
-                    'tipo' => 'ferias',
-                    'servidor' => $r->servidor,
-                    'detalhe' => ($r->FERIAS_DATA_INICIO ?? '—') . ' a ' . ($r->FERIAS_DATA_FIM ?? '—'),
-                    'data' => $r->data,
-                ]);
-
-            // Pendências: abonos de falta
-            $pendAbonos = \Illuminate\Support\Facades\DB::table('ABONO_FALTA as ab')
-                ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'ab.FUNCIONARIO_ID')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->whereIn('ab.FUNCIONARIO_ID', $funcIds)
-                ->where('ab.ABONO_STATUS', 'pendente')
-                ->select('ab.ABONO_ID as ref_id', 'p.PESSOA_NOME as servidor', 'ab.ABONO_DATA_FALTA as data', 'ab.ABONO_MOTIVO as motivo')
-                ->get()->map(fn($r) => [
-                    'id' => 'abono_' . $r->ref_id,
-                    'ref_id' => $r->ref_id,
-                    'ref_tabela' => 'ABONO_FALTA',
-                    'tipo' => 'abono',
-                    'servidor' => $r->servidor,
-                    'detalhe' => 'Abono de falta — ' . ($r->data ?? '—') . ' — ' . ($r->motivo ?? 'Sem motivo'),
-                    'data' => $r->data,
-                ]);
-
-            $pendencias = $pendFerias->merge($pendAbonos);
-
-            $total = $equipe->count();
-            $presentes = $equipe->where('presente', true)->count();
-            $emFerias = $equipe->where('ferias', true)->count();
-
-            return response()->json([
-                'fallback' => false,
-                'equipe' => $equipe,
-                'pendencias' => $pendencias,
-                'kpis' => [
-                    'total' => $total,
-                    'presentes' => $presentes,
-                    'pendencias' => $pendencias->count(),
-                    'emFerias' => $emFerias,
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/gestor/aprovar', function (\Illuminate\Http\Request $request) {
-        try {
-            $acao = $request->acao;      // 'aprovado' | 'reprovado'
-            $refId = $request->ref_id;
-            $tabela = $request->ref_tabela;
-
-            if ($tabela === 'FERIAS') {
-                $status = $acao === 'aprovado' ? 'aprovado' : 'cancelado';
-                \Illuminate\Support\Facades\DB::table('FERIAS')->where('FERIAS_ID', $refId)->update(['FERIAS_STATUS' => $status]);
-            } elseif ($tabela === 'ABONO_FALTA') {
-                $status = $acao === 'aprovado' ? 'aprovado' : 'reprovado';
-                \Illuminate\Support\Facades\DB::table('ABONO_FALTA')->where('ABONO_ID', $refId)->update(['ABONO_STATUS' => $status]);
-            }
-            return response()->json(['ok' => true, 'acao' => $acao]);
-        } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Ponto Eletrônico — leitura real de batidas
-    Route::get('/ponto', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'registros' => [], 'apuracao' => null]);
-
-            $comp = $request->competencia ?? now()->format('Y-m'); // formato YYYY-MM
-            [$ano, $mes] = explode('-', $comp . '-01');
-
-            $batidas = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->whereRaw("strftime('%Y-%m', REGISTRO_DATA) = ?", [$comp])
-                ->orderBy('REGISTRO_DATA')
-                ->orderBy('REGISTRO_HORA')
-                ->get();
-
-            // Agrupa por dia
-            $porDia = [];
-            foreach ($batidas as $b) {
-                $dia = (int) substr($b->REGISTRO_DATA, 8, 2);
-                $porDia[$dia][] = [
-                    'hora' => substr($b->REGISTRO_HORA ?? '', 0, 5),
-                    'tipo' => $b->REGISTRO_TIPO ?? 'entrada',
-                ];
-            }
-
-            $registros = array_map(fn($dia, $bats) => ['dia' => $dia, 'batidas' => $bats], array_keys($porDia), $porDia);
-
-            // Apuração (banco de horas)
-            $apuracao = \Illuminate\Support\Facades\DB::table('APURACAO_PONTO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->where('APURACAO_COMPETENCIA', 'like', "$comp%")
-                ->first();
-
-            return response()->json([
-                'fallback' => empty($registros),
-                'registros' => array_values($registros),
-                'apuracao' => $apuracao ? [
-                    'competencia' => $apuracao->APURACAO_COMPETENCIA,
-                    'horas_trab' => $apuracao->APURACAO_HORAS_TRAB ?? 0,
-                    'horas_falta' => $apuracao->APURACAO_HORAS_FALTA ?? 0,
-                    'saldo_acumulado' => $apuracao->APURACAO_SALDO ?? 0,
-                ] : null,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'registros' => [], 'apuracao' => null, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/ponto/registro', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-
-            // Busca o funcionário vinculado ao usuário (ativo ou histórico mais recente)
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)
-                ->orderByRaw('FUNCIONARIO_DATA_FIM IS NULL DESC')
-                ->orderByDesc('FUNCIONARIO_ID')
-                ->first();
-
-            // Fallback: se não achar por USUARIO_ID, tenta pelo FUNCIONARIO_ID do usuário diretamente
-            if (!$func && $user->FUNCIONARIO_ID) {
-                $func = \App\Models\Funcionario::find($user->FUNCIONARIO_ID);
-            }
-
-            if (!$func) {
-                return response()->json(['erro' => 'Funcionário não vinculado a este usuário.'], 404);
-            }
-
-            // Monta o datetime — aceita data+hora separados ou usa o momento atual
-            $data = $request->data ?? now()->toDateString();
-            $hora = $request->hora ?? now()->format('H:i:s');
-            $dataHora = $data . ' ' . $hora;
-
-            $id = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO')->insertGetId([
-                'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                'REGISTRO_DATA_HORA' => $dataHora,
-                'REGISTRO_TIPO' => $request->tipo ?? 'ENTRADA',
-                'REGISTRO_ORIGEM' => 'gente_v3',
-            ]);
-
-            return response()->json(['id' => $id, 'hora' => now()->format('H:i')], 201);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Ponto registro: ' . $e->getMessage());
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ── Configuração Global de Ponto ─────────────────────────────
-    // Helper para verificar permissão admin/rh/gestor
-    // GET  /api/v3/ponto/config  — configurações globais (regime, horários, tolerância)
-    // PUT  /api/v3/ponto/config  — salva configurações globais
-
-    // Manter compatibilidade com GET /ponto/regime (lê da nova config)
-    Route::get('/ponto/regime', function () {
-        $valor = \Illuminate\Support\Facades\DB::table('CONFIGURACAO_SISTEMA')
-            ->where('CONFIG_CHAVE', 'REGIME_PONTO')->value('CONFIG_VALOR') ?? '4_batidas';
-        return response()->json(['regime' => $valor]);
-    });
-
-    Route::get('/ponto/config', function () {
-        $db = \Illuminate\Support\Facades\DB::table('CONFIGURACAO_SISTEMA');
-        return response()->json([
-            'regime' => $db->where('CONFIG_CHAVE', 'REGIME_PONTO')->value('CONFIG_VALOR') ?? '4_batidas',
-            'hora_entrada' => $db->where('CONFIG_CHAVE', 'PONTO_HORA_ENTRADA')->value('CONFIG_VALOR') ?? '08:00',
-            'hora_saida' => $db->where('CONFIG_CHAVE', 'PONTO_HORA_SAIDA')->value('CONFIG_VALOR') ?? '18:00',
-            'tolerancia' => (int) ($db->where('CONFIG_CHAVE', 'PONTO_TOLERANCIA')->value('CONFIG_VALOR') ?? 15),
-            'intervalo_almoco' => (int) ($db->where('CONFIG_CHAVE', 'PONTO_INTERVALO_ALMOCO')->value('CONFIG_VALOR') ?? 120),
-        ]);
-    });
-
-    Route::put('/ponto/config', function (\Illuminate\Http\Request $request) {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $perfis = $user->usuarioPerfis()->with('perfil')->get()
-            ->pluck('perfil.PERFIL_NOME')->map(fn($p) => strtolower(trim($p ?? '')))->toArray();
-        $permitidos = ['admin', 'administrador', 'rh', 'recursos humanos', 'gestor'];
-        $ok = !empty(array_intersect($perfis, $permitidos)) || strtolower($user->USUARIO_LOGIN ?? '') === 'admin';
-        if (!$ok)
-            return response()->json(['erro' => 'Sem permissão.'], 403);
-
-        $salvar = function (string $chave, string $valor, string $desc) {
-            \Illuminate\Support\Facades\DB::table('CONFIGURACAO_SISTEMA')->updateOrInsert(
-                ['CONFIG_CHAVE' => $chave],
-                ['CONFIG_VALOR' => $valor, 'CONFIG_DESCRICAO' => $desc, 'CONFIG_TIPO' => 'string', 'CONFIG_UPDATED_AT' => now()]
-            );
-        };
-
-        if ($request->has('regime') && in_array($request->regime, ['2_batidas', '4_batidas']))
-            $salvar('REGIME_PONTO', $request->regime, 'Regime de batidas do ponto eletrônico');
-        if ($request->has('hora_entrada') && preg_match('/^\d{2}:\d{2}$/', $request->hora_entrada))
-            $salvar('PONTO_HORA_ENTRADA', $request->hora_entrada, 'Horário-limite padrão de entrada');
-        if ($request->has('hora_saida') && preg_match('/^\d{2}:\d{2}$/', $request->hora_saida))
-            $salvar('PONTO_HORA_SAIDA', $request->hora_saida, 'Horário-limite padrão de saída');
-        if ($request->has('tolerancia') && is_numeric($request->tolerancia))
-            $salvar('PONTO_TOLERANCIA', (string) (int) $request->tolerancia, 'Tolerância padrão em minutos');
-        if ($request->has('intervalo_almoco') && is_numeric($request->intervalo_almoco))
-            $salvar('PONTO_INTERVALO_ALMOCO', (string) (int) $request->intervalo_almoco, 'Duração padrão do intervalo de almoço em minutos');
-
-        return response()->json(['message' => 'Configurações salvas com sucesso.']);
-    });
-
-    // Manter compatibilidade com PUT /ponto/regime (redireciona para config)
-    Route::put('/ponto/regime', function (\Illuminate\Http\Request $request) {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $perfis = $user->usuarioPerfis()->with('perfil')->get()
-            ->pluck('perfil.PERFIL_NOME')->map(fn($p) => strtolower(trim($p ?? '')))->toArray();
-        $permitidos = ['admin', 'administrador', 'rh', 'recursos humanos', 'gestor'];
-        $ok = !empty(array_intersect($perfis, $permitidos)) || strtolower($user->USUARIO_LOGIN ?? '') === 'admin';
-        if (!$ok)
-            return response()->json(['erro' => 'Sem permissão.'], 403);
-        $regime = $request->input('regime');
-        if (!in_array($regime, ['2_batidas', '4_batidas']))
-            return response()->json(['erro' => 'Regime inválido.'], 422);
-        \Illuminate\Support\Facades\DB::table('CONFIGURACAO_SISTEMA')->updateOrInsert(
-            ['CONFIG_CHAVE' => 'REGIME_PONTO'],
-            ['CONFIG_VALOR' => $regime, 'CONFIG_DESCRICAO' => 'Regime de batidas', 'CONFIG_TIPO' => 'string', 'CONFIG_UPDATED_AT' => now()]
-        );
-        return response()->json(['regime' => $regime, 'message' => 'Regime atualizado.']);
-    });
-
-    // ── Configuração de Ponto por Funcionário ──────────────────
-    // GET  /api/v3/ponto/config/funcionarios           — lista config de todos
-    // GET  /api/v3/ponto/config/funcionarios/{id}      — config de um funcionário
-    // PUT  /api/v3/ponto/config/funcionarios/{id}      — salva config de um funcionário
-
-    Route::get('/ponto/config/funcionarios', function () {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $perfis = $user->usuarioPerfis()->with('perfil')->get()
-            ->pluck('perfil.PERFIL_NOME')->map(fn($p) => strtolower(trim($p ?? '')))->toArray();
-        $permitidos = ['admin', 'administrador', 'rh', 'recursos humanos', 'gestor'];
-        $ok = !empty(array_intersect($perfis, $permitidos)) || strtolower($user->USUARIO_LOGIN ?? '') === 'admin';
-        if (!$ok)
-            return response()->json(['erro' => 'Sem permissão.'], 403);
-
-        $lista = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-            ->leftJoin('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-            ->leftJoin('PONTO_CONFIG_FUNCIONARIO as pc', 'pc.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')
-            ->whereNull('f.FUNCIONARIO_DATA_FIM')
-            ->select(
-                'f.FUNCIONARIO_ID',
-                'f.FUNCIONARIO_MATRICULA',
-                'p.PESSOA_NOME',
-                'pc.REGIME',
-                'pc.HORA_ENTRADA',
-                'pc.HORA_SAIDA',
-                'pc.TOLERANCIA'
-            )
-            ->orderBy('p.PESSOA_NOME')
-            ->get();
-
-        return response()->json($lista);
-    });
-
-    Route::get('/ponto/config/funcionarios/{id}', function (int $id) {
-        $cfg = \Illuminate\Support\Facades\DB::table('PONTO_CONFIG_FUNCIONARIO')
-            ->where('FUNCIONARIO_ID', $id)->first();
-        return response()->json($cfg ?? ['FUNCIONARIO_ID' => $id]);
-    });
-
-    Route::put('/ponto/config/funcionarios/{id}', function (\Illuminate\Http\Request $request, int $id) {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $perfis = $user->usuarioPerfis()->with('perfil')->get()
-            ->pluck('perfil.PERFIL_NOME')->map(fn($p) => strtolower(trim($p ?? '')))->toArray();
-        $permitidos = ['admin', 'administrador', 'rh', 'recursos humanos', 'gestor'];
-        $ok = !empty(array_intersect($perfis, $permitidos)) || strtolower($user->USUARIO_LOGIN ?? '') === 'admin';
-        if (!$ok)
-            return response()->json(['erro' => 'Sem permissão.'], 403);
-
-        $existe = \App\Models\Funcionario::find($id);
-        if (!$existe)
-            return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-        $upd = ['updated_at' => now()];
-
-        // null = herdar padrão; string vazia = resetar para padrão
-        $regime = $request->input('regime');
-        $upd['REGIME'] = (!$regime || $regime === 'padrao') ? null : $regime;
-
-        $he = $request->input('hora_entrada');
-        $upd['HORA_ENTRADA'] = ($he && preg_match('/^\d{2}:\d{2}$/', $he)) ? $he : null;
-
-        $hs = $request->input('hora_saida');
-        $upd['HORA_SAIDA'] = ($hs && preg_match('/^\d{2}:\d{2}$/', $hs)) ? $hs : null;
-
-        $tol = $request->input('tolerancia');
-        $upd['TOLERANCIA'] = is_numeric($tol) ? (int) $tol : null;
-
-        \Illuminate\Support\Facades\DB::table('PONTO_CONFIG_FUNCIONARIO')->updateOrInsert(
-            ['FUNCIONARIO_ID' => $id],
-            array_merge($upd, ['created_at' => now()])
-        );
-
-        return response()->json(['message' => 'Configuração do funcionário salva.']);
-    });
-
-    // ─ Meus Holerites (contracheque)
-    Route::get('/meus-holerites', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'holerites' => []]);
-
-            $rows = \Illuminate\Support\Facades\DB::table('CALCULO_FUNCIONARIO as cf')
-                ->join('FOLHA_PAGAMENTO as fp', 'fp.FOLHA_ID', '=', 'cf.FOLHA_ID')
-                ->where('cf.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->select(
-                    'cf.CALCULO_ID as id',
-                    'fp.FOLHA_COMPETENCIA as competencia',
-                    'cf.CALCULO_VENC_TOTAL as bruto',
-                    'cf.CALCULO_DESC_TOTAL as descontos',
-                    'cf.CALCULO_LIQ_TOTAL as liquido',
-                    'fp.FOLHA_STATUS as status'
-                )
-                ->orderByDesc('fp.FOLHA_COMPETENCIA')
-                ->take(24)
-                ->get()
-                ->map(fn($r) => [
-                    'id' => $r->id,
-                    'competencia' => $r->competencia,
-                    'bruto' => (float) ($r->bruto ?? 0),
-                    'descontos' => (float) ($r->descontos ?? 0),
-                    'liquido' => (float) ($r->liquido ?? 0),
-                    'status' => $r->status ?? 'Fechada',
-                ]);
-
-            return response()->json(['holerites' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'holerites' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Cadastrar Novo Funcionário
-    Route::post('/funcionarios', function (\Illuminate\Http\Request $request) {
-        try {
-            \Illuminate\Support\Facades\DB::beginTransaction();
-
-            // 1. Cria a PESSOA
-            $pessoaId = \Illuminate\Support\Facades\DB::table('PESSOA')->insertGetId([
-                'PESSOA_NOME' => $request->nome,
-                'PESSOA_CPF' => $request->cpf ?? null,
-                'PESSOA_RG' => $request->rg ?? null,
-                'PESSOA_DATA_NASCIMENTO' => $request->data_nascimento ?? null,
-                'PESSOA_SEXO_ID' => $request->sexo_id ?? null,
-            ]);
-
-            // 2. Cria o USUARIO (opcional)
-            $usuarioId = null;
-            if ($request->email) {
-                $usuarioId = \Illuminate\Support\Facades\DB::table('USUARIO')->insertGetId([
-                    'USUARIO_EMAIL' => $request->email,
-                    'USUARIO_SENHA' => bcrypt($request->cpf ?? '12345678'),
-                    'USUARIO_ATIVO' => 1,
-                ]);
-            }
-
-            // 3. Cria o FUNCIONARIO
-            $funcId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->insertGetId([
-                'PESSOA_ID' => $pessoaId,
-                'USUARIO_ID' => $usuarioId,
-                'CARGO_ID' => $request->cargo_id ?? null,
-                'FUNCIONARIO_MATRICULA' => $request->matricula ?? null,
-                'FUNCIONARIO_DATA_ADMISSAO' => $request->data_admissao ?? now()->toDateString(),
-            ]);
-
-            // 4. Cria LOTACAO se setor informado
-            if ($request->setor_id) {
-                \Illuminate\Support\Facades\DB::table('LOTACAO')->insert([
-                    'FUNCIONARIO_ID' => $funcId,
-                    'SETOR_ID' => $request->setor_id,
-                    'LOTACAO_DATA_INICIO' => $request->data_admissao ?? now()->toDateString(),
-                ]);
-            }
-
-            \Illuminate\Support\Facades\DB::commit();
-            return response()->json(['funcionario_id' => $funcId, 'pessoa_id' => $pessoaId], 201);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Inativar / desligar Funcionário
-    Route::delete('/funcionarios/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                ->where('FUNCIONARIO_ID', $id)
-                ->update(['FUNCIONARIO_DATA_FIM' => now()->toDateString()]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Comunicados
-    Route::get('/comunicados', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $rows = \Illuminate\Support\Facades\DB::table('COMUNICADO as c')
-                ->leftJoin('COMUNICADO_LEITURA as l', function ($j) use ($user) {
-                    $j->on('l.COMUNICADO_ID', '=', 'c.COMUNICADO_ID')
-                        ->where('l.USUARIO_ID', $user->USUARIO_ID);
-                })
-                ->select('c.*', \Illuminate\Support\Facades\DB::raw('CASE WHEN l.LEITURA_ID IS NULL THEN 0 ELSE 1 END as lido'))
-                ->orderByDesc('c.COMUNICADO_DT_PUBLICACAO')
-                ->take(30)->get()
-                ->map(fn($r) => [
-                    'id' => $r->COMUNICADO_ID,
-                    'titulo' => $r->COMUNICADO_TITULO,
-                    'conteudo' => $r->COMUNICADO_TEXTO ?? $r->COMUNICADO_CONTEUDO ?? '',
-                    'tipo' => $r->COMUNICADO_TIPO ?? 'geral',
-                    'data' => $r->COMUNICADO_DT_PUBLICACAO,
-                    'lido' => (bool) $r->lido,
-                    'urgente' => (bool) ($r->COMUNICADO_URGENTE ?? false),
-                ]);
-            return response()->json(['fallback' => false, 'comunicados' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'comunicados' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/comunicados', function (\Illuminate\Http\Request $request) {
-        try {
-            $id = \Illuminate\Support\Facades\DB::table('COMUNICADO')->insertGetId([
-                'COMUNICADO_TITULO' => $request->titulo,
-                'COMUNICADO_TEXTO' => $request->conteudo,
-                'COMUNICADO_TIPO' => $request->tipo ?? 'geral',
-                'COMUNICADO_URGENTE' => $request->urgente ? 1 : 0,
-                'COMUNICADO_DT_PUBLICACAO' => now()->toDateString(),
-                'USUARIO_ID' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::put('/comunicados/{id}/lido', function ($id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            \Illuminate\Support\Facades\DB::table('COMUNICADO_LEITURA')->updateOrInsert(
-                ['COMUNICADO_ID' => $id, 'USUARIO_ID' => $user->USUARIO_ID],
-                ['LEITURA_DT' => now()->toDateTimeString()]
-            );
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Agenda
-    Route::get('/agenda', function (\Illuminate\Http\Request $request) {
-        try {
-            $comp = $request->competencia ?? now()->format('Y-m');
-            $rows = \Illuminate\Support\Facades\DB::table('AGENDA_EVENTO')
-                ->whereRaw("strftime('%Y-%m', EVENTO_DATA) = ?", [$comp])
-                ->get()
-                ->map(fn($r) => [
-                    'id' => $r->EVENTO_ID,
-                    'titulo' => $r->EVENTO_TITULO,
-                    'data' => $r->EVENTO_DATA,
-                    'tipo' => $r->EVENTO_TIPO ?? 'reuniao',
-                    'desc' => $r->EVENTO_DESCRICAO ?? '',
-                ]);
-            return response()->json(['fallback' => false, 'eventos' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'eventos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/agenda', function (\Illuminate\Http\Request $request) {
-        try {
-            $id = \Illuminate\Support\Facades\DB::table('AGENDA_EVENTO')->insertGetId([
-                'EVENTO_TITULO' => $request->titulo,
-                'EVENTO_DATA' => $request->data,
-                'EVENTO_TIPO' => $request->tipo ?? 'reuniao',
-                'EVENTO_DESCRICAO' => $request->desc ?? null,
-                'USUARIO_ID' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::delete('/agenda/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('AGENDA_EVENTO')->where('EVENTO_ID', $id)->delete();
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Sobreaviso
-    Route::get('/sobreaviso', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $comp = $request->competencia ?? now()->format('Y-m');
-            if (!$func)
-                return response()->json(['fallback' => true, 'sobreaviso' => [], 'acionamentos' => []]);
-
-            $sobreaviso = \Illuminate\Support\Facades\DB::table('ESCALA_SOBREAVISO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->whereRaw("strftime('%Y-%m', SOBREAVISO_DATA) = ?", [$comp])
-                ->get()
-                ->map(fn($r) => ['id' => $r->SOBREAVISO_ID, 'data' => $r->SOBREAVISO_DATA, 'turno' => $r->SOBREAVISO_TURNO ?? 'Integral', 'horas' => $r->SOBREAVISO_HORAS ?? 12]);
-
-            $acionamentos = \Illuminate\Support\Facades\DB::table('ACIONAMENTO_SOBREAVISO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->whereRaw("strftime('%Y-%m', ACIONAMENTO_DATA) = ?", [$comp])
-                ->get()
-                ->map(fn($r) => ['id' => $r->ACIONAMENTO_ID, 'data' => $r->ACIONAMENTO_DATA, 'hora' => $r->ACIONAMENTO_HORA, 'motivo' => $r->ACIONAMENTO_MOTIVO ?? '']);
-
-            return response()->json(['fallback' => false, 'sobreaviso' => $sobreaviso, 'acionamentos' => $acionamentos]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'sobreaviso' => [], 'acionamentos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/sobreaviso/acionamento', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('ACIONAMENTO_SOBREAVISO')->insertGetId([
-                'FUNCIONARIO_ID' => $func?->FUNCIONARIO_ID ?? null,
-                'ACIONAMENTO_DATA' => $request->data ?? now()->toDateString(),
-                'ACIONAMENTO_HORA' => $request->hora ?? now()->format('H:i'),
-                'ACIONAMENTO_MOTIVO' => $request->motivo ?? null,
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Ouvidoria
-    Route::get('/ouvidoria', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $rows = \Illuminate\Support\Facades\DB::table('MANIFESTACAO')
-                ->where('USUARIO_ID', $user->USUARIO_ID)
-                ->orderByDesc('MANIFESTACAO_DT_REGISTRO')
-                ->get()
-                ->map(fn($r) => [
-                    'id' => $r->MANIFESTACAO_ID,
-                    'tipo' => $r->MANIFESTACAO_TIPO ?? 'Reclamação',
-                    'assunto' => $r->MANIFESTACAO_ASSUNTO ?? '—',
-                    'descricao' => $r->MANIFESTACAO_DESCRICAO ?? '',
-                    'status' => $r->MANIFESTACAO_STATUS ?? 'aberta',
-                    'protocolo' => $r->MANIFESTACAO_PROTOCOLO ?? null,
-                    'data' => $r->MANIFESTACAO_DT_REGISTRO,
-                    'resposta' => $r->MANIFESTACAO_RESPOSTA ?? null,
-                ]);
-            return response()->json(['fallback' => false, 'manifestacoes' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'manifestacoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/ouvidoria', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $protocolo = 'OUV' . date('Ymd') . rand(100, 999);
-            $id = \Illuminate\Support\Facades\DB::table('MANIFESTACAO')->insertGetId([
-                'USUARIO_ID' => $user->USUARIO_ID,
-                'MANIFESTACAO_TIPO' => $request->tipo ?? 'Sugestão',
-                'MANIFESTACAO_ASSUNTO' => $request->assunto,
-                'MANIFESTACAO_DESCRICAO' => $request->descricao,
-                'MANIFESTACAO_ANONIMA' => $request->anonima ? 1 : 0,
-                'MANIFESTACAO_STATUS' => 'aberta',
-                'MANIFESTACAO_PROTOCOLO' => $protocolo,
-                'MANIFESTACAO_DT_REGISTRO' => now()->toDateString(),
-            ]);
-            return response()->json(['id' => $id, 'protocolo' => $protocolo], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Declarações / Requerimentos
-    Route::get('/declaracoes', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'pedidos' => []]);
-
-            $rows = \Illuminate\Support\Facades\DB::table('DECLARACAO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('DECLARACAO_DT_SOLICITACAO')
-                ->get()
-                ->map(fn($r) => [
-                    'id' => $r->DECLARACAO_ID,
-                    'tipo' => $r->DECLARACAO_TIPO ?? '—',
-                    'status' => $r->DECLARACAO_STATUS ?? 'pendente',
-                    'solicitacao' => $r->DECLARACAO_DT_SOLICITACAO,
-                    'observacao' => $r->DECLARACAO_OBS ?? null,
-                ]);
-            return response()->json(['fallback' => false, 'pedidos' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'pedidos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/declaracoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('DECLARACAO')->insertGetId([
-                'FUNCIONARIO_ID' => $func?->FUNCIONARIO_ID ?? null,
-                'DECLARACAO_TIPO' => $request->tipo,
-                'DECLARACAO_STATUS' => 'pendente',
-                'DECLARACAO_OBS' => $request->observacao ?? null,
-                'DECLARACAO_DT_SOLICITACAO' => now()->toDateString(),
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Férias
-    Route::get('/ferias', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['ferias' => [], 'saldo' => 30, 'vencimento' => '—']);
-            $rows = \Illuminate\Support\Facades\DB::table('FERIAS')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->orderByDesc('FERIAS_DATA_INICIO')->get();
-            $gozados = $rows->where('FERIAS_STATUS', '!=', 'cancelado')->sum(fn($r) => abs(\Carbon\Carbon::parse($r->FERIAS_DATA_INICIO)->diffInDays(\Carbon\Carbon::parse($r->FERIAS_DATA_FIM))));
-            return response()->json(['ferias' => $rows, 'saldo' => max(0, 30 - $gozados), 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['ferias' => [], 'saldo' => 30, 'vencimento' => '—', 'fallback' => true]);
-        }
-    });
-    Route::post('/ferias', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('FERIAS')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'FERIAS_DATA_INICIO' => $request->FERIAS_DATA_INICIO, 'FERIAS_DATA_FIM' => $request->FERIAS_DATA_FIM, 'FERIAS_AQUISITIVO_INICIO' => $request->FERIAS_AQUISITIVO_INICIO, 'FERIAS_AQUISITIVO_FIM' => $request->FERIAS_AQUISITIVO_FIM, 'FERIAS_STATUS' => 'agendado', 'FERIAS_DATA_SOLICITACAO' => now()->toDateString()]);
-            return response()->json(['ferias_id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::put('/ferias/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('FERIAS')->where('FERIAS_ID', $id)->update(['FERIAS_DATA_INICIO' => $request->FERIAS_DATA_INICIO, 'FERIAS_DATA_FIM' => $request->FERIAS_DATA_FIM, 'FERIAS_AQUISITIVO_INICIO' => $request->FERIAS_AQUISITIVO_INICIO, 'FERIAS_AQUISITIVO_FIM' => $request->FERIAS_AQUISITIVO_FIM]);
-            return response()->json(['message' => 'Atualizado.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::delete('/ferias/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('FERIAS')->where('FERIAS_ID', $id)->update(['FERIAS_STATUS' => 'cancelado']);
-            return response()->json(['message' => 'Cancelado.']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Afastamentos / Licenças Administrativas
-    Route::get('/afastamentos', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'afastamentos' => []]);
-            $keywords = ['licenca', 'premio', 'particulares', 'maternidade', 'paternidade', 'capacitacao', 'judicial'];
-            $rows = \Illuminate\Support\Facades\DB::table('AFASTAMENTO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $k)
-                        $q->orWhereRaw("LOWER(AFASTAMENTO_TIPO) LIKE ?", '%' . $k . '%');
-                })
-                ->orderByDesc('AFASTAMENTO_DATA_INICIO')->take(20)->get()
-                ->map(fn($a) => ['id' => $a->AFASTAMENTO_ID, 'tipo' => $a->AFASTAMENTO_TIPO, 'tipo_nome' => $a->AFASTAMENTO_TIPO_NOME ?? null, 'inicio' => $a->AFASTAMENTO_DATA_INICIO, 'fim' => $a->AFASTAMENTO_DATA_FIM ?? null, 'obs' => $a->AFASTAMENTO_OBS ?? null, 'status' => $a->AFASTAMENTO_STATUS ?? 'Pendente']);
-            return response()->json(['afastamentos' => $rows, 'fallback' => $rows->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'afastamentos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/afastamentos', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $seq = \Illuminate\Support\Facades\DB::table('AFASTAMENTO')->count() + 1;
-            $proto = 'AFT-' . now()->format('Y') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
-            $id = \Illuminate\Support\Facades\DB::table('AFASTAMENTO')->insertGetId(['FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null, 'AFASTAMENTO_TIPO' => $request->tipo, 'AFASTAMENTO_DATA_INICIO' => $request->inicio, 'AFASTAMENTO_DATA_FIM' => $request->fim ?? null, 'AFASTAMENTO_OBS' => $request->obs ?? null, 'AFASTAMENTO_STATUS' => 'pendente', 'AFASTAMENTO_PROTOCOLO' => $proto, 'AFASTAMENTO_DT_REGISTRO' => now()->toDateString()]);
-            return response()->json(['id' => $id, 'protocolo' => $proto], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Substituições de Plantão
-    Route::get('/substituicoes', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO as sub')
-                ->leftJoin('FUNCIONARIO as fs', 'fs.FUNCIONARIO_ID', '=', 'sub.SOLICITANTE_FUNCIONARIO_ID')
-                ->leftJoin('PESSOA as ps', 'ps.PESSOA_ID', '=', 'fs.PESSOA_ID')
-                ->leftJoin('FUNCIONARIO as ft', 'ft.FUNCIONARIO_ID', '=', 'sub.SUBSTITUTO_FUNCIONARIO_ID')
-                ->leftJoin('PESSOA as pt', 'pt.PESSOA_ID', '=', 'ft.PESSOA_ID')
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'sub.SETOR_ID')
-                ->select(
-                    'sub.SUBSTITUICAO_ID as id',
-                    'ps.PESSOA_NOME as solicitante',
-                    'sub.SOLICITANTE_FUNCIONARIO_ID as solicitante_id',
-                    'pt.PESSOA_NOME as substituto',
-                    'sub.SUBSTITUTO_FUNCIONARIO_ID as substituto_id',
-                    's.SETOR_NOME as setor',
-                    'sub.SUBSTITUICAO_DATA as data_plantao',
-                    'sub.SUBSTITUICAO_TURNO as turno',
-                    'sub.SUBSTITUICAO_MOTIVO as motivo',
-                    'sub.SUBSTITUICAO_STATUS as status',
-                    'sub.SUBSTITUICAO_DT_REGISTRO as criado_em'
-                )
-                ->orderByDesc('sub.SUBSTITUICAO_ID')
-                ->take(50)
-                ->get();
-            return response()->json($rows);
-        } catch (\Throwable $e) {
-            return response()->json([], 200); // tabela pode não existir ainda
-        }
-    });
-
-    Route::post('/substituicoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $id = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')->insertGetId([
-                'ESCALA_ID' => $request->escala_id,
-                'SOLICITANTE_FUNCIONARIO_ID' => $request->solicitante_id,
-                'SUBSTITUTO_FUNCIONARIO_ID' => $request->substituto_id ?? null,
-                'SUBSTITUICAO_DATA' => $request->data_plantao,
-                'SUBSTITUICAO_TURNO' => $request->turno,
-                'SUBSTITUICAO_MOTIVO' => $request->motivo ?? null,
-                'SUBSTITUICAO_STATUS' => 'pendente',
-                'SUBSTITUICAO_DT_REGISTRO' => now()->toDateString(),
-            ]);
-            return response()->json(['id' => $id, 'status' => 'pendente'], 201);
-        } catch (\Throwable $e) {
-            // Fallback: tabela pode não existir
-            return response()->json(['id' => null, 'status' => 'pendente', 'aviso' => $e->getMessage()], 201);
-        }
-    });
-
-    Route::put('/substituicoes/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')
-                ->where('SUBSTITUICAO_ID', $id)
-                ->update(['SUBSTITUICAO_STATUS' => $request->status]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Escalas Médicas — Matriz de Plantões
-    Route::get('/escalas', function () {
-        try {
-            $escalas = \Illuminate\Support\Facades\DB::table('ESCALA as e')
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'e.SETOR_ID')
-                ->select(
-                    'e.ESCALA_ID',
-                    'e.ESCALA_COMPETENCIA',
-                    's.SETOR_NOME as setor'
-                )
-                ->orderByDesc('e.ESCALA_ID')
-                ->take(24)
-                ->get()
-                ->map(function ($e) {
-                    // ESCALA_COMPETENCIA armazenada como YYYYMM (202603) ou string — formata para exibição
-                    $comp = $e->ESCALA_COMPETENCIA ?? '';
-                    if (is_numeric($comp) && strlen($comp) === 6) {
-                        $meses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-                        $m = (int) substr($comp, 4, 2);
-                        $a = substr($comp, 0, 4);
-                        $e->ESCALA_COMPETENCIA = ($meses[$m] ?? $m) . '/' . $a;
-                    }
-                    return $e;
-                });
-            return response()->json(['escalas' => $escalas, 'fallback' => $escalas->isEmpty()]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'escalas' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::get('/escalas/{id}', function ($id) {
-        try {
-            // Dados da escala
-            $escala = \Illuminate\Support\Facades\DB::table('ESCALA as e')
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'e.SETOR_ID')
-                ->select('e.*', 's.SETOR_NOME as setor_nome')
-                ->where('e.ESCALA_ID', $id)
-                ->first();
-
-            if (!$escala) {
-                return response()->json(['erro' => 'Escala não encontrada'], 404);
-            }
-
-            // Extrai ano e mês da competência (formato YYYYMM ou string)
-            $comp = $escala->ESCALA_COMPETENCIA ?? '';
-            if (is_numeric($comp) && strlen($comp) === 6) {
-                $ano = (int) substr($comp, 0, 4);
-                $mes = (int) substr($comp, 4, 2);
-            } else {
-                $ano = now()->year;
-                $mes = now()->month;
-            }
-            $inicioMes = sprintf('%04d-%02d-01', $ano, $mes);
-            $fimMes = sprintf(
-                '%04d-%02d-%02d',
-                $ano,
-                $mes,
-                cal_days_in_month(CAL_GREGORIAN, $mes, $ano)
-            );
-
-            // Feriados do mês
-            $feriados = \Illuminate\Support\Facades\DB::table('FERIADO')
-                ->whereBetween('FERIADO_DATA', [$inicioMes, $fimMes])
-                ->get()
-                ->map(fn($f) => ['data' => $f->FERIADO_DATA, 'nome' => $f->FERIADO_NOME ?? '']);
-
-            // Funcionários na escala (DETALHE_ESCALA)
-            $detalhes = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA as de')
-                ->leftJoin('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'de.FUNCIONARIO_ID')
-                ->leftJoin('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
-                ->where('de.ESCALA_ID', $id)
-                ->select('de.DETALHE_ESCALA_ID', 'de.FUNCIONARIO_ID', 'p.PESSOA_NOME', 'c.CARGO_NOME')
-                ->get();
-
-            $funcionarios = $detalhes->map(function ($d) {
-                // Busca os itens de escala deste detalhe
-                $itens = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')
-                    ->where('DETALHE_ESCALA_ID', $d->DETALHE_ESCALA_ID)
-                    ->get()
-                    ->map(fn($i) => [
-                        'data' => $i->DETALHE_ESCALA_ITEM_DATA,
-                        'turno_id' => $i->TURNO_ID ?? null,
-                        'turno_sigla' => $i->TURNO_SIGLA ?? $i->DETALHE_ESCALA_ITEM_TURNO ?? null,
-                    ]);
-
-                return [
-                    'detalhe_id' => $d->DETALHE_ESCALA_ID,
-                    'funcionario_id' => $d->FUNCIONARIO_ID,
-                    'nome' => $d->PESSOA_NOME ?? 'Sem nome',
-                    'cargo' => $d->CARGO_NOME ?? '—',
-                    'itens' => $itens,
-                ];
-            });
-
-            return response()->json([
-                'escala' => [
-                    'id' => $escala->ESCALA_ID,
-                    'competencia' => $escala->ESCALA_COMPETENCIA,
-                    'ano' => (int) $ano,
-                    'mes' => (int) $mes,
-                    'setor' => $escala->setor_nome ?? '—',
-                ],
-                'feriados' => $feriados,
-                'funcionarios' => $funcionarios,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::post('/escalas/{id}/salvar', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $detalheId = $request->detalhe_escala_id;
-            $itens = $request->itens ?? [];
-
-            // Remove itens anteriores deste detalhe (substitui completo)
-            \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')
-                ->where('DETALHE_ESCALA_ID', $detalheId)
-                ->delete();
-
-            // Insere os novos itens
-            foreach ($itens as $item) {
-                \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')->insert([
-                    'DETALHE_ESCALA_ID' => $detalheId,
-                    'DETALHE_ESCALA_ITEM_DATA' => $item['data'],
-                    'TURNO_ID' => $item['turno_id'] ?? null,
-                    'DETALHE_ESCALA_ITEM_FALTA' => 0,
-                    'DETALHE_ESCALA_ITEM_ATRASO' => 0,
-                ]);
-            }
-
-            return response()->json([
-                'msg' => 'Escala salva com sucesso!',
-                'detalhe' => $detalheId,
-                'itens_qtd' => count($itens),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['msg' => 'Erro ao salvar: ' . $e->getMessage()], 500);
-        }
-    });
-
-    Route::post('/escalas', function (\Illuminate\Http\Request $request) {
-        try {
-            $meses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            $mes = (int) $request->mes;
-            $ano = (int) $request->ano;
-            $comp = ($meses[$mes] ?? $mes) . '/' . $ano;
-            $setorId = $request->setor_id ?: null;
-
-            $escalaId = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId([
-                'SETOR_ID' => $setorId,
-                'ESCALA_COMPETENCIA' => $comp,
-                'ESCALA_DESCRICAO' => "Escala $comp",
-            ]);
-
-            // Auto-popular com funcionários ativos lotados no setor
-            if ($setorId) {
-                $funcionarios = \Illuminate\Support\Facades\DB::table('LOTACAO')
-                    ->where('SETOR_ID', $setorId)
-                    ->whereNull('LOTACAO_DATA_FIM')
-                    ->pluck('FUNCIONARIO_ID')
-                    ->unique();
-
-                foreach ($funcionarios as $funcId) {
-                    \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')->insertOrIgnore([
-                        'ESCALA_ID' => $escalaId,
-                        'FUNCIONARIO_ID' => $funcId,
-                    ]);
-                }
-            }
-
-            return response()->json(['escala_id' => $escalaId, 'competencia' => $comp, 'funcionarios_adicionados' => $funcionarios->count() ?? 0], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Setores (usado no modal Nova Escala)
-    Route::get('/setores', function () {
-        try {
-            $setores = \Illuminate\Support\Facades\DB::table('SETOR')
-                ->select('SETOR_ID', 'SETOR_NOME')
-                ->orderBy('SETOR_NOME')
-                ->get();
-            return response()->json(['setores' => $setores]);
-        } catch (\Throwable $e) {
-            return response()->json(['setores' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Folhas de Pagamento (Sprint 3)
-    Route::get('/folhas', function () {
-        // ⚠�? Rota corrigida — usa tabela FOLHA (não FOLHA_PAGAMENTO)
-        try {
-            $statusMap = [
-                'Fechada' => 'F',
-                'fechada' => 'F',
-                'Aberta' => 'A',
-                'aberta' => 'A',
-                'F' => 'F',
-                'A' => 'A',
-                'P' => 'P',
-                'C' => 'C',
-            ];
-            $compConvert = function ($c) {
-                if (!$c)
-                    return null;
-                if (preg_match('/^\d{6}$/', $c))
-                    return $c;
-                if (preg_match('/^(\d{4})-(\d{2})$/', $c, $m))
-                    return $m[2] . $m[1];
-                $meses = [
-                    'Jan' => '01',
-                    'Fev' => '02',
-                    'Mar' => '03',
-                    'Abr' => '04',
-                    'Mai' => '05',
-                    'Jun' => '06',
-                    'Jul' => '07',
-                    'Ago' => '08',
-                    'Set' => '09',
-                    'Out' => '10',
-                    'Nov' => '11',
-                    'Dez' => '12'
-                ];
-                if (preg_match('/^([A-Za-z]{3})\/(\d{4})$/', $c, $m)) {
-                    return ($meses[$m[1]] ?? '01') . $m[2];
-                }
-                return $c;
-            };
-
-            $rows = \Illuminate\Support\Facades\DB::table('FOLHA')
-                ->orderBy('FOLHA_COMPETENCIA', 'desc')
-                ->limit(50)->get();
-
-            $folhas = $rows->map(function ($f) use ($statusMap, $compConvert) {
-                $totais = \Illuminate\Support\Facades\DB::table('DETALHE_FOLHA')
-                    ->where('FOLHA_ID', $f->FOLHA_ID)
-                    ->whereNull('DETALHE_FOLHA_ERRO')
-                    ->selectRaw('COUNT(*) as qtd, SUM(DETALHE_FOLHA_PROVENTOS) as prov, SUM(DETALHE_FOLHA_DESCONTOS) as desc_val')
-                    ->first();
-                $statusRaw = $f->FOLHA_STATUS ?? $f->FOLHA_SITUACAO ?? 'A';
-                return [
-                    'FOLHA_ID' => $f->FOLHA_ID,
-                    'FOLHA_COMPETENCIA' => $compConvert($f->FOLHA_COMPETENCIA),
-                    'FOLHA_COMPETENCIA_RAW' => $f->FOLHA_COMPETENCIA,
-                    'FOLHA_SITUACAO' => $statusMap[$statusRaw] ?? 'A',
-                    'qtd_funcionarios' => (int) ($totais->qtd ?? $f->FOLHA_QTD_SERVIDORES ?? 0),
-                    'total_proventos' => (float) ($totais->prov ?? $f->FOLHA_VALOR_TOTAL ?? 0),
-                    'total_descontos' => (float) ($totais->desc_val ?? 0),
-                    'total_liquido' => (float) (($totais->prov ?? 0) - ($totais->desc_val ?? 0)),
-                    'FOLHA_DESCRICAO' => $f->FOLHA_DESCRICAO ?? null,
-                ];
-            });
-            return response()->json($folhas);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ Medicina do Trabalho — GET exames + POST agendar
-    Route::get('/medicina', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'exames' => [], 'historico' => []]);
-
-            $hoje = now();
-
-            $exames = \Illuminate\Support\Facades\DB::table('EXAME_MEDICO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('EXAME_DATA_REALIZACAO')
-                ->get()
-                ->map(function ($e) use ($hoje) {
-                    $venc = $e->EXAME_DATA_VENCIMENTO ? new \Carbon\Carbon($e->EXAME_DATA_VENCIMENTO) : null;
-                    $diasRestantes = $venc ? $hoje->diffInDays($venc, false) : null;
-
-                    if (!$venc)
-                        $status = 'em_dia';
-                    elseif ($diasRestantes < 0)
-                        $status = 'vencido';
-                    elseif ($diasRestantes <= 30)
-                        $status = 'proximo';
-                    else
-                        $status = 'em_dia';
-
-                    return [
-                        'id' => $e->EXAME_ID,
-                        'tipo' => $e->EXAME_TIPO ?? 'Periódico',
-                        'dataExame' => $e->EXAME_DATA_REALIZACAO,
-                        'vencimento' => $e->EXAME_DATA_VENCIMENTO,
-                        'apto' => (bool) ($e->EXAME_APTO ?? true),
-                        'status' => $status,
-                        'diasRestantes' => $diasRestantes,
-                        'medico' => $e->EXAME_MEDICO ?? null,
-                        'crm' => $e->EXAME_CRM ?? null,
-                    ];
-                });
-
-            // Histórico de atendimentos (reaproveitando AFASTAMENTO com tipo=atestado como proxi, ou tabela específica)
-            $historico = $exames->map(fn($e) => [
-                'tipo' => $e['tipo'],
-                'data' => $e['dataExame'],
-                'apto' => $e['apto'],
-            ]);
-
-            return response()->json([
-                'fallback' => $exames->isEmpty(),
-                'exames' => $exames,
-                'historico' => $historico,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'exames' => [], 'historico' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/medicina/agendar', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('EXAME_MEDICO')->insertGetId([
-                'FUNCIONARIO_ID' => $func?->FUNCIONARIO_ID ?? null,
-                'EXAME_TIPO' => $request->tipo ?? 'Periódico',
-                'EXAME_DATA_REALIZACAO' => $request->data ?? now()->toDateString(),
-                'EXAME_OBS' => $request->obs ?? null,
-                'EXAME_STATUS' => 'agendado',
-            ]);
-            return response()->json(['id' => $id, 'status' => 'agendado'], 201);
-        } catch (\Throwable $e) {
-            // Fallback: retorna sucesso mesmo sem persistir
-            return response()->json(['id' => null, 'status' => 'agendado', 'aviso' => $e->getMessage()], 201);
-        }
-    });
-
-    // ─ Plantões Extras (Sprint 2)
-    Route::get('/plantoes-extras', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'plantoes' => []]);
-
-            $comp = $request->competencia ?? now()->format('Y-m');
-            $rows = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA as pe')
-                ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'pe.FUNCIONARIO_ID')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'pe.SETOR_ID')
-                ->where('pe.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->whereRaw("strftime('%Y-%m', pe.PLANTAO_DATA) = ?", [$comp])
-                ->orderByDesc('pe.PLANTAO_DATA')
-                ->select(
-                    'pe.PLANTAO_ID as id',
-                    'pe.PLANTAO_DATA as data',
-                    'pe.PLANTAO_TURNO as turno',
-                    'pe.PLANTAO_HORAS as horas',
-                    'pe.PLANTAO_STATUS as status',
-                    's.SETOR_NOME as setor',
-                    'p.PESSOA_NOME as servidor'
-                )
-                ->get();
-
-            return response()->json(['fallback' => $rows->isEmpty(), 'plantoes' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'plantoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/plantoes-extras', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')->insertGetId([
-                'FUNCIONARIO_ID' => $func?->FUNCIONARIO_ID ?? $request->funcionario_id,
-                'SETOR_ID' => $request->setor_id ?? null,
-                'ESCALA_ID' => $request->escala_id ?? null,
-                'PLANTAO_DATA' => $request->data,
-                'PLANTAO_TURNO' => $request->turno ?? 'Diurno',
-                'PLANTAO_HORAS' => $request->horas ?? 12,
-                'PLANTAO_STATUS' => 'pendente',
-                'PLANTAO_MOTIVO' => $request->motivo ?? null,
-            ]);
-            return response()->json(['id' => $id, 'status' => 'pendente'], 201);
-        } catch (\Throwable $e) {
-            // fallback gracioso — aceita sem persistir
-            return response()->json(['id' => null, 'status' => 'pendente', 'aviso' => $e->getMessage()], 201);
-        }
-    });
-
-    // ─ Notificações in-app (Sprint 4)
-    Route::get('/notificacoes', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $rows = \Illuminate\Support\Facades\DB::table('NOTIFICACAO')
-                ->where('USUARIO_ID', $user->USUARIO_ID)
-                ->orderByDesc('NOTIFICACAO_DT_CRIACAO')
-                ->take(50)
-                ->get()
-                ->map(fn($n) => [
-                    'id' => $n->NOTIFICACAO_ID,
-                    'titulo' => $n->NOTIFICACAO_TITULO,
-                    'body' => $n->NOTIFICACAO_BODY ?? '',
-                    'tipo' => $n->NOTIFICACAO_TIPO ?? 'info',
-                    'icone' => $n->NOTIFICACAO_ICONE ?? '🔔',
-                    'url' => $n->NOTIFICACAO_URL ?? null,
-                    'lida' => (bool) $n->NOTIFICACAO_LIDA,
-                    'criada_em' => $n->NOTIFICACAO_DT_CRIACAO,
-                ]);
-            $naoLidas = $rows->where('lida', false)->count();
-            return response()->json([
-                'fallback' => false,
-                'notificacoes' => $rows,
-                'nao_lidas' => $naoLidas,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'notificacoes' => [], 'nao_lidas' => 0, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::put('/notificacoes/{id}/lida', function ($id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            \Illuminate\Support\Facades\DB::table('NOTIFICACAO')
-                ->where('NOTIFICACAO_ID', $id)
-                ->where('USUARIO_ID', $user->USUARIO_ID)
-                ->update(['NOTIFICACAO_LIDA' => 1, 'NOTIFICACAO_DT_LEITURA' => now()->toDateTimeString()]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::put('/notificacoes/lidas', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            \Illuminate\Support\Facades\DB::table('NOTIFICACAO')
-                ->where('USUARIO_ID', $user->USUARIO_ID)
-                ->where('NOTIFICACAO_LIDA', 0)
-                ->update(['NOTIFICACAO_LIDA' => 1, 'NOTIFICACAO_DT_LEITURA' => now()->toDateTimeString()]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Banco de Horas (Sprint Alta Prioridade)
-    Route::get('/banco-horas', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['fallback' => true, 'apuracoes' => []]);
-
-            // Busca apurações mensais se a tabela APURACAO_PONTO existir
-            $apuracoes = \Illuminate\Support\Facades\DB::table('APURACAO_PONTO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('APURACAO_COMPETENCIA')
-                ->take(12)
-                ->get()
-                ->map(fn($a) => [
-                    'competencia' => $a->APURACAO_COMPETENCIA ?? null,
-                    'esperadas' => $a->APURACAO_HORAS_ESPERADAS ?? 0,
-                    'trabalhadas' => $a->APURACAO_HORAS_TRABALHADAS ?? 0,
-                    'extras' => $a->APURACAO_HORAS_EXTRAS ?? 0,
-                    'negativas' => $a->APURACAO_HORAS_NEGATIVAS ?? 0,
-                    'saldo' => $a->APURACAO_SALDO ?? 0,
-                    'saldo_acumulado' => $a->APURACAO_SALDO_ACUMULADO ?? 0,
-                    'status' => $a->APURACAO_STATUS ?? 'em_aberto',
-                ]);
-
-            return response()->json(['fallback' => $apuracoes->isEmpty(), 'apuracoes' => $apuracoes]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'apuracoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─ Alterar Senha (Alta Prioridade)
-    Route::post('/perfil/alterar-senha', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            if (!$user)
-                return response()->json(['ok' => false, 'erro' => 'Não autenticado.'], 401);
-
-            $senhaAtual = $request->senha_atual ?? '';
-            $novaSenha = $request->nova_senha ?? '';
-            $confirmacao = $request->confirmacao ?? '';
-
-            // Validações básicas
-            if (strlen($novaSenha) < 6) {
-                return response()->json(['ok' => false, 'erro' => 'A nova senha deve ter ao menos 6 caracteres.'], 422);
-            }
-            if ($novaSenha !== $confirmacao) {
-                return response()->json(['ok' => false, 'erro' => 'As senhas não coincidem.'], 422);
-            }
-
-            // Verifica senha atual — tenta bcrypt primeiro, depois MD5 (legado)
-            $hashAtual = $user->USUARIO_SENHA ?? $user->password ?? '';
-            $senhaOk = \Illuminate\Support\Facades\Hash::check($senhaAtual, $hashAtual)
-                || md5($senhaAtual) === $hashAtual
-                || $senhaAtual === $hashAtual;
-
-            if (!$senhaOk) {
-                return response()->json(['ok' => false, 'erro' => 'Senha atual incorreta.'], 422);
-            }
-
-            // Atualiza com bcrypt
-            $novoHash = \Illuminate\Support\Facades\Hash::make($novaSenha);
-            \Illuminate\Support\Facades\DB::table('USUARIO')
-                ->where('USUARIO_ID', $user->USUARIO_ID ?? $user->id)
-                ->update(['USUARIO_SENHA' => $novoHash]);
-
-            return response()->json(['ok' => true, 'msg' => 'Senha alterada com sucesso!']);
-        } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ PDF do Holerite via DomPDF (GAP-07 — view v3.holerite-pdf)
-    Route::get('/meus-holerites/{id}/pdf', function ($id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-
-            // Busca o DETALHE_FOLHA pelo id (funciona como id do holerite individal)
-            $detalhe = \Illuminate\Support\Facades\DB::table('DETALHE_FOLHA as df')
-                ->join('FOLHA as fo', 'fo.FOLHA_ID', '=', 'df.FOLHA_ID')
-                ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'df.FUNCIONARIO_ID')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
-                ->leftJoin('LOTACAO as l', function ($j) {
-                    $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')
-                        ->whereNull('l.LOTACAO_DATA_FIM');
-                })
-                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
-                ->where('df.DETALHE_FOLHA_ID', $id)
-                ->select(
-                    'df.*',
-                    'fo.FOLHA_COMPETENCIA',
-                    'p.PESSOA_NOME as nome',
-                    'p.PESSOA_CPF_NUMERO as cpf',
-                    'f.FUNCIONARIO_MATRICULA as matricula',
-                    'f.FUNCIONARIO_BANCO as banco',
-                    'f.FUNCIONARIO_AGENCIA as agencia',
-                    'f.FUNCIONARIO_CONTA as conta',
-                    'f.FUNCIONARIO_REGIME_PREV as regime_prev',
-                    'c.CARGO_NOME as cargo',
-                    's.SETOR_NOME as lotacao'
-                )->first();
-
-            if (!$detalhe)
-                return response()->json(['erro' => 'Holerite não encontrado.'], 404);
-
-            // Segurança: funcionário só acessa o próprio holerite
-            if ($func && $detalhe->FUNCIONARIO_ID !== $func->FUNCIONARIO_ID) {
-                return response()->json(['erro' => 'Acesso não autorizado.'], 403);
-            }
-
-            $proventos = (float) ($detalhe->DETALHE_FOLHA_PROVENTOS ?? 0);
-            $descontos = (float) ($detalhe->DETALHE_FOLHA_DESCONTOS ?? 0);
-            $liquido = (float) ($detalhe->DETALHE_FOLHA_LIQUIDO ?? ($proventos - $descontos));
-
-            // Busca rubricas individuais (ITEM_FOLHA) se a tabela existir
-            $rubricas = [];
-            try {
-                $items = \Illuminate\Support\Facades\DB::table('ITEM_FOLHA as it')
-                    ->leftJoin('RUBRICA as r', 'r.RUBRICA_ID', '=', 'it.RUBRICA_ID')
-                    ->where('it.DETALHE_FOLHA_ID', $id)
-                    ->select(
-                        'r.RUBRICA_CODIGO as codigo',
-                        'r.RUBRICA_DESCRICAO as descricao',
-                        'it.ITEM_TIPO as tipo',          // 'P' provento / 'D' desconto
-                        'it.ITEM_VALOR as valor',
-                        'it.ITEM_REFERENCIA as referencia'
-                    )->get()->toArray();
-
-                $rubricas = array_map(fn($i) => [
-                    'codigo' => $i->codigo ?? '—',
-                    'descricao' => $i->descricao ?? 'Item',
-                    'tipo' => $i->tipo ?? 'P',
-                    'valor' => (float) ($i->valor ?? 0),
-                    'referencia' => $i->referencia ?? null,
-                ], $items);
-            } catch (\Throwable $re) {
-                // Fallback sintético: dois itens agregados
-                if ($proventos > 0)
-                    $rubricas[] = ['codigo' => '001', 'descricao' => 'Vencimento / Proventos', 'tipo' => 'P', 'valor' => $proventos, 'referencia' => null];
-                if ($descontos > 0)
-                    $rubricas[] = ['codigo' => '900', 'descricao' => 'Total de Descontos', 'tipo' => 'D', 'valor' => $descontos, 'referencia' => null];
-            }
-
-            // Formata competência para exibição  (AAAAMM → MM/AAAA)
-            $comp = $detalhe->FOLHA_COMPETENCIA ?? '';
-            if (preg_match('/^(\d{4})(\d{2})$/', $comp, $m))
-                $compFmt = "{$m[2]}/{$m[1]}";
-            elseif (preg_match('/^(\d{4})-(\d{2})$/', $comp, $m))
-                $compFmt = "{$m[2]}/{$m[1]}";
-            else
-                $compFmt = $comp;
-
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('v3.holerite-pdf', [
-                'servidor' => [
-                    'nome' => $detalhe->nome,
-                    'matricula' => $detalhe->matricula,
-                    'cpf' => $detalhe->cpf,
-                    'cargo' => $detalhe->cargo ?? '—',
-                    'lotacao' => $detalhe->lotacao ?? '—',
-                    'regime_prev' => $detalhe->regime_prev ?? '—',
-                    'banco' => $detalhe->banco ?? '—',
-                    'agencia' => $detalhe->agencia ?? '—',
-                    'conta' => $detalhe->conta ?? '—',
-                ],
-                'rubricas' => $rubricas,
-                'competencia' => $compFmt,
-                'emitido_em' => now()->format('d/m/Y H:i'),
-                'total_proventos' => $proventos,
-                'total_descontos' => $descontos,
-                'liquido' => $liquido,
-            ])->setPaper('a4', 'portrait');
-
-            $nome = str_replace([' ', '/'], ['_', '-'], ($detalhe->nome ?? 'servidor'));
-            $nArq = "holerite_{$compFmt}_{$nome}.pdf";
-
-            return $pdf->stream($nArq);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-
-    // ─ A) Documentos do Funcionário (GET lista, POST upload)
-    Route::get('/funcionarios/{id}/documentos', function ($id) {
-        try {
-            $docs = \Illuminate\Support\Facades\DB::table('FUNCIONARIO_DOCUMENTO')
-                ->where('FUNCIONARIO_ID', $id)
-                ->orderByDesc('DOC_DT_UPLOAD')
-                ->get()
-                ->map(fn($d) => [
-                    'id' => $d->DOC_ID,
-                    'tipo' => $d->DOC_TIPO ?? 'Documento',
-                    'numero' => $d->DOC_NUMERO ?? null,
-                    'arquivo' => $d->DOC_ARQUIVO ?? null,
-                    'url' => $d->DOC_ARQUIVO ? asset('storage/' . $d->DOC_ARQUIVO) : null,
-                    'obrigatorio' => (bool) ($d->DOC_OBRIGATORIO ?? 0),
-                    'tamanho' => $d->DOC_TAMANHO ?? null,
-                    'enviado_em' => $d->DOC_DT_UPLOAD,
-                ]);
-            return response()->json($docs);
-        } catch (\Throwable $e) {
-            // Tabela pode não existir ainda; retorna vazio graciosamente
-            return response()->json([]);
-        }
-    });
-
-    Route::post('/funcionarios/{id}/documentos', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            if (!$request->hasFile('arquivo')) {
-                return response()->json(['erro' => 'Nenhum arquivo enviado.'], 422);
-            }
-            $file = $request->file('arquivo');
-            $tipo = $request->tipo ?? 'Documento';
-            $numero = $request->numero ?? null;
-            $ext = $file->extension();
-            $path = $file->storeAs("documentos/{$id}", uniqid() . '.' . $ext, 'public');
-
-            $docId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO_DOCUMENTO')->insertGetId([
-                'FUNCIONARIO_ID' => $id,
-                'DOC_TIPO' => $tipo,
-                'DOC_NUMERO' => $numero,
-                'DOC_ARQUIVO' => $path,
-                'DOC_TAMANHO' => $file->getSize(),
-                'DOC_OBRIGATORIO' => 0,
-                'DOC_DT_UPLOAD' => now()->toDateTimeString(),
-            ]);
-            return response()->json(['id' => $docId, 'url' => asset('storage/' . $path), 'arquivo' => $path], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::delete('/funcionarios/{id}/documentos/{docId}', function ($id, $docId) {
-        try {
-            $doc = \Illuminate\Support\Facades\DB::table('FUNCIONARIO_DOCUMENTO')
-                ->where('DOC_ID', $docId)->where('FUNCIONARIO_ID', $id)->first();
-            if (!$doc)
-                return response()->json(['erro' => 'Documento não encontrado.'], 404);
-            if ($doc->DOC_ARQUIVO)
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($doc->DOC_ARQUIVO);
-            \Illuminate\Support\Facades\DB::table('FUNCIONARIO_DOCUMENTO')->where('DOC_ID', $docId)->delete();
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ B) Aprovação de Atestados pelo Gestor
-    Route::put('/atestados/{id}/aprovar', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $acao = $request->acao ?? 'aprovar';   // aprovar | rejeitar
-            $obs = $request->observacao ?? null;
-            $status = $acao === 'aprovar' ? 'aprovado' : 'rejeitado';
-            $user = \Illuminate\Support\Facades\Auth::user();
-
-            \Illuminate\Support\Facades\DB::table('ATESTADO')
-                ->where('ATESTADO_ID', $id)
-                ->update([
-                    'ATESTADO_STATUS' => $status,
-                    'ATESTADO_OBS_GESTOR' => $obs,
-                    'APROVADOR_USUARIO_ID' => $user->USUARIO_ID ?? $user->id ?? null,
-                    'ATESTADO_DT_APROVACAO' => now()->toDateString(),
-                ]);
-
-            return response()->json(['ok' => true, 'status' => $status]);
-        } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ C) Saldo de Férias por Período Aquisitivo
-    Route::get('/ferias/saldo/{id}', function ($id) {
-        try {
-            $func = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                ->where('FUNCIONARIO_ID', $id)
-                ->first();
-            if (!$func)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
-
-            $dataInicio = \Carbon\Carbon::parse($func->FUNCIONARIO_DATA_INICIO)->startOfDay();
-            $hoje = \Carbon\Carbon::now()->startOfDay();
-            $periodos = [];
-            $anoAtual = $dataInicio->copy();
-
-            // Gera períodos aquisitivos de 12 em 12 meses desde a admissão
-            while ($anoAtual->copy()->addYear()->lte($hoje)) {
-                $inicioAquis = $anoAtual->copy();
-                $fimAquis = $anoAtual->copy()->addYear()->subDay();
-
-                // Férias já tiradas neste período aquisitivo
-                $feriasUsadas = \Illuminate\Support\Facades\DB::table('FERIAS')
-                    ->where('FUNCIONARIO_ID', $id)
-                    ->where('FERIAS_DT_INICIO', '>=', $inicioAquis->toDateString())
-                    ->where('FERIAS_DT_INICIO', '<=', $fimAquis->toDateString())
-                    ->where('FERIAS_STATUS', '!=', 'cancelado')
-                    ->sum(\Illuminate\Support\Facades\DB::raw("COALESCE(FERIAS_DIAS, 30)"));
-
-                $periodos[] = [
-                    'periodo' => $inicioAquis->format('d/m/Y') . ' — ' . $fimAquis->format('d/m/Y'),
-                    'inicio_aquisitivo' => $inicioAquis->toDateString(),
-                    'fim_aquisitivo' => $fimAquis->toDateString(),
-                    'direito_dias' => 30,
-                    'usados_dias' => (int) $feriasUsadas,
-                    'saldo_dias' => max(0, 30 - (int) $feriasUsadas),
-                    'vencido' => $fimAquis->copy()->addYear()->lt($hoje),
-                ];
-
-                $anoAtual->addYear();
-            }
-
-            // Período aquisitivo em andamento
-            $inicioAtual = $anoAtual->copy();
-            $mesesdecorridos = $dataInicio->diffInMonths($hoje);
-            $mesesNoPeriodo = $mesesdecorridos % 12;
-
-            return response()->json([
-                'funcionario_id' => (int) $id,
-                'admissao' => $func->FUNCIONARIO_DATA_INICIO,
-                'tempo_servico_meses' => (int) $mesesdecorridos,
-                'periodo_atual_inicio' => $inicioAtual->toDateString(),
-                'meses_decorridos_periodo' => $mesesNoPeriodo,
-                'periodos_aquisitivos' => $periodos,
-                'total_saldo_dias' => array_sum(array_column($periodos, 'saldo_dias')),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ CARGOS (S-1030) ─────────────────────────────────────────
-    Route::get('/cargos', function (\Illuminate\Http\Request $request) {
-        try {
-            $q = \Illuminate\Support\Facades\DB::table('CARGO');
-            if ($request->has('q') && $request->q)
-                $q->where('CARGO_NOME', 'like', '%' . $request->q . '%');
-            if ($request->has('ativo') && $request->ativo !== '')
-                $q->where('CARGO_ATIVO', $request->ativo);
-            $rows = $q->orderBy('CARGO_NOME')->get()->map(fn($c) => [
-                'cargo_id' => $c->CARGO_ID,
-                'nome' => $c->CARGO_NOME,
-                'sigla' => $c->CARGO_SIGLA ?? null,
-                'cbo' => $c->CARGO_CBO ?? null,
-                'descricao' => $c->CARGO_DESCRICAO ?? null,
-                'remuneracao' => $c->CARGO_REMUNERACAO ?? null,
-                'escolaridade' => $c->CARGO_ESCOLARIDADE ?? null,
-                'gestao' => (bool) ($c->CARGO_GESTAO ?? 0),
-                'data_inicio' => $c->CARGO_DATA_INICIO ?? null,
-                'ativo' => (bool) ($c->CARGO_ATIVO ?? 1),
-            ]);
-            return response()->json(['cargos' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['cargos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/cargos', function (\Illuminate\Http\Request $request) {
-        try {
-            if (!$request->CARGO_NOME)
-                return response()->json(['erro' => 'Nome obrigatório.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('CARGO')->insertGetId([
-                'CARGO_NOME' => $request->CARGO_NOME,
-                'CARGO_SIGLA' => $request->CARGO_SIGLA ?? null,
-                'CARGO_CBO' => $request->CARGO_CBO ?? null,
-                'CARGO_DESCRICAO' => $request->CARGO_DESCRICAO ?? null,
-                'CARGO_REMUNERACAO' => $request->CARGO_REMUNERACAO ?? null,
-                'CARGO_ESCOLARIDADE' => $request->CARGO_ESCOLARIDADE ?? null,
-                'CARGO_GESTAO' => $request->CARGO_GESTAO ?? 0,
-                'CARGO_DATA_INICIO' => $request->CARGO_DATA_INICIO ?? null,
-                'CARGO_ATIVO' => 1,
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('CARGO')->where('CARGO_ID', $id)->update([
-                'CARGO_NOME' => $request->CARGO_NOME,
-                'CARGO_SIGLA' => $request->CARGO_SIGLA ?? null,
-                'CARGO_CBO' => $request->CARGO_CBO ?? null,
-                'CARGO_DESCRICAO' => $request->CARGO_DESCRICAO ?? null,
-                'CARGO_REMUNERACAO' => $request->CARGO_REMUNERACAO ?? null,
-                'CARGO_ESCOLARIDADE' => $request->CARGO_ESCOLARIDADE ?? null,
-                'CARGO_GESTAO' => $request->CARGO_GESTAO ?? 0,
-                'CARGO_DATA_INICIO' => $request->CARGO_DATA_INICIO ?? null,
-            ]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::delete('/cargos/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('CARGO')->where('CARGO_ID', $id)->update(['CARGO_ATIVO' => 0]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ FUNÇÕES / COMISSÃO (S-1040) ────────────────────────────
-    Route::get('/funcoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $q = \Illuminate\Support\Facades\DB::table('FUNCAO');
-            if ($request->has('q') && $request->q)
-                $q->where('FUNCAO_NOME', 'like', '%' . $request->q . '%');
-            $rows = $q->orderBy('FUNCAO_NOME')->get()->map(fn($f) => [
-                'funcao_id' => $f->FUNCAO_ID,
-                'nome' => $f->FUNCAO_NOME,
-                'cbo' => $f->FUNCAO_CBO ?? null,
-                'tipo' => $f->FUNCAO_TIPO ?? null,
-                'gratificacao' => $f->FUNCAO_GRATIFICACAO ?? null,
-                'ativo' => (bool) ($f->FUNCAO_ATIVO ?? 1),
-            ]);
-            return response()->json(['funcoes' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['funcoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/funcoes', function (\Illuminate\Http\Request $request) {
-        try {
-            if (!$request->nome)
-                return response()->json(['erro' => 'Nome obrigatório.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('FUNCAO')->insertGetId([
-                'FUNCAO_NOME' => $request->nome,
-                'FUNCAO_CBO' => $request->cbo ?? null,
-                'FUNCAO_TIPO' => $request->tipo ?? null,
-                'FUNCAO_GRATIFICACAO' => $request->gratificacao ?? null,
-                'FUNCAO_ATIVO' => 1,
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::put('/funcoes/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update([
-                'FUNCAO_NOME' => $request->nome,
-                'FUNCAO_CBO' => $request->cbo ?? null,
-                'FUNCAO_TIPO' => $request->tipo ?? null,
-                'FUNCAO_GRATIFICACAO' => $request->gratificacao ?? null,
-            ]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::delete('/funcoes/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update(['FUNCAO_ATIVO' => 0]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ CALCULAR FOLHA ─────────────────────────────────────────
-    Route::post('/folhas/calcular', function (\Illuminate\Http\Request $request) {
-        try {
-            $competencia = $request->competencia ?? date('Y-m'); // ex: '2026-02'
-
-            // Normaliza formatos: '022026' ou '02/2026' → '2026-02'
-            if (preg_match('/^(\d{2})(\d{4})$/', $competencia, $m)) {
-                $competencia = $m[2] . '-' . $m[1];
-            } elseif (preg_match('/^(\d{2})\/(\d{4})$/', $competencia, $m)) {
-                $competencia = $m[2] . '-' . $m[1];
-            }
-
-            // Busca folha existente para esta competência
-            $folha = \Illuminate\Support\Facades\DB::table('FOLHA')
-                ->where('FOLHA_COMPETENCIA', $competencia)->first();
-
-            if (!$folha) {
-                return response()->json(['erro' => "Nenhuma folha para '{$competencia}'. Crie a folha primeiro."], 404);
-            }
-            $folhaId = $folha->FOLHA_ID;
-
-            // Conta funcionários com detalhe na folha
-            $qtd = \Illuminate\Support\Facades\DB::table('DETALHE_FOLHA')
-                ->where('FOLHA_ID', $folhaId)
-                ->whereNull('DETALHE_FOLHA_ERRO')
-                ->count();
-
-            if ($qtd === 0) {
-                return response()->json(['erro' => 'Nenhum funcionário na folha. Execute o seed de dados primeiro.'], 422);
-            }
-
-            // Soma proventos e descontos da DETALHE_FOLHA
-            $totais = \Illuminate\Support\Facades\DB::table('DETALHE_FOLHA')
-                ->where('FOLHA_ID', $folhaId)
-                ->whereNull('DETALHE_FOLHA_ERRO')
-                ->selectRaw('SUM(DETALHE_FOLHA_PROVENTOS) as proventos, SUM(DETALHE_FOLHA_DESCONTOS) as descontos')
-                ->first();
-
-            $proventos = round((float) ($totais->proventos ?? 0), 2);
-            $descontos = round((float) ($totais->descontos ?? 0), 2);
-            $liquido = $proventos - $descontos;
-
-            // Atualiza totais da folha
-            \Illuminate\Support\Facades\DB::table('FOLHA')->where('FOLHA_ID', $folhaId)->update([
-                'FOLHA_STATUS' => 'Fechada',
-                'FOLHA_QTD_SERVIDORES' => $qtd,
-                'FOLHA_VALOR_TOTAL' => $proventos,
-                'FOLHA_ATIVO' => 1,
-            ]);
-
-            return response()->json([
-                'ok' => true,
-                'folha_id' => $folhaId,
-                'competencia' => $competencia,
-                'qtd_funcionarios' => $qtd,
-                'total_proventos' => $proventos,
-                'total_descontos' => $descontos,
-                'total_liquido' => $liquido,
-                'mensagem' => "Folha {$competencia} calculada! {$qtd} funcs, R$ " . number_format($proventos, 2, ',', '.'),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ PROGRESSÃO FUNCIONAL ────────────────────────────────────
-    Route::get('/progressao-funcional', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcId = $user->FUNCIONARIO_ID ?? null;
-
-            $progressoes = [];
-            $admissao = null;
-            $salarioBase = 0;
-
-            if ($funcId) {
-                $func = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                    ->where('FUNCIONARIO_ID', $funcId)->first();
-                $admissao = $func?->FUNCIONARIO_DATA_INICIO ?? null;
-                $salarioBase = $func?->FUNCIONARIO_SALARIO_BASE ?? 0;
-
-                $rows = \Illuminate\Support\Facades\DB::table('PROGRESSAO_FUNCIONAL')
-                    ->where('FUNCIONARIO_ID', $funcId)
-                    ->orderBy('PROGRESSAO_DATA')
-                    ->get();
-
-                foreach ($rows as $p) {
-                    $progressoes[] = [
-                        'id' => $p->PROGRESSAO_ID,
-                        'nivel' => $p->PROGRESSAO_NIVEL ?? '—',
-                        'referencia' => $p->PROGRESSAO_REFERENCIA ?? '—',
-                        'salario' => $p->PROGRESSAO_SALARIO ?? 0,
-                        'data' => $p->PROGRESSAO_DATA ?? null,
-                        'tipo' => $p->PROGRESSAO_TIPO ?? 'Progressão',
-                        'reajuste' => $p->PROGRESSAO_REAJUSTE ?? 0,
-                        'obs' => $p->PROGRESSAO_OBS ?? null,
-                        'ativa' => (bool) ($p->PROGRESSAO_ATIVA ?? false),
-                        'futura' => (bool) ($p->PROGRESSAO_FUTURA ?? false),
-                    ];
-                }
-            }
-
-            $fallback = empty($progressoes);
-            return response()->json([
-                'fallback' => $fallback,
-                'progressoes' => $progressoes,
-                'admissao' => $admissao,
-                'salario_base' => $salarioBase,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'progressoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-
-    // ─ TURNOS ─────────────────────────────────────────────────
-    // Colunas reais: TURNO_ID, TURNO_SIGLA, TURNO_DESCRICAO,
-    //   TURNO_HORA_INICIO, TURNO_HORA_FIM, TURNO_CARGA_HORARIA, TURNO_ATIVO
-    Route::get('/turnos', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('TURNO')
-                ->where('TURNO_ATIVO', 1)
-                ->orderBy('TURNO_SIGLA')->get()
-                ->map(fn($t) => [
-                    'id' => $t->TURNO_ID,
-                    'nome' => $t->TURNO_DESCRICAO ?? $t->TURNO_SIGLA,
-                    'sigla' => $t->TURNO_SIGLA,
-                    'codigo' => $t->TURNO_SIGLA,
-                    'hora_entrada' => $t->TURNO_HORA_INICIO ?? null,
-                    'hora_saida' => $t->TURNO_HORA_FIM ?? null,
-                    'carga_horaria' => $t->TURNO_CARGA_HORARIA ?? null,
-                    'ativo' => (bool) ($t->TURNO_ATIVO ?? 1),
-                ]);
-            return response()->json(['turnos' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['turnos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/turnos', function (\Illuminate\Http\Request $req) {
-        try {
-            if (!$req->TURNO_SIGLA || !$req->TURNO_DESCRICAO)
-                return response()->json(['erro' => 'Sigla e descrição obrigatórios.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('TURNO')->insertGetId([
-                'TURNO_SIGLA' => strtoupper($req->TURNO_SIGLA),
-                'TURNO_DESCRICAO' => $req->TURNO_DESCRICAO,
-                'TURNO_HORA_INICIO' => $req->TURNO_HORA_INICIO ?? null,
-                'TURNO_HORA_FIM' => $req->TURNO_HORA_FIM ?? null,
-                'TURNO_CARGA_HORARIA' => $req->TURNO_CARGA_HORARIA ?? null,
-                'TURNO_ATIVO' => 1,
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::put('/turnos/{id}', function (\Illuminate\Http\Request $req, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('TURNO')->where('TURNO_ID', $id)->update([
-                'TURNO_SIGLA' => strtoupper($req->TURNO_SIGLA),
-                'TURNO_DESCRICAO' => $req->TURNO_DESCRICAO,
-                'TURNO_HORA_INICIO' => $req->TURNO_HORA_INICIO ?? null,
-                'TURNO_HORA_FIM' => $req->TURNO_HORA_FIM ?? null,
-                'TURNO_CARGA_HORARIA' => $req->TURNO_CARGA_HORARIA ?? null,
-            ]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::delete('/turnos/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('TURNO')->where('TURNO_ID', $id)->update(['TURNO_ATIVO' => 0]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ FERIADOS ───────────────────────────────────────────────
-    Route::get('/feriados', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('FERIADO')->orderBy('FERIADO_DATA')->get()->map(fn($f) => ['id' => $f->FERIADO_ID, 'nome' => $f->FERIADO_NOME, 'data' => $f->FERIADO_DATA, 'tipo' => $f->FERIADO_TIPO ?? 'N', 'recorrente' => (bool) ($f->FERIADO_RECORRENTE ?? 0)]);
-            return response()->json(['feriados' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['feriados' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/feriados', function (\Illuminate\Http\Request $req) {
-        try {
-            if (!$req->FERIADO_NOME || !$req->FERIADO_DATA)
-                return response()->json(['erro' => 'Nome e data obrigatorios.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('FERIADO')->insertGetId(['FERIADO_NOME' => $req->FERIADO_NOME, 'FERIADO_DATA' => $req->FERIADO_DATA, 'FERIADO_TIPO' => $req->FERIADO_TIPO ?? 'N', 'FERIADO_RECORRENTE' => $req->FERIADO_RECORRENTE ? 1 : 0]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::put('/feriados/{id}', function (\Illuminate\Http\Request $req, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('FERIADO')->where('FERIADO_ID', $id)->update(['FERIADO_NOME' => $req->FERIADO_NOME, 'FERIADO_DATA' => $req->FERIADO_DATA, 'FERIADO_TIPO' => $req->FERIADO_TIPO ?? 'N', 'FERIADO_RECORRENTE' => $req->FERIADO_RECORRENTE ? 1 : 0]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::delete('/feriados/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('FERIADO')->where('FERIADO_ID', $id)->delete();
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ VINCULOS ───────────────────────────────────────────────
-    Route::get('/vinculos', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('VINCULO')->orderBy('VINCULO_NOME')->get()->map(fn($v) => ['id' => $v->VINCULO_ID, 'nome' => $v->VINCULO_NOME, 'sigla' => $v->VINCULO_SIGLA ?? null, 'tipo_esocial' => $v->VINCULO_TIPO_ESOCIAL ?? null, 'fgts' => (bool) ($v->VINCULO_FGTS ?? 0), 'inss' => (bool) ($v->VINCULO_INSS ?? 0), 'irrf' => (bool) ($v->VINCULO_IRRF ?? 0), 'descricao' => $v->VINCULO_DESCRICAO ?? null, 'ativo' => (bool) ($v->VINCULO_ATIVO ?? 1)]);
-            return response()->json(['vinculos' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['vinculos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/vinculos', function (\Illuminate\Http\Request $req) {
-        try {
-            if (!$req->VINCULO_NOME)
-                return response()->json(['erro' => 'Nome obrigatorio.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('VINCULO')->insertGetId(['VINCULO_NOME' => $req->VINCULO_NOME, 'VINCULO_SIGLA' => $req->VINCULO_SIGLA ?? null, 'VINCULO_TIPO_ESOCIAL' => $req->VINCULO_TIPO_ESOCIAL ?? null, 'VINCULO_FGTS' => $req->VINCULO_FGTS ? 1 : 0, 'VINCULO_INSS' => $req->VINCULO_INSS ? 1 : 0, 'VINCULO_IRRF' => $req->VINCULO_IRRF ? 1 : 0, 'VINCULO_DESCRICAO' => $req->VINCULO_DESCRICAO ?? null, 'VINCULO_ATIVO' => 1]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::put('/vinculos/{id}', function (\Illuminate\Http\Request $req, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)->update(['VINCULO_NOME' => $req->VINCULO_NOME, 'VINCULO_SIGLA' => $req->VINCULO_SIGLA ?? null, 'VINCULO_TIPO_ESOCIAL' => $req->VINCULO_TIPO_ESOCIAL ?? null, 'VINCULO_FGTS' => $req->VINCULO_FGTS ? 1 : 0, 'VINCULO_INSS' => $req->VINCULO_INSS ? 1 : 0, 'VINCULO_IRRF' => $req->VINCULO_IRRF ? 1 : 0, 'VINCULO_DESCRICAO' => $req->VINCULO_DESCRICAO ?? null]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::delete('/vinculos/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)->update(['VINCULO_ATIVO' => 0]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ EVENTOS DE FOLHA ───────────────────────────────────────
-    Route::get('/eventos', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('EVENTO')->orderBy('EVENTO_CODIGO')->get()->map(fn($e) => ['id' => $e->EVENTO_ID, 'codigo' => $e->EVENTO_CODIGO, 'nome' => $e->EVENTO_NOME, 'tipo' => $e->EVENTO_TIPO ?? 'P', 'inss' => (bool) ($e->EVENTO_INSS ?? 0), 'irrf' => (bool) ($e->EVENTO_IRRF ?? 0), 'fgts' => (bool) ($e->EVENTO_FGTS ?? 0), 'ativo' => (bool) ($e->EVENTO_ATIVO ?? 1)]);
-            return response()->json(['eventos' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['eventos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/eventos', function (\Illuminate\Http\Request $req) {
-        try {
-            if (!$req->EVENTO_CODIGO || !$req->EVENTO_NOME)
-                return response()->json(['erro' => 'Codigo e nome obrigatorios.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('EVENTO')->insertGetId(['EVENTO_CODIGO' => $req->EVENTO_CODIGO, 'EVENTO_NOME' => $req->EVENTO_NOME, 'EVENTO_TIPO' => $req->EVENTO_TIPO ?? 'P', 'EVENTO_INSS' => $req->EVENTO_INSS ? 1 : 0, 'EVENTO_IRRF' => $req->EVENTO_IRRF ? 1 : 0, 'EVENTO_FGTS' => $req->EVENTO_FGTS ? 1 : 0, 'EVENTO_ATIVO' => 1]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::put('/eventos/{id}', function (\Illuminate\Http\Request $req, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('EVENTO')->where('EVENTO_ID', $id)->update(['EVENTO_CODIGO' => $req->EVENTO_CODIGO, 'EVENTO_NOME' => $req->EVENTO_NOME, 'EVENTO_TIPO' => $req->EVENTO_TIPO ?? 'P', 'EVENTO_INSS' => $req->EVENTO_INSS ? 1 : 0, 'EVENTO_IRRF' => $req->EVENTO_IRRF ? 1 : 0, 'EVENTO_FGTS' => $req->EVENTO_FGTS ? 1 : 0]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::delete('/eventos/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('EVENTO')->where('EVENTO_ID', $id)->update(['EVENTO_ATIVO' => 0]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ ESCALA DE TRABALHO ─────────────────────────────────────
-    // GET /api/v3/escala-trabalho?mes=2&ano=2026[&setor_id=X]
-    // Retorna grade mensal de turnos usando DETALHE_ESCALA_ITEM
-    Route::get('/escala-trabalho', function (\Illuminate\Http\Request $req) {
-        try {
-            $mes = (int) ($req->mes ?? date('n'));
-            $ano = (int) ($req->ano ?? date('Y'));
-            $ini = sprintf('%04d-%02d-01', $ano, $mes);
-            $fim = date('Y-m-t', strtotime($ini));
-            $setorId = $req->setor_id ?: null;
-
-            // Setores ativos
-            $setores = \Illuminate\Support\Facades\DB::table('SETOR')
-                ->where('SETOR_ATIVO', 1)->orderBy('SETOR_NOME')->get()
-                ->map(fn($s) => ['id' => $s->SETOR_ID, 'nome' => $s->SETOR_NOME]);
-
-            // Funcionários com lotação ativa no mês, filtrados por setor se pedido
-            $funcQ = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
-                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-                ->join('LOTACAO as l', function ($j) {
-                    $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')
-                        ->whereNull('l.LOTACAO_DATA_FIM');
-                })
-                ->join('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
-                ->whereNull('f.FUNCIONARIO_DATA_FIM')
-                ->select('f.FUNCIONARIO_ID', 'p.PESSOA_NOME', 's.SETOR_NOME', 'l.SETOR_ID');
-
-            if ($setorId)
-                $funcQ->where('l.SETOR_ID', $setorId);
-            $funcs = $funcQ->get();
-
-            // Itens de escala (DETALHE_ESCALA_ITEM) para o período
-            $funcIds = $funcs->pluck('FUNCIONARIO_ID')->toArray();
-            $itens = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM as dei')
-                ->join('DETALHE_ESCALA as de', 'de.DETALHE_ESCALA_ID', '=', 'dei.DETALHE_ESCALA_ID')
-                ->join('ESCALA as e', 'e.ESCALA_ID', '=', 'de.ESCALA_ID')
-                ->join('TURNO as t', 't.TURNO_ID', '=', 'dei.TURNO_ID')
-                ->whereIn('de.FUNCIONARIO_ID', $funcIds)
-                ->whereBetween('dei.DETALHE_ESCALA_ITEM_DATA', [$ini, $fim])
-                ->select('de.FUNCIONARIO_ID', 'dei.DETALHE_ESCALA_ITEM_DATA as data', 't.TURNO_SIGLA as turno_sigla', 't.TURNO_NOME as turno_nome')
-                ->get()->groupBy('FUNCIONARIO_ID');
-
-            $escala = $funcs->map(function ($f) use ($itens) {
-                $dias = [];
-                foreach ($itens->get($f->FUNCIONARIO_ID, collect()) as $item) {
-                    $dia = (int) date('j', strtotime($item->data));
-                    $dias[$dia] = ['turno' => $item->turno_sigla ?? $item->turno_nome, 'obs' => null];
-                }
-                return [
-                    'funcionario_id' => $f->FUNCIONARIO_ID,
-                    'nome' => $f->PESSOA_NOME,
-                    'setor' => $f->SETOR_NOME,
-                    'dias' => $dias,
-                ];
-            });
-
-            $funcionarios = $funcs->map(fn($f) => ['id' => $f->FUNCIONARIO_ID, 'nome' => $f->PESSOA_NOME]);
-            return response()->json(['escala' => $escala, 'setores' => $setores, 'funcionarios' => $funcionarios]);
-        } catch (\Throwable $e) {
-            return response()->json(['escala' => [], 'setores' => [], 'funcionarios' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    // POST /api/v3/escala-trabalho — salva turno de um dia na DETALHE_ESCALA_ITEM
-    Route::post('/escala-trabalho', function (\Illuminate\Http\Request $req) {
-        try {
-            if (!$req->funcionario_id || !$req->data || !$req->turno)
-                return response()->json(['erro' => 'Funcionario, data e turno obrigatorios.'], 422);
-
-            $funcId = $req->funcionario_id;
-            $data = $req->data; // 'YYYY-MM-DD'
-            $sigla = strtoupper($req->turno);
-
-            // Busca ou cria TURNO pelo sigla
-            $turno = \Illuminate\Support\Facades\DB::table('TURNO')->where('TURNO_SIGLA', $sigla)->first()
-                ?? \Illuminate\Support\Facades\DB::table('TURNO')->where('TURNO_NOME', $sigla)->first();
-            if (!$turno)
-                return response()->json(['erro' => "Turno '{$sigla}' não encontrado. Cadastre-o primeiro."], 422);
-
-            // Busca competência para achar a escala do mês
-            [$ano, $mes] = explode('-', substr($data, 0, 7));
-            $meses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            $compStr = ($meses[(int) $mes] ?? $mes) . '/' . $ano;
-
-            // Busca escala do setor do funcionário naquele mês
-            $lotacao = \Illuminate\Support\Facades\DB::table('LOTACAO')
-                ->where('FUNCIONARIO_ID', $funcId)->whereNull('LOTACAO_DATA_FIM')->first();
-            if (!$lotacao)
-                return response()->json(['erro' => 'Funcionário sem setor ativo definido.'], 422);
-
-            $escala = \Illuminate\Support\Facades\DB::table('ESCALA')
-                ->where('SETOR_ID', $lotacao->SETOR_ID)
-                ->where('ESCALA_COMPETENCIA', $compStr)->first();
-
-            if (!$escala) {
-                $escalaId = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId([
-                    'SETOR_ID' => $lotacao->SETOR_ID,
-                    'ESCALA_COMPETENCIA' => $compStr,
-                    'ESCALA_DESCRICAO' => "Escala {$compStr}",
-                    'ESCALA_ATIVO' => 1,
-                ]);
-            } else {
-                $escalaId = $escala->ESCALA_ID;
-            }
-
-            // Garante DETALHE_ESCALA para o funcionário
-            $det = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')
-                ->where('ESCALA_ID', $escalaId)->where('FUNCIONARIO_ID', $funcId)->first();
-            if (!$det) {
-                $detId = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')
-                    ->insertGetId(['ESCALA_ID' => $escalaId, 'FUNCIONARIO_ID' => $funcId]);
-            } else {
-                $detId = $det->DETALHE_ESCALA_ID;
-            }
-
-            // Upsert DETALHE_ESCALA_ITEM
-            \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')->updateOrInsert(
-                ['DETALHE_ESCALA_ID' => $detId, 'DETALHE_ESCALA_ITEM_DATA' => $data],
-                ['TURNO_ID' => $turno->TURNO_ID]
-            );
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ PARAMETROS FINANCEIROS ─────────────────────────────────
-    Route::get('/parametros-financeiros', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('PARAMETRO_FINANCEIRO')->orderBy('PARAMETRO_TIPO')->orderBy('PARAMETRO_COMPETENCIA', 'desc')->get()->map(fn($p) => ['id' => $p->PARAMETRO_ID, 'tipo' => $p->PARAMETRO_TIPO, 'competencia' => $p->PARAMETRO_COMPETENCIA ?? null, 'descricao' => $p->PARAMETRO_DESCRICAO, 'valor' => $p->PARAMETRO_VALOR, 'tipo_valor' => $p->PARAMETRO_TIPO_VALOR ?? 'ALIQUOTA', 'vigencia_inicio' => $p->PARAMETRO_VIGENCIA_INICIO ?? null, 'vigencia_fim' => $p->PARAMETRO_VIGENCIA_FIM ?? null]);
-            return response()->json(['parametros' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['parametros' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-    Route::post('/parametros-financeiros', function (\Illuminate\Http\Request $req) {
-        try {
-            if (!$req->descricao)
-                return response()->json(['erro' => 'Descricao obrigatoria.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('PARAMETRO_FINANCEIRO')->insertGetId(['PARAMETRO_TIPO' => $req->tipo ?? 'OUTROS', 'PARAMETRO_COMPETENCIA' => $req->competencia ?? null, 'PARAMETRO_DESCRICAO' => $req->descricao, 'PARAMETRO_VALOR' => $req->valor ?? 0, 'PARAMETRO_TIPO_VALOR' => $req->tipo_valor ?? 'ALIQUOTA', 'PARAMETRO_VIGENCIA_INICIO' => $req->vigencia_inicio ?? null, 'PARAMETRO_VIGENCIA_FIM' => $req->vigencia_fim ?? null]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::put('/parametros-financeiros/{id}', function (\Illuminate\Http\Request $req, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('PARAMETRO_FINANCEIRO')->where('PARAMETRO_ID', $id)->update(['PARAMETRO_TIPO' => $req->tipo ?? 'OUTROS', 'PARAMETRO_COMPETENCIA' => $req->competencia ?? null, 'PARAMETRO_DESCRICAO' => $req->descricao, 'PARAMETRO_VALOR' => $req->valor ?? 0, 'PARAMETRO_TIPO_VALOR' => $req->tipo_valor ?? 'ALIQUOTA', 'PARAMETRO_VIGENCIA_INICIO' => $req->vigencia_inicio ?? null, 'PARAMETRO_VIGENCIA_FIM' => $req->vigencia_fim ?? null]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-    Route::delete('/parametros-financeiros/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('PARAMETRO_FINANCEIRO')->where('PARAMETRO_ID', $id)->delete();
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ TABELAS AUXILIARES (generico) ──────────────────────────
-    $tabelasConfig = [
-        'banco' => ['tabela' => 'BANCO', 'pk' => 'BANCO_ID', 'campos' => ['codigo' => 'BANCO_CODIGO', 'nome' => 'BANCO_NOME']],
-        'uf' => ['tabela' => 'UF', 'pk' => 'UF_ID', 'campos' => ['sigla' => 'UF_SIGLA', 'nome' => 'UF_NOME', 'regiao' => 'UF_REGIAO']],
-        'cidade' => ['tabela' => 'CIDADE', 'pk' => 'CIDADE_ID', 'campos' => ['nome' => 'CIDADE_NOME', 'uf_sigla' => 'UF_SIGLA', 'ibge' => 'CIDADE_IBGE']],
-        'bairro' => ['tabela' => 'BAIRRO', 'pk' => 'BAIRRO_ID', 'campos' => ['nome' => 'BAIRRO_NOME', 'cidade_id' => 'CIDADE_ID']],
-        'cartorio' => ['tabela' => 'CARTORIO', 'pk' => 'CARTORIO_ID', 'campos' => ['nome' => 'CARTORIO_NOME', 'cidade' => 'CARTORIO_CIDADE']],
-        'conselho' => ['tabela' => 'CONSELHO', 'pk' => 'CONSELHO_ID', 'campos' => ['sigla' => 'CONSELHO_SIGLA', 'nome' => 'CONSELHO_NOME']],
-        'tipo-documento' => ['tabela' => 'TIPO_DOCUMENTO', 'pk' => 'TIPO_DOCUMENTO_ID', 'campos' => ['codigo' => 'TIPO_DOCUMENTO_CODIGO', 'nome' => 'TIPO_DOCUMENTO_NOME']],
-    ];
-
-    foreach ($tabelasConfig as $recurso => $cfg) {
-        Route::get("/tabelas/{$recurso}", function () use ($cfg) {
-            try {
-                $rows = \Illuminate\Support\Facades\DB::table($cfg['tabela'])->orderBy(reset($cfg['campos']))->limit(2000)->get();
-                $itens = $rows->map(function ($r) use ($cfg) {
-                    $item = ['id' => $r->{$cfg['pk']}];
-                    foreach ($cfg['campos'] as $alias => $col) {
-                        $item[$alias] = $r->$col ?? null;
-                    }
-                    return $item;
-                });
-                return response()->json(['itens' => $itens]);
-            } catch (\Throwable $e) {
-                return response()->json(['itens' => [], 'erro' => $e->getMessage()]);
-            }
-        });
-        Route::post("/tabelas/{$recurso}", function (\Illuminate\Http\Request $req) use ($cfg) {
-            try {
-                $dados = [];
-                foreach ($cfg['campos'] as $alias => $col) {
-                    if ($req->has($alias))
-                        $dados[$col] = $req->$alias;
-                }
-                $id = \Illuminate\Support\Facades\DB::table($cfg['tabela'])->insertGetId($dados);
-                return response()->json(['id' => $id], 201);
-            } catch (\Throwable $e) {
-                return response()->json(['erro' => $e->getMessage()], 500);
-            }
-        });
-        Route::put("/tabelas/{$recurso}/{id}", function (\Illuminate\Http\Request $req, $id) use ($cfg) {
-            try {
-                $dados = [];
-                foreach ($cfg['campos'] as $alias => $col) {
-                    if ($req->has($alias))
-                        $dados[$col] = $req->$alias;
-                }
-                \Illuminate\Support\Facades\DB::table($cfg['tabela'])->where($cfg['pk'], $id)->update($dados);
-                return response()->json(['ok' => true]);
-            } catch (\Throwable $e) {
-                return response()->json(['erro' => $e->getMessage()], 500);
-            }
-        });
-        Route::delete("/tabelas/{$recurso}/{id}", function ($id) use ($cfg) {
-            try {
-                \Illuminate\Support\Facades\DB::table($cfg['tabela'])->where($cfg['pk'], $id)->delete();
-                return response()->json(['ok' => true]);
-            } catch (\Throwable $e) {
-                return response()->json(['erro' => $e->getMessage()], 500);
-            }
-        });
-    }
-
-    // ─ SUBSTITUICOES DE PLANTAO / ESCALA ─────────────────────
-    Route::get('/substituicoes', function (\Illuminate\Http\Request $req) {
-        try {
-            $q = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')
-                ->join('FUNCIONARIO as SOL', 'SUBSTITUICAO.FUNCIONARIO_ID_SOLICITANTE', '=', 'SOL.FUNCIONARIO_ID')
-                ->leftJoin('FUNCIONARIO as SUB', 'SUBSTITUICAO.FUNCIONARIO_ID_SUBSTITUTO', '=', 'SUB.FUNCIONARIO_ID')
-                ->leftJoin('SETOR', 'SUBSTITUICAO.SETOR_ID', '=', 'SETOR.SETOR_ID')
-                ->orderBy('SUBSTITUICAO.SUBSTITUICAO_DATA_PLANTAO', 'desc')
-                ->limit(200)
-                ->select(
-                    'SUBSTITUICAO.SUBSTITUICAO_ID as id',
-                    'SOL.FUNCIONARIO_NOME as solicitante',
-                    'SUBSTITUICAO.FUNCIONARIO_ID_SOLICITANTE as solicitante_id',
-                    'SUB.FUNCIONARIO_NOME as substituto',
-                    'SUBSTITUICAO.FUNCIONARIO_ID_SUBSTITUTO as substituto_id',
-                    'SUBSTITUICAO.SUBSTITUICAO_DATA_PLANTAO as data_plantao',
-                    'SUBSTITUICAO.SUBSTITUICAO_TURNO as turno',
-                    'SUBSTITUICAO.SUBSTITUICAO_STATUS as status',
-                    'SUBSTITUICAO.SUBSTITUICAO_MOTIVO as motivo',
-                    'SETOR.SETOR_NOME as setor',
-                    'SUBSTITUICAO.CREATED_AT as criado_em'
-                )->get();
-            return response()->json(['substituicoes' => $q]);
-        } catch (\Throwable $e) {
-            return response()->json(['substituicoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/substituicoes', function (\Illuminate\Http\Request $req) {
-        try {
-            if (!$req->solicitante_id || !$req->data_plantao || !$req->turno)
-                return response()->json(['erro' => 'Solicitante, data e turno obrigatorios.'], 422);
-            $id = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')->insertGetId([
-                'FUNCIONARIO_ID_SOLICITANTE' => $req->solicitante_id,
-                'FUNCIONARIO_ID_SUBSTITUTO' => $req->substituto_id ?? null,
-                'SETOR_ID' => $req->setor_id ?? null,
-                'SUBSTITUICAO_DATA_PLANTAO' => $req->data_plantao,
-                'SUBSTITUICAO_TURNO' => $req->turno,
-                'SUBSTITUICAO_MOTIVO' => $req->motivo ?? null,
-                'SUBSTITUICAO_STATUS' => 'pendente',
-                'CREATED_AT' => now(),
-                'UPDATED_AT' => now(),
-            ]);
-            return response()->json(['id' => $id, 'status' => 'pendente'], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::put('/substituicoes/{id}/aprovar', function (\Illuminate\Http\Request $req, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')->where('SUBSTITUICAO_ID', $id)->update([
-                'SUBSTITUICAO_STATUS' => $req->status ?? 'aprovada',
-                'SUBSTITUICAO_OBS_APROVADOR' => $req->obs ?? null,
-                'UPDATED_AT' => now(),
-            ]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::delete('/substituicoes/{id}', function ($id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')->where('SUBSTITUICAO_ID', $id)->delete();
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─ ESCALAS (lista e detalhe) ──────────────────────────────
-    Route::get('/escalas', function () {
-        try {
-            $escalas = \Illuminate\Support\Facades\DB::table('ESCALA')
-                ->leftJoin('SETOR', 'ESCALA.SETOR_ID', '=', 'SETOR.SETOR_ID')
-                ->where('ESCALA_ATIVO', 1)
-                ->orderBy('ESCALA_NOME')
-                ->select('ESCALA.ESCALA_ID', 'ESCALA_NOME', 'SETOR.SETOR_NOME as setor')
-                ->get();
-            return response()->json(['escalas' => $escalas]);
-        } catch (\Throwable $e) {
-            return response()->json(['escalas' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // ─── ESCALAS MÉDICAS ────────────────────────────────────────
-    // Lista todas as escalas (para o select do MatrizEscalaView)
-    Route::get('/escalas', function () {
-        try {
-            $rows = \Illuminate\Support\Facades\DB::table('ESCALA')
-                ->leftJoin('SETOR', 'ESCALA.SETOR_ID', '=', 'SETOR.SETOR_ID')
-                ->select(
-                    'ESCALA.ESCALA_ID',
-                    'ESCALA.ESCALA_COMPETENCIA',
-                    'ESCALA.SETOR_ID',
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(SETOR.SETOR_NOME, 'Geral') as setor")
-                )
-                ->orderBy('ESCALA.ESCALA_COMPETENCIA', 'desc')
-                ->limit(100)->get();
-            return response()->json(['escalas' => $rows]);
-        } catch (\Throwable $e) {
-            return response()->json(['escalas' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // Cria nova escala médica
-    Route::post('/escalas', function (\Illuminate\Http\Request $request) {
-        try {
-            $mes = (int) ($request->mes ?? date('n'));
-            $ano = (int) ($request->ano ?? date('Y'));
-            $setorId = $request->setor_id ?: null;
-            $competencia = sprintf('%02d/%04d', $mes, $ano);
-
-            // Verifica se já existe
-            $existe = \Illuminate\Support\Facades\DB::table('ESCALA')
-                ->where('ESCALA_COMPETENCIA', $competencia)
-                ->where('SETOR_ID', $setorId)
-                ->first();
-            if ($existe) {
-                return response()->json(['erro' => "Já existe escala $competencia para este setor."], 422);
-            }
-
-            $id = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId([
-                'ESCALA_COMPETENCIA' => $competencia,
-                'SETOR_ID' => $setorId,
-                'ESCALA_STATUS' => 'Aberta',
-            ]);
-
-            // Adiciona todos os funcionários do setor como detalhe
-            $funcs = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                ->where('FUNCIONARIO_ATIVO', 1)
-                ->when($setorId, fn($q) => $q->where('SETOR_ID', $setorId))
-                ->get(['FUNCIONARIO_ID']);
-
-            foreach ($funcs as $f) {
-                \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')->insert([
-                    'ESCALA_ID' => $id,
-                    'FUNCIONARIO_ID' => $f->FUNCIONARIO_ID,
-                ]);
-            }
-
-            return response()->json(['ok' => true, 'escala_id' => $id, 'competencia' => $competencia]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // Detalhe de uma escala médica (funcionários + itens de plantão)
-    Route::get('/escalas/{id}', function ($id) {
-        try {
-            $escala = \Illuminate\Support\Facades\DB::table('ESCALA')
-                ->leftJoin('SETOR', 'ESCALA.SETOR_ID', '=', 'SETOR.SETOR_ID')
-                ->where('ESCALA.ESCALA_ID', $id)
-                ->select('ESCALA.*', \Illuminate\Support\Facades\DB::raw("COALESCE(SETOR.SETOR_NOME,'Geral') as setor_nome"))
-                ->first();
-
-            if (!$escala)
-                return response()->json(['erro' => 'Escala não encontrada'], 404);
-
-            // Competência: 'MM/YYYY' → mes e ano
-            $mes = 1;
-            $ano = date('Y');
-            if (preg_match('/^(\d{2})\/(\d{4})$/', $escala->ESCALA_COMPETENCIA ?? '', $m)) {
-                $mes = (int) $m[1];
-                $ano = (int) $m[2];
-            } elseif (preg_match('/^(\d{4})-(\d{2})$/', $escala->ESCALA_COMPETENCIA ?? '', $m)) {
-                $ano = (int) $m[1];
-                $mes = (int) $m[2];
-            }
-
-            // Funcionários vinculados à escala via DETALHE_ESCALA
-            $detalhes = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA as D')
-                ->join('FUNCIONARIO as F', 'D.FUNCIONARIO_ID', '=', 'F.FUNCIONARIO_ID')
-                ->leftJoin('PESSOA as P', 'F.PESSOA_ID', '=', 'P.PESSOA_ID')
-                ->where('D.ESCALA_ID', $id)
-                ->select(
-                    'D.DETALHE_ESCALA_ID as detalhe_id',
-                    'F.FUNCIONARIO_ID as funcionario_id',
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(P.PESSOA_NOME, 'Funcionário') as nome"),
-                    \Illuminate\Support\Facades\DB::raw("'Profissional' as cargo")
-                )
-                ->get();
-
-            // Itens de plantão (DETALHE_ESCALA_ITEM ou fallback sem itens)
-            $funcionarios = [];
-            foreach ($detalhes as $d) {
-                $itens = [];
-                try {
-                    $raw = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')
-                        ->where('DETALHE_ESCALA_ID', $d->detalhe_id)
-                        ->get(['DETALHE_ESCALA_ITEM_DATA as data', 'TURNO_ID as turno_id', 'TURNO_SIGLA as turno_sigla']);
-                    $itens = $raw->toArray();
-                } catch (\Throwable) {
-                    $itens = [];
-                }
-
-                $funcionarios[] = [
-                    'detalhe_id' => $d->detalhe_id,
-                    'funcionario_id' => $d->funcionario_id,
-                    'nome' => $d->nome,
-                    'cargo' => $d->cargo,
-                    'itens' => $itens,
-                ];
-            }
-
-            return response()->json([
-                'escala' => ['competencia' => $escala->ESCALA_COMPETENCIA, 'ano' => $ano, 'mes' => $mes - 1, 'setor' => $escala->setor_nome],
-                'funcionarios' => $funcionarios,
-                'feriados' => [],
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['funcionarios' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // Salvar itens de plantão de uma escala
-    Route::post('/escalas/{id}/salvar', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $detalheId = $request->detalhe_escala_id;
-            $itens = $request->itens ?? [];
-
-            // Remove itens antigos do detalhe
-            try {
-                \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')
-                    ->where('DETALHE_ESCALA_ID', $detalheId)->delete();
-            } catch (\Throwable) {
-            }
-
-            foreach ($itens as $item) {
-                \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')->insert([
-                    'DETALHE_ESCALA_ID' => $detalheId,
-                    'DETALHE_ESCALA_ITEM_DATA' => $item['data'],
-                    'TURNO_ID' => $item['turno_id'] ?? null,
-                ]);
-            }
-            return response()->json(['ok' => true, 'itens_salvos' => count($itens)]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ─── ESCALA DE TRABALHO (grade mensal por funcionário) ──────
-    Route::get('/escala-trabalho', function (\Illuminate\Http\Request $request) {
-        try {
-            $mes = (int) ($request->mes ?? date('n'));
-            $ano = (int) ($request->ano ?? date('Y'));
-            $setorId = $request->setor_id ?? null;
-
-            $competencia = sprintf('%02d/%04d', $mes, $ano);
-
-            // Última lotação por funcionário (via subquery compatível com SQLite)
-            $ultimaLotacao = \Illuminate\Support\Facades\DB::table('LOTACAO as L2')
-                ->selectRaw('MAX(L2.LOTACAO_ID) as lid')
-                ->groupBy('L2.FUNCIONARIO_ID');
-
-            $funcs = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as F')
-                ->leftJoin('PESSOA as P', 'F.PESSOA_ID', '=', 'P.PESSOA_ID')
-                ->leftJoin('LOTACAO as L', function ($j) use ($ultimaLotacao) {
-                    $j->on('L.FUNCIONARIO_ID', '=', 'F.FUNCIONARIO_ID')
-                        ->whereIn('L.LOTACAO_ID', $ultimaLotacao);
-                })
-                ->leftJoin('SETOR as S', 'L.SETOR_ID', '=', 'S.SETOR_ID')
-                ->where('F.FUNCIONARIO_ATIVO', 1)
-                ->when($setorId, fn($q) => $q->where('L.SETOR_ID', $setorId))
-                ->select(
-                    'F.FUNCIONARIO_ID as id',
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(P.PESSOA_NOME, 'Funcionário') as nome"),
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(S.SETOR_NOME, 'Sem setor') as setor"),
-                    'L.SETOR_ID as setor_id'
-                )
-                ->limit(200)->get();
-
-            // Itens de escala para a competência
-            $registros = collect();
-            try {
-                $registros = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM as I')
-                    ->join('DETALHE_ESCALA as D', 'I.DETALHE_ESCALA_ID', '=', 'D.DETALHE_ESCALA_ID')
-                    ->join('ESCALA as E', 'D.ESCALA_ID', '=', 'E.ESCALA_ID')
-                    ->where('E.ESCALA_COMPETENCIA', $competencia)
-                    ->select(
-                        'D.FUNCIONARIO_ID as func_id',
-                        'I.DETALHE_ESCALA_ITEM_DATA as data',
-                        \Illuminate\Support\Facades\DB::raw("COALESCE(I.TURNO_SIGLA, '') as turno")
-                    )->get();
-            } catch (\Throwable) {
-            }
-
-            // Mapa: func_id → { dia_num → { turno } }
-            $mapa = [];
-            foreach ($registros as $r) {
-                $dia = (int) date('j', strtotime($r->data));
-                if ($r->turno) {
-                    $mapa[$r->func_id][$dia] = ['turno' => $r->turno];
-                }
-            }
-
-            $escala = $funcs->map(fn($f) => [
-                'funcionario_id' => $f->id,
-                'nome' => $f->nome,
-                'setor' => $f->setor,
-                'dias' => $mapa[$f->id] ?? [],
-            ]);
-
-            $setores = \Illuminate\Support\Facades\DB::table('SETOR')
-                ->where('SETOR_ATIVO', 1)
-                ->select('SETOR_ID as id', 'SETOR_NOME as nome')
-                ->get();
-
-            return response()->json([
-                'escala' => $escala,
-                'setores' => $setores,
-                'funcionarios' => $funcs->map(fn($f) => ['id' => $f->id, 'nome' => $f->nome]),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'escala' => [],
-                'setores' => [],
-                'funcionarios' => [],
-                'erro' => $e->getMessage(),
-            ]);
-        }
-    });
-
-    // Registrar/atualizar turno de escala de trabalho
-    Route::post('/escala-trabalho', function (\Illuminate\Http\Request $request) {
-        try {
-            $funcId = $request->funcionario_id;
-            $data = $request->data;   // 'YYYY-MM-DD'
-            $turno = $request->turno;
-            $obs = $request->obs ?? null;
-
-            if (!$funcId || !$data || !$turno) {
-                return response()->json(['erro' => 'Campos obrigatórios: funcionario_id, data, turno'], 422);
-            }
-
-            // Determina mês/ano e competência
-            $dt = new \DateTime($data);
-            $competencia = $dt->format('m/Y');
-
-            // Garante que existe uma ESCALA para esta competência/sem setor específico
-            $escala = \Illuminate\Support\Facades\DB::table('ESCALA')
-                ->where('ESCALA_COMPETENCIA', $competencia)
-                ->whereNull('SETOR_ID')
-                ->first();
-
-            if (!$escala) {
-                $escalaId = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId([
-                    'ESCALA_COMPETENCIA' => $competencia,
-                    'ESCALA_STATUS' => 'Aberta',
-                ]);
-            } else {
-                $escalaId = $escala->ESCALA_ID;
-            }
-
-            // Garante DETALHE_ESCALA para funcionário
-            $detalhe = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')
-                ->where('ESCALA_ID', $escalaId)
-                ->where('FUNCIONARIO_ID', $funcId)
-                ->first();
-
-            if (!$detalhe) {
-                $detalheId = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')->insertGetId([
-                    'ESCALA_ID' => $escalaId,
-                    'FUNCIONARIO_ID' => $funcId,
-                ]);
-            } else {
-                $detalheId = $detalhe->DETALHE_ESCALA_ID;
-            }
-
-            // Remove item existente nesta data e insere novo
-            try {
-                \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')
-                    ->where('DETALHE_ESCALA_ID', $detalheId)
-                    ->where('DETALHE_ESCALA_ITEM_DATA', $data)
-                    ->delete();
-            } catch (\Throwable) {
-            }
-
-            \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')->insert([
-                'DETALHE_ESCALA_ID' => $detalheId,
-                'DETALHE_ESCALA_ITEM_DATA' => $data,
-                'TURNO_SIGLA' => $turno,
-                'DETALHE_ESCALA_ITEM_OBS' => $obs,
-            ]);
-
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // SUBSTITUIÇÕES — GET lista, POST criar, PUT status
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-
-    Route::get('/substituicoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $q = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO as S')
-                ->leftJoin('FUNCIONARIO as FS', 'S.FUNCIONARIO_ID', '=', 'FS.FUNCIONARIO_ID')
-                ->leftJoin('PESSOA as PS', 'FS.PESSOA_ID', '=', 'PS.PESSOA_ID')
-                ->leftJoin('FUNCIONARIO as FT', 'S.SUBSTITUTO_ID', '=', 'FT.FUNCIONARIO_ID')
-                ->leftJoin('PESSOA as PT', 'FT.PESSOA_ID', '=', 'PT.PESSOA_ID')
-                ->leftJoin('ESCALA as E', 'S.ESCALA_ID', '=', 'E.ESCALA_ID')
-                ->leftJoin('SETOR as ST', 'E.SETOR_ID', '=', 'ST.SETOR_ID')
-                ->select(
-                    'S.SUBSTITUICAO_ID as id',
-                    'S.FUNCIONARIO_ID as solicitante_id',
-                    'S.SUBSTITUTO_ID as substituto_id',
-                    'S.SUBSTITUICAO_DATA as data_plantao',
-                    'S.SUBSTITUICAO_TURNO as turno',
-                    'S.SUBSTITUICAO_MOTIVO as motivo',
-                    'S.SUBSTITUICAO_STATUS as status',
-                    'S.created_at as criado_em',
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(PS.PESSOA_NOME, '—') as solicitante"),
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(PT.PESSOA_NOME, '—') as substituto"),
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(ST.SETOR_NOME, '—') as setor")
-                )
-                ->orderByDesc('S.created_at')
-                ->limit(200)
-                ->get();
-
-            return response()->json(['substituicoes' => $q]);
-        } catch (\Throwable $e) {
-            return response()->json(['substituicoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/substituicoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $id = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')->insertGetId([
-                'ESCALA_ID' => $request->escala_id ?: null,
-                'FUNCIONARIO_ID' => $request->solicitante_id ?: null,
-                'SUBSTITUTO_ID' => $request->substituto_id ?: null,
-                'SUBSTITUICAO_DATA' => $request->data_plantao,
-                'SUBSTITUICAO_TURNO' => $request->turno,
-                'SUBSTITUICAO_MOTIVO' => $request->motivo ?: null,
-                'SUBSTITUICAO_STATUS' => 'pendente',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            return response()->json(['ok' => true, 'id' => $id]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    Route::put('/substituicoes/{id}', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            \Illuminate\Support\Facades\DB::table('SUBSTITUICAO')
-                ->where('SUBSTITUICAO_ID', $id)
-                ->update([
-                    'SUBSTITUICAO_STATUS' => $request->status,
-                    'updated_at' => now(),
-                ]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // AVALIAÇÃO DE DESEMPENHO — GET histórico, POST salvar ciclo
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-
-    Route::get('/avaliacoes', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['avaliacoes' => [], 'fallback' => true]);
-
-            $avs = \Illuminate\Support\Facades\DB::table('AVALIACAO_DESEMPENHO as A')
-                ->leftJoin('USUARIO as U', 'A.AVALIADOR_ID', '=', 'U.USUARIO_ID')
-                ->where('A.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->where('A.AVALIACAO_STATUS', 'publicada')
-                ->orderByDesc('A.AVALIACAO_CICLO')
-                ->select('A.*', \Illuminate\Support\Facades\DB::raw("COALESCE(U.USUARIO_NOME, 'RH') as avaliador_nome"))
-                ->get();
-
-            $result = $avs->map(function ($av) {
-                $criterios = \Illuminate\Support\Facades\DB::table('AVALIACAO_CRITERIO')
-                    ->where('AVALIACAO_ID', $av->AVALIACAO_ID)
-                    ->get()
-                    ->map(fn($c) => [
-                        'nome' => $c->CRITERIO_NOME,
-                        'peso' => $c->CRITERIO_PESO,
-                        'nota' => $c->CRITERIO_NOTA,
-                        'obs' => $c->CRITERIO_OBS,
-                    ]);
-                return [
-                    'id' => $av->AVALIACAO_ID,
-                    'ciclo' => $av->AVALIACAO_CICLO,
-                    'nota' => (float) $av->AVALIACAO_NOTA_FINAL,
-                    'avaliador' => $av->avaliador_nome,
-                    'obs' => $av->AVALIACAO_OBS,
-                    'criterios' => $criterios,
-                ];
-            });
-
-            return response()->json(['avaliacoes' => $result]);
-        } catch (\Throwable $e) {
-            return response()->json(['avaliacoes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/avaliacoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['erro' => 'Funcionário não encontrado'], 404);
-
-            $criterios = $request->criterios ?? [];
-            $notaFinal = 0;
-            $totalPeso = 0;
-            foreach ($criterios as $c) {
-                $notaFinal += ($c['nota'] ?? 0) * ($c['peso'] ?? 20);
-                $totalPeso += ($c['peso'] ?? 20);
-            }
-            $notaFinal = $totalPeso > 0 ? round($notaFinal / $totalPeso, 1) : 0;
-
-            // Upsert: um rascunho por ciclo por funcionário
-            $existing = \Illuminate\Support\Facades\DB::table('AVALIACAO_DESEMPENHO')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->where('AVALIACAO_CICLO', $request->ciclo)
-                ->where('AVALIACAO_STATUS', 'rascunho')
-                ->first();
-
-            if ($existing) {
-                $avId = $existing->AVALIACAO_ID;
-                \Illuminate\Support\Facades\DB::table('AVALIACAO_DESEMPENHO')
-                    ->where('AVALIACAO_ID', $avId)
-                    ->update(['AVALIACAO_NOTA_FINAL' => $notaFinal, 'AVALIACAO_OBS' => $request->obs, 'updated_at' => now()]);
-                \Illuminate\Support\Facades\DB::table('AVALIACAO_CRITERIO')->where('AVALIACAO_ID', $avId)->delete();
-            } else {
-                $avId = \Illuminate\Support\Facades\DB::table('AVALIACAO_DESEMPENHO')->insertGetId([
-                    'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                    'AVALIACAO_CICLO' => $request->ciclo,
-                    'AVALIACAO_NOTA_FINAL' => $notaFinal,
-                    'AVALIACAO_STATUS' => 'rascunho',
-                    'AVALIACAO_OBS' => $request->obs ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            foreach ($criterios as $c) {
-                \Illuminate\Support\Facades\DB::table('AVALIACAO_CRITERIO')->insert([
-                    'AVALIACAO_ID' => $avId,
-                    'CRITERIO_NOME' => $c['nome'],
-                    'CRITERIO_PESO' => $c['peso'] ?? 20,
-                    'CRITERIO_NOTA' => $c['nota'] ?? null,
-                    'CRITERIO_OBS' => $c['obs'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            return response()->json(['ok' => true, 'nota_final' => $notaFinal, 'id' => $avId]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // AUTOCADASTRO — Rotas AUTENTICADAS (RH/Admin)
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-
-
-    // Gera novo link de autocadastro
-    Route::post('/autocadastro/gerar-link', function (\Illuminate\Http\Request $request) {
-        try {
-            $token = \Illuminate\Support\Str::random(48);
-            $expira = now()->addDays((int) ($request->validade_dias ?? 7));
-
-            \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')->insert([
-                'TOKEN' => $token,
-                'TOKEN_EMAIL' => $request->email ?? null,
-                'TOKEN_NOME' => $request->nome ?? null,
-                'TOKEN_STATUS' => 'pendente',
-                'CRIADO_POR' => auth()->id(),
-                'expira_em' => $expira,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $url = url("/autocadastro/{$token}");
-            return response()->json(['ok' => true, 'token' => $token, 'url' => $url, 'expira_em' => $expira->format('d/m/Y')]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // Lista cadastros pendentes de aprovação
-    Route::get('/autocadastro/pendentes', function () {
-        try {
-            $pendentes = \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
-                ->leftJoin('USUARIO as U', 'AUTOCADASTRO_TOKEN.CRIADO_POR', '=', 'U.USUARIO_ID')
-                ->select(
-                    'AUTOCADASTRO_TOKEN.*',
-                    \Illuminate\Support\Facades\DB::raw("COALESCE(U.USUARIO_NOME, 'Sistema') as criado_por_nome")
-                )
-                ->orderBy('AUTOCADASTRO_TOKEN.created_at', 'desc')
-                ->limit(100)->get()
-                ->map(function ($r) {
-                    $r->TOKEN_DADOS = $r->TOKEN_DADOS ? json_decode($r->TOKEN_DADOS, true) : null;
-                    return $r;
-                });
-            return response()->json(['pendentes' => $pendentes]);
-        } catch (\Throwable $e) {
-            return response()->json(['pendentes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    // Aprova um cadastro: cria PESSOA + FUNCIONARIO + USUARIO
-    Route::post('/autocadastro/{token}/aprovar', function ($token) {
-        try {
-            $reg = \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
-                ->where('TOKEN', $token)
-                ->where('TOKEN_STATUS', 'preenchido')
-                ->first();
-
-            if (!$reg)
-                return response()->json(['erro' => 'Registro não encontrado ou já aprovado'], 404);
-
-            $dados = json_decode($reg->TOKEN_DADOS, true);
-            if (!$dados)
-                return response()->json(['erro' => 'Sem dados para aprovar'], 422);
-
-            \Illuminate\Support\Facades\DB::transaction(function () use ($reg, $dados, $token) {
-                // 1. Cria PESSOA
-                $pessoaId = \Illuminate\Support\Facades\DB::table('PESSOA')->insertGetId([
-                    'PESSOA_NOME' => $dados['nome'],
-                    'PESSOA_CPF' => $dados['cpf'] ?? null,
-                    'PESSOA_NASC' => $dados['data_nasc'] ?? null,
-                    'PESSOA_SEXO' => $dados['sexo'] ?? null,
-                    'PESSOA_RG' => $dados['rg'] ?? null,
-                    'PESSOA_ORG_EMISSOR' => $dados['org_emissor'] ?? null,
-                    'PESSOA_PIS_PASEP' => $dados['pis'] ?? null,
-                    'ESTADO_CIVIL' => $dados['estado_civil'] ?? null,
-                    'PESSOA_ATIVO' => 1,
-                ]);
-
-                // 2. Cria FUNCIONARIO
-                $funcId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->insertGetId([
-                    'PESSOA_ID' => $pessoaId,
-                    'FUNCIONARIO_DATA_INICIO' => now()->format('Y-m-d'),
-                    'FUNCIONARIO_ATIVO' => 1,
-                ]);
-
-                // 3. Cria USUARIO (login = email)
-                \Illuminate\Support\Facades\DB::table('USUARIO')->insert([
-                    'USUARIO_NOME' => $dados['nome'],
-                    'USUARIO_LOGIN' => $dados['email'],
-                    'USUARIO_SENHA' => $dados['senha_hash'] ?? \Illuminate\Support\Facades\Hash::make('mudar@123'),
-                    'USUARIO_ATIVO' => 1,
-                ]);
-
-                // 4. Marca token como aprovado
-                \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
-                    ->where('TOKEN', $token)
-                    ->update(['TOKEN_STATUS' => 'aprovado', 'FUNCIONARIO_ID' => $funcId, 'updated_at' => now()]);
-            });
-
-            return response()->json(['ok' => true, 'msg' => 'Cadastro aprovado com sucesso!']);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // Revoga/cancela um token
-    Route::delete('/autocadastro/{token}', function ($token) {
-        try {
-            \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
-                ->where('TOKEN', $token)
-                ->update(['TOKEN_STATUS' => 'revogado', 'updated_at' => now()]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // ── Progressão Funcional PCCV ─────────────────────────────────────────────
-    require __DIR__ . '/progressao_funcional.php';
-
-    // ── App Mobile de Ponto (autenticação JWT própria, sem sessão web) ─────────
-    require __DIR__ . '/ponto_app.php';
-
-}); // fecha o grupo prefix('api/v3')->middleware(['web','auth'])
-
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-// AUTOCADASTRO — Rotas PÚBLICAS (sem autenticação)
-// �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
 Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
-    // Valida token e retorna dados pré-preenchidos
+    // Valida token e retorna dados prÃ©-preenchidos
     Route::get('/autocadastro/{token}', function ($token) {
         try {
             $reg = \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
@@ -8982,10 +3613,10 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 ->first();
 
             if (!$reg) {
-                return response()->json(['status' => 'invalido', 'erro' => 'Token não encontrado'], 404);
+                return response()->json(['status' => 'invalido', 'erro' => 'Token nÃ£o encontrado'], 404);
             }
 
-            // Verifica expiração
+            // Verifica expiraÃ§Ã£o
             if ($reg->expira_em && now()->gt($reg->expira_em)) {
                 \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
                     ->where('TOKEN', $token)->update(['TOKEN_STATUS' => 'expirado']);
@@ -9006,7 +3637,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // Recebe os dados do formulário de autocadastro (multipart/form-data)
+    // Recebe os dados do formulÃ¡rio de autocadastro (multipart/form-data)
     Route::post('/autocadastro/{token}', function (\Illuminate\Http\Request $request, $token) {
         try {
             $reg = \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
@@ -9015,22 +3646,22 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 ->first();
 
             if (!$reg) {
-                return response()->json(['erro' => 'Token inválido ou já utilizado'], 422);
+                return response()->json(['erro' => 'Token invÃ¡lido ou jÃ¡ utilizado'], 422);
             }
 
             if ($reg->expira_em && now()->gt($reg->expira_em)) {
                 return response()->json(['erro' => 'Token expirado'], 410);
             }
 
-            // Valida campos obrigatórios
+            // Valida campos obrigatÃ³rios
             $nome = trim($request->nome ?? '');
             $email = trim($request->email ?? '');
             $senha = $request->senha ?? '';
             if (!$nome || !$email || strlen($senha) < 6) {
-                return response()->json(['erro' => 'Nome, e-mail e senha (mín. 6 chars) são obrigatórios'], 422);
+                return response()->json(['erro' => 'Nome, e-mail e senha (mÃ­n. 6 chars) sÃ£o obrigatÃ³rios'], 422);
             }
 
-            // ── Salva arquivos de documentos ──────────────────────────────
+            // â”€â”€ Salva arquivos de documentos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             $docCampos = ['doc_identidade', 'doc_cpf', 'doc_residencia', 'doc_pis', 'doc_foto', 'doc_dependentes'];
             $docPaths = [];
             $dir = "autocadastro/{$token}";
@@ -9048,7 +3679,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 }
             }
 
-            // ── Dependentes ───────────────────────────────────────────────
+            // â”€â”€ Dependentes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             $dependentes = [];
             if ($request->has('dependentes')) {
                 $raw = $request->input('dependentes');
@@ -9068,7 +3699,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 }
             }
 
-            // ── Persiste os dados do token ─────────────────────────────────
+            // â”€â”€ Persiste os dados do token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
                 ->where('TOKEN', $token)
                 ->update([
@@ -9100,204 +3731,32 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                     'usado_em' => now(),
                 ]);
 
-            return response()->json(['ok' => true, 'msg' => 'Cadastro recebido! Aguarde a aprovação do RH.']);
+            return response()->json(['ok' => true, 'msg' => 'Cadastro recebido! Aguarde a aprovaÃ§Ã£o do RH.']);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
     });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // SPRINT D — SEGURANÇA DO TRABALHO
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // SPRINT D â€” SEGURANÃ‡A DO TRABALHO
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
-    Route::get('/seguranca/epis', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['epis' => [], 'fallback' => true]);
 
-            $epis = \Illuminate\Support\Facades\DB::table('SEGURANCA_EPI')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('created_at')
-                ->get()
-                ->map(fn($e) => [
-                    'id' => $e->EPI_ID,
-                    'nome' => $e->EPI_NOME,
-                    'ca' => $e->EPI_CA,
-                    'ico' => $e->EPI_ICONE ?? '🦺',
-                    'validade' => $e->EPI_VALIDADE,
-                    'quantidade' => $e->EPI_QUANTIDADE,
-                    'vencido' => $e->EPI_VALIDADE && $e->EPI_VALIDADE < now()->toDateString(),
-                    'aVencer' => $e->EPI_VALIDADE && $e->EPI_VALIDADE >= now()->toDateString()
-                        && $e->EPI_VALIDADE <= now()->addDays(30)->toDateString(),
-                ]);
 
-            return response()->json(['epis' => $epis]);
-        } catch (\Throwable $e) {
-            return response()->json(['epis' => [], 'erro' => $e->getMessage()]);
-        }
-    });
 
-    Route::post('/seguranca/epis', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('SEGURANCA_EPI')->insertGetId([
-                'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null,
-                'EPI_NOME' => $request->nome,
-                'EPI_CA' => $request->ca ?? null,
-                'EPI_ICONE' => $request->ico ?? '🦺',
-                'EPI_VALIDADE' => $request->validade ?? null,
-                'EPI_QUANTIDADE' => $request->quantidade ?? 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            return response()->json(['ok' => true, 'id' => $id]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
 
-    Route::get('/seguranca/incidentes', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['incidentes' => [], 'fallback' => true]);
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // SPRINT D â€” TREINAMENTOS
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
-            $incs = \Illuminate\Support\Facades\DB::table('SEGURANCA_INCIDENTE')
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('INCIDENTE_DATA')
-                ->get()
-                ->map(fn($i) => [
-                    'id' => $i->INCIDENTE_ID,
-                    'tipo' => $i->INCIDENTE_TIPO,
-                    'data' => $i->INCIDENTE_DATA,
-                    'descricao' => $i->INCIDENTE_DESCRICAO,
-                    'local' => $i->INCIDENTE_LOCAL,
-                    'cat' => $i->INCIDENTE_CAT,
-                    'closed' => (bool) $i->INCIDENTE_FECHADO,
-                ]);
 
-            return response()->json(['incidentes' => $incs]);
-        } catch (\Throwable $e) {
-            return response()->json(['incidentes' => [], 'erro' => $e->getMessage()]);
-        }
-    });
 
-    Route::post('/seguranca/incidentes', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('SEGURANCA_INCIDENTE')->insertGetId([
-                'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null,
-                'INCIDENTE_TIPO' => $request->tipo ?? 'quase',
-                'INCIDENTE_DATA' => now()->toDateString(),
-                'INCIDENTE_LOCAL' => $request->local,
-                'INCIDENTE_DESCRICAO' => $request->descricao,
-                'INCIDENTE_FECHADO' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            return response()->json(['ok' => true, 'id' => $id]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // SPRINT D — TREINAMENTOS
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // SPRINT D â€” PESQUISA DE SATISFAÃ‡ÃƒO (CRUD + RESULTADOS)
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
-    Route::get('/treinamentos/meus', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['cursos' => [], 'fallback' => true]);
-
-            $cursos = \Illuminate\Support\Facades\DB::table('TREINAMENTO_INSCRICAO as I')
-                ->join('TREINAMENTO as T', 'I.TREINAMENTO_ID', '=', 'T.TREINAMENTO_ID')
-                ->where('I.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->select('T.*', 'I.*')
-                ->get()
-                ->map(fn($c) => [
-                    'id' => $c->TREINAMENTO_ID,
-                    'titulo' => $c->TREINAMENTO_TITULO,
-                    'desc' => $c->TREINAMENTO_DESC,
-                    'area' => $c->TREINAMENTO_AREA ?? 'Geral',
-                    'carga' => $c->TREINAMENTO_CARGA,
-                    'modalidade' => $c->TREINAMENTO_MODALIDADE,
-                    'status' => $c->INSCRICAO_STATUS,
-                    'progresso' => $c->INSCRICAO_PROGRESSO,
-                    'certificado' => (bool) $c->INSCRICAO_CERTIFICADO,
-                    'data' => $c->INSCRICAO_DATA_CONCLUSAO,
-                ]);
-
-            return response()->json(['cursos' => $cursos]);
-        } catch (\Throwable $e) {
-            return response()->json(['cursos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::get('/treinamentos/catalogo', function () {
-        try {
-            $catalogo = \Illuminate\Support\Facades\DB::table('TREINAMENTO')
-                ->where('TREINAMENTO_ATIVO', true)
-                ->get()
-                ->map(fn($t) => [
-                    'id' => $t->TREINAMENTO_ID,
-                    'titulo' => $t->TREINAMENTO_TITULO,
-                    'desc' => $t->TREINAMENTO_DESC,
-                    'area' => $t->TREINAMENTO_AREA ?? 'Geral',
-                    'carga' => $t->TREINAMENTO_CARGA,
-                    'modalidade' => $t->TREINAMENTO_MODALIDADE,
-                    'proxima' => $t->TREINAMENTO_PROXIMA,
-                    'vagas' => $t->TREINAMENTO_VAGAS,
-                    'custo' => 0,
-                ]);
-            return response()->json(['catalogo' => $catalogo]);
-        } catch (\Throwable $e) {
-            return response()->json(['catalogo' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/treinamentos/{id}/inscrever', function (\Illuminate\Http\Request $request, $id) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$func)
-                return response()->json(['erro' => 'Funcionário não encontrado'], 404);
-
-            // Evitar duplicata
-            $existe = \Illuminate\Support\Facades\DB::table('TREINAMENTO_INSCRICAO')
-                ->where('TREINAMENTO_ID', $id)
-                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->exists();
-            if ($existe)
-                return response()->json(['ok' => true, 'msg' => 'Já inscrito.']);
-
-            \Illuminate\Support\Facades\DB::table('TREINAMENTO_INSCRICAO')->insert([
-                'TREINAMENTO_ID' => $id,
-                'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
-                'INSCRICAO_STATUS' => 'inscrito',
-                'INSCRICAO_PROGRESSO' => 0,
-                'INSCRICAO_CERTIFICADO' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // SPRINT D — PESQUISA DE SATISFAÇÃO (CRUD + RESULTADOS)
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-
-    // ── Funcionário: lista pesquisas abertas ──────────────────────────
+    // â”€â”€ FuncionÃ¡rio: lista pesquisas abertas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/pesquisas', function () {
         try {
             $pesquisas = \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
@@ -9331,7 +3790,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // ── Funcionário: responder pesquisa ───────────────────────────────
+    // â”€â”€ FuncionÃ¡rio: responder pesquisa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::post('/pesquisas/{id}/responder', function (\Illuminate\Http\Request $request, $id) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -9356,7 +3815,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // ── Admin: listar todas as pesquisas ──────────────────────────────
+    // â”€â”€ Admin: listar todas as pesquisas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/pesquisas/admin', function () {
         try {
             $pesquisas = \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
@@ -9395,7 +3854,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // ── Admin: criar pesquisa ─────────────────────────────────────────
+    // â”€â”€ Admin: criar pesquisa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::post('/pesquisas', function (\Illuminate\Http\Request $request) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -9426,7 +3885,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // ── Admin: editar pesquisa ────────────────────────────────────────
+    // â”€â”€ Admin: editar pesquisa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::put('/pesquisas/{id}', function (\Illuminate\Http\Request $request, $id) {
         try {
             \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
@@ -9473,7 +3932,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // ── Admin: mudar status ───────────────────────────────────────────
+    // â”€â”€ Admin: mudar status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::patch('/pesquisas/{id}/status', function (\Illuminate\Http\Request $request, $id) {
         try {
             \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
@@ -9485,7 +3944,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // ── Admin: excluir pesquisa ───────────────────────────────────────
+    // â”€â”€ Admin: excluir pesquisa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::delete('/pesquisas/{id}', function ($id) {
         try {
             \Illuminate\Support\Facades\DB::table('PESQUISA_RESPOSTA')->where('PESQUISA_ID', $id)->delete();
@@ -9497,7 +3956,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // ── Admin: resultados detalhados ──────────────────────────────────
+    // â”€â”€ Admin: resultados detalhados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/pesquisas/{id}/resultados', function ($id) {
         try {
             // Respostas totais
@@ -9585,41 +4044,6 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // SPRINT D — BENEF�?CIOS
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-
-    Route::get('/beneficios', function () {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-
-            $ativos = \Illuminate\Support\Facades\DB::table('BENEFICIO')
-                ->when($func, fn($q) => $q->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID))
-                ->where('BENEFICIO_ATIVO', 1)
-                ->get()
-                ->map(fn($b) => [
-                    'id' => $b->BENEFICIO_ID,
-                    'ico' => $b->BENEFICIO_ICO ?? '�?',
-                    'nome' => $b->BENEFICIO_NOME,
-                    'cor' => $b->BENEFICIO_COR ?? '#64748b',
-                    'desc' => $b->BENEFICIO_DESC ?? '',
-                    'fornecedor' => $b->BENEFICIO_FORNEC ?? '—',
-                    'valor' => (float) ($b->BENEFICIO_VALOR ?? 0),
-                    'custo' => (float) ($b->BENEFICIO_CUSTO ?? 0),
-                    'detalhes' => [],
-                    'extrato' => [],
-                ]);
-
-            if ($ativos->isEmpty())
-                return response()->json(['ativos' => [], 'disponiveis' => [], 'fallback' => true]);
-
-            return response()->json(['ativos' => $ativos, 'disponiveis' => []]);
-        } catch (\Throwable $e) {
-            return response()->json(['ativos' => [], 'disponiveis' => [], 'fallback' => true]);
-        }
-    });
-
     Route::post('/beneficios/solicitar', function (\Illuminate\Http\Request $request) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -9637,9 +4061,9 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         return response()->json(['ok' => true]);
     });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // SPRINT D — CARGOS E SAL�?RIOS (S-1030 / S-1040)
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // SPRINT D â€” CARGOS E SALÃ?RIOS (S-1030 / S-1040)
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
     Route::get('/cargos', function (\Illuminate\Http\Request $request) {
         try {
@@ -9671,7 +4095,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::post('/cargos', function (\Illuminate\Http\Request $request) {
         try {
             if (!$request->CARGO_NOME)
-                return response()->json(['erro' => 'Nome obrigatório.'], 422);
+                return response()->json(['erro' => 'Nome obrigatÃ³rio.'], 422);
             $id = \Illuminate\Support\Facades\DB::table('CARGO')->insertGetId([
                 'CARGO_NOME' => $request->CARGO_NOME,
                 'CARGO_SIGLA' => $request->CARGO_SIGLA ?? null,
@@ -9742,7 +4166,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::post('/funcoes', function (\Illuminate\Http\Request $request) {
         try {
             if (!$request->nome)
-                return response()->json(['erro' => 'Nome obrigatório.'], 422);
+                return response()->json(['erro' => 'Nome obrigatÃ³rio.'], 422);
             $id = \Illuminate\Support\Facades\DB::table('FUNCAO')->insertGetId([
                 'FUNCAO_NOME' => $request->nome,
                 'FUNCAO_CBO' => $request->cbo ?? null,
@@ -9782,9 +4206,9 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // PONTO ELETRÔNICO — config, registros do mês e bater ponto
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // PONTO ELETRÃ”NICO â€” config, registros do mÃªs e bater ponto
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
     Route::get('/ponto/config', function () {
         try {
@@ -9802,10 +4226,115 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 'hora_entrada' => $cfg->HORA_ENTRADA ?? '08:00',
                 'hora_saida' => $cfg->HORA_SAIDA ?? '18:00',
                 'tolerancia' => $cfg->TOLERANCIA ?? 15,
-                'intervalo_almoco' => 120,
+                'intervalo_almoco' => isset($cfg->INTERVALO_ALMOCO) ? (int) $cfg->INTERVALO_ALMOCO : null,
+                'jornada_financeira_horas' => isset($cfg->JORNADA_FINANCEIRA_HORAS) ? (float) $cfg->JORNADA_FINANCEIRA_HORAS : null,
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['regime' => '4_batidas', 'hora_entrada' => '08:00', 'hora_saida' => '18:00', 'tolerancia' => 15, 'intervalo_almoco' => 120]);
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
+    });
+
+    Route::put('/ponto/config', function (\Illuminate\Http\Request $request) {
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
+            if (!$func) return response()->json(['erro' => 'Sem funcionario'], 404);
+
+            $id = $func->FUNCIONARIO_ID;
+            $dados = $request->only(['regime', 'hora_entrada', 'hora_saida', 'tolerancia']);
+
+            $update = [
+                'REGIME' => $dados['regime'] ?? '4_batidas',
+                'HORA_ENTRADA' => $dados['hora_entrada'] ?? '08:00',
+                'HORA_SAIDA' => $dados['hora_saida'] ?? '18:00',
+                'TOLERANCIA' => $dados['tolerancia'] ?? 15,
+                'updated_at' => now(),
+            ];
+
+            \Illuminate\Support\Facades\DB::table('PONTO_CONFIG_FUNCIONARIO')->updateOrInsert(
+                ['FUNCIONARIO_ID' => $id],
+                $update
+            );
+            return response()->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
+    });
+
+    // Endpoints Admin
+    Route::get('/ponto/config/funcionarios', function () {
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if (!in_array($user->PERFIL, ['admin', 'rh'])) {
+                return response()->json(['erro' => 'Nao autorizado'], 403);
+            }
+
+            $rows = \Illuminate\Support\Facades\DB::table('PONTO_CONFIG_FUNCIONARIO as C')
+                ->join('FUNCIONARIO as F', 'C.FUNCIONARIO_ID', '=', 'F.FUNCIONARIO_ID')
+                ->join('PESSOA as P', 'F.PESSOA_ID', '=', 'P.PESSOA_ID')
+                ->select(
+                    'C.FUNCIONARIO_ID',
+                    'P.PESSOA_NOME as NOME',
+                    'C.REGIME',
+                    'C.HORA_ENTRADA',
+                    'C.HORA_SAIDA',
+                    'C.TOLERANCIA',
+                    'C.INTERVALO_ALMOCO',
+                    'C.JORNADA_FINANCEIRA_HORAS',
+                    'C.JORNADA_FINANCEIRA_OBS'
+                )
+                ->get();
+
+            return response()->json(['configs' => $rows]);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
+    });
+
+    Route::put('/ponto/config/funcionarios/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if (!in_array($user->PERFIL, ['admin', 'rh'])) {
+                return response()->json(['erro' => 'Nao autorizado'], 403);
+            }
+
+            $dados = $request->all();
+            
+            // Regra 4: JORNADA_FINANCEIRA_HORAS = s贸 admin
+            if (array_key_exists('JORNADA_FINANCEIRA_HORAS', $dados)) {
+                if ($user->PERFIL !== 'admin') {
+                    return response()->json(['erro' => 'Apenas admins podem configurar jornada financeira.'], 403);
+                }
+                if ($dados['JORNADA_FINANCEIRA_HORAS'] !== null && empty($dados['JORNADA_FINANCEIRA_OBS'])) {
+                    return response()->json(['erro' => 'Observação é obrigatória ao definir jornada financeira.'], 422);
+                }
+            }
+
+            $update = [];
+            if (isset($dados['REGIME'])) $update['REGIME'] = $dados['REGIME'];
+            if (isset($dados['HORA_ENTRADA'])) $update['HORA_ENTRADA'] = $dados['HORA_ENTRADA'];
+            if (isset($dados['HORA_SAIDA'])) $update['HORA_SAIDA'] = $dados['HORA_SAIDA'];
+            if (isset($dados['TOLERANCIA'])) $update['TOLERANCIA'] = $dados['TOLERANCIA'];
+            
+            if (array_key_exists('INTERVALO_ALMOCO', $dados)) {
+                $update['INTERVALO_ALMOCO'] = $dados['INTERVALO_ALMOCO'];
+            }
+            if (array_key_exists('JORNADA_FINANCEIRA_HORAS', $dados)) {
+                $update['JORNADA_FINANCEIRA_HORAS'] = $dados['JORNADA_FINANCEIRA_HORAS'];
+            }
+            if (array_key_exists('JORNADA_FINANCEIRA_OBS', $dados)) {
+                $update['JORNADA_FINANCEIRA_OBS'] = $dados['JORNADA_FINANCEIRA_OBS'];
+            }
+            $update['updated_at'] = now();
+
+            \Illuminate\Support\Facades\DB::table('PONTO_CONFIG_FUNCIONARIO')->updateOrInsert(
+                ['FUNCIONARIO_ID' => $id],
+                $update
+            );
+
+            return response()->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
         }
     });
 
@@ -9857,7 +4386,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
             $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
 
             if (!$func)
-                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
+                return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o encontrado.'], 404);
 
             $data = $request->data ?? now()->toDateString(); // YYYY-MM-DD
             $hora = $request->hora ?? now()->format('H:i:s');
@@ -9888,9 +4417,9 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         }
     });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // DECLARAÇÕES E REQUERIMENTOS
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // DECLARAÃ‡Ã•ES E REQUERIMENTOS
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
     Route::get('/declaracoes', function () {
         try {
@@ -9947,7 +4476,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('upload.safe');
 
     Route::get('/declaracoes/{id}/download', function ($id) {
         try {
@@ -9956,15 +4485,15 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
             $decl = \Illuminate\Support\Facades\DB::table('DECLARACAO')->where('DECLARACAO_ID', $id)->first();
             if (!$decl)
-                return response()->json(['erro' => 'Não encontrado.'], 404);
+                return response()->json(['erro' => 'NÃ£o encontrado.'], 404);
 
-            // Busca dados do funcionário
+            // Busca dados do funcionÃ¡rio
             $funcNome = 'Servidor(a)';
-            $funcMatricula = '—';
-            $cargo = '—';
-            $setor = '—';
-            $cpf = '—';
-            $dtAdmissao = '—';
+            $funcMatricula = 'â€”';
+            $cargo = 'â€”';
+            $setor = 'â€”';
+            $cpf = 'â€”';
+            $dtAdmissao = 'â€”';
             if ($func) {
                 $pessoa = \Illuminate\Support\Facades\DB::table('PESSOA')
                     ->join('FUNCIONARIO', 'FUNCIONARIO.PESSOA_ID', '=', 'PESSOA.PESSOA_ID')
@@ -9972,17 +4501,17 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                     ->select('PESSOA.PESSOA_NOME', 'PESSOA.PESSOA_CPF')
                     ->first();
                 $funcNome = $pessoa->PESSOA_NOME ?? 'Servidor(a)';
-                $cpf = isset($pessoa->PESSOA_CPF) ? preg_replace('/^(\d{3})(\d{3})(\d{3})(\d{2})$/', '$1.$2.$3-$4', $pessoa->PESSOA_CPF) : '—';
-                $funcMatricula = $func->FUNCIONARIO_MATRICULA ?? '—';
-                $dtAdmissao = $func->FUNCIONARIO_DT_ADMISSAO ? date('d/m/Y', strtotime($func->FUNCIONARIO_DT_ADMISSAO)) : '—';
-                // Cargo e setor via lotação
+                $cpf = isset($pessoa->PESSOA_CPF) ? preg_replace('/^(\d{3})(\d{3})(\d{3})(\d{2})$/', '$1.$2.$3-$4', $pessoa->PESSOA_CPF) : 'â€”';
+                $funcMatricula = $func->FUNCIONARIO_MATRICULA ?? 'â€”';
+                $dtAdmissao = $func->FUNCIONARIO_DT_ADMISSAO ? date('d/m/Y', strtotime($func->FUNCIONARIO_DT_ADMISSAO)) : 'â€”';
+                // Cargo e setor via lotaÃ§Ã£o
                 $lot = \Illuminate\Support\Facades\DB::table('LOTACAO')
                     ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
                     ->orderByDesc('LOTACAO_ID')
                     ->first();
                 if ($lot) {
-                    $cargo = $lot->CARGO ?? $lot->FUNCAO ?? '—';
-                    $setor = $lot->SETOR ?? $lot->UNIDADE ?? '—';
+                    $cargo = $lot->CARGO ?? $lot->FUNCAO ?? 'â€”';
+                    $setor = $lot->SETOR ?? $lot->UNIDADE ?? 'â€”';
                 }
             }
 
@@ -9992,7 +4521,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
             $hoje = now()->format('d/m/Y');
             $ano = date('Y');
 
-            // Mapa de variáveis para substituição no template
+            // Mapa de variÃ¡veis para substituiÃ§Ã£o no template
             $vars = [
                 '{{NOME}}' => $funcNome,
                 '{{MATRICULA}}' => $funcMatricula,
@@ -10014,7 +4543,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
             if ($modelo && !empty($modelo->MODELO_HTML)) {
                 $html = str_replace(array_keys($vars), array_values($vars), $modelo->MODELO_HTML);
             } else {
-                // Fallback: HTML padrão gerado pelo sistema
+                // Fallback: HTML padrÃ£o gerado pelo sistema
                 $html = <<<HTML
 <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>{$tipo}</title>
 <style>
@@ -10031,15 +4560,15 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
   .assinatura p{font-size:12px;color:#475569;margin:3px 0}
   .rodape{margin-top:36px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px}
 </style></head><body>
-<div class="topo"><h1>TRIBUNAL DE JUSTIÇA DO MARANHÃO</h1><p>Departamento de Gestão de Pessoas · Sistema GENTE v3</p></div>
+<div class="topo"><h1>TRIBUNAL DE JUSTIÃ‡A DO MARANHÃƒO</h1><p>Departamento de GestÃ£o de Pessoas Â· Sistema GENTE v3</p></div>
 <div class="titulo">{$tipo}</div>
 <div class="corpo">
-<p>Declaramos, para os devidos fins de direito, que <strong>{$funcNome}</strong>, servidor(a) com matrícula <strong>{$funcMatricula}</strong>, encontra-se regularmente vinculado(a) ao quadro de pessoal desta instituição, na forma da legislação vigente.</p>
-<p>Esta declaração é emitida a pedido do(a) interessado(a) e tem validade de <strong>90 (noventa) dias</strong> a contar da data de emissão.</p>
+<p>Declaramos, para os devidos fins de direito, que <strong>{$funcNome}</strong>, servidor(a) com matrÃ­cula <strong>{$funcMatricula}</strong>, encontra-se regularmente vinculado(a) ao quadro de pessoal desta instituiÃ§Ã£o, na forma da legislaÃ§Ã£o vigente.</p>
+<p>Esta declaraÃ§Ã£o Ã© emitida a pedido do(a) interessado(a) e tem validade de <strong>90 (noventa) dias</strong> a contar da data de emissÃ£o.</p>
 </div>
 <div class="tabela"><table>
 <tr><td>Servidor(a):</td><td>{$funcNome}</td></tr>
-<tr><td>Matrícula:</td><td>{$funcMatricula}</td></tr>
+<tr><td>MatrÃ­cula:</td><td>{$funcMatricula}</td></tr>
 <tr><td>CPF:</td><td>{$cpf}</td></tr>
 <tr><td>Cargo:</td><td>{$cargo}</td></tr>
 <tr><td>Setor:</td><td>{$setor}</td></tr>
@@ -10049,9 +4578,9 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 <tr><td>Emitido em:</td><td>{$hoje}</td></tr>
 </table></div>
 <div class="assinatura"><div class="linha"></div>
-<p><strong>Departamento de Gestão de Pessoas</strong></p>
-<p>Assinado digitalmente · {$hoje}</p></div>
-<div class="rodape">Documento gerado eletronicamente · Protocolo {$proto} · Sistema GENTE v3 · {$hoje}</div>
+<p><strong>Departamento de GestÃ£o de Pessoas</strong></p>
+<p>Assinado digitalmente Â· {$hoje}</p></div>
+<div class="rodape">Documento gerado eletronicamente Â· Protocolo {$proto} Â· Sistema GENTE v3 Â· {$hoje}</div>
 </body></html>
 HTML;
             }
@@ -10065,11 +4594,11 @@ HTML;
         }
     });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // RH — GESTÃO DE DECLARAÇÕES (admin/rh)
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // RH â€” GESTÃƒO DE DECLARAÃ‡Ã•ES (admin/rh)
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
-    // Lista TODAS as declarações (todos os funcionários) para o RH
+    // Lista TODAS as declaraÃ§Ãµes (todos os funcionÃ¡rios) para o RH
     Route::get('/rh/declaracoes', function () {
         try {
             $rows = \Illuminate\Support\Facades\DB::table('DECLARACAO as D')
@@ -10094,8 +4623,8 @@ HTML;
                     'status' => $d->status ?? 'pendente',
                     'obs' => $d->obs,
                     'data' => $d->data,
-                    'servidor' => $d->servidor ?? 'Servidor não identificado',
-                    'matricula' => $d->matricula ?? '—',
+                    'servidor' => $d->servidor ?? 'Servidor nÃ£o identificado',
+                    'matricula' => $d->matricula ?? 'â€”',
                     'protocolo' => 'REQ-' . date('Y') . '-' . str_pad($d->id, 3, '0', STR_PAD_LEFT),
                 ]);
 
@@ -10105,14 +4634,14 @@ HTML;
         }
     });
 
-    // Atualiza status de uma declaração (aprovar ou indeferir)
+    // Atualiza status de uma declaraÃ§Ã£o (aprovar ou indeferir)
     Route::patch('/rh/declaracoes/{id}', function (\Illuminate\Http\Request $request, $id) {
         try {
             $status = $request->status;
             $obs = $request->obs ?? null;
 
             if (!in_array($status, ['pronto', 'indeferido', 'andamento', 'pendente'])) {
-                return response()->json(['erro' => 'Status inválido.'], 422);
+                return response()->json(['erro' => 'Status invÃ¡lido.'], 422);
             }
 
             \Illuminate\Support\Facades\DB::table('DECLARACAO')
@@ -10129,15 +4658,15 @@ HTML;
         }
     });
 
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
-    // RH — GESTÃO DE MODELOS DE DECLARAÇÃO
-    // �?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
+    // RH â€” GESTÃƒO DE MODELOS DE DECLARAÃ‡ÃƒO
+    // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 
-    // Lista todos os tipos com info se têm modelo
+    // Lista todos os tipos com info se tÃªm modelo
     Route::get('/rh/modelos', function () {
         try {
             $tipos = [
-                'Declaração de Vínculo Empregatício',
+                'Declaração de Vínculo Empregêtício',
                 'Declaração para Financiamento Imobiliário',
                 'Declaração de Renda',
                 'Certidão de Tempo de Serviço',
@@ -10170,7 +4699,7 @@ HTML;
         }
     });
 
-    // Retorna o HTML de um modelo específico
+    // Retorna o HTML de um modelo especÃ­fico
     Route::get('/rh/modelos/{tipo}', function ($tipo) {
         try {
             $tipo = urldecode($tipo);
@@ -10190,7 +4719,7 @@ HTML;
             $tipo = $request->tipo;
             $html = $request->html ?? '';
             if (!$tipo || !$html)
-                return response()->json(['erro' => 'tipo e html são obrigatórios'], 422);
+                return response()->json(['erro' => 'tipo e html sÃ£o obrigatÃ³rios'], 422);
 
             $agora = now()->toDateTimeString();
             $existe = \Illuminate\Support\Facades\DB::table('DECLARACAO_MODELO')
@@ -10213,7 +4742,7 @@ HTML;
         }
     });
 
-    // Remove modelo (volta ao padrão do sistema)
+    // Remove modelo (volta ao padrÃ£o do sistema)
     Route::delete('/rh/modelos/{tipo}', function ($tipo) {
         try {
             $tipo = urldecode($tipo);
@@ -10224,15 +4753,15 @@ HTML;
         }
     });
 
-    // ─────────────────────────────────────────────────────────────
-    // AVALIAÇÃO DE DESEMPENHO  /api/v3/avaliacoes
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // AVALIAÃ‡ÃƒO DE DESEMPENHO  /api/v3/avaliacoes
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    // GET  — histórico de avaliações (do servidor logado OU de um funcionário específico quando gestor avalia)
-    Route::get('/v3/avaliacoes', function (\Illuminate\Http\Request $request) {
+    // GET  â€” histÃ³rico de avaliaÃ§Ãµes (do servidor logado OU de um funcionÃ¡rio especÃ­fico quando gestor avalia)
+    Route::get('/avaliacoes', function (\Illuminate\Http\Request $request) {
         try {
             $usuario = session('usuario');
-            // Gestor pode consultar avaliações de um servidor específico passando ?funcionario_id=X
+            // Gestor pode consultar avaliaÃ§Ãµes de um servidor especÃ­fico passando ?funcionario_id=X
             $funcId = $request->query('funcionario_id')
                 ?? $usuario['FUNCIONARIO_ID']
                 ?? $usuario['id']
@@ -10256,7 +4785,7 @@ HTML;
                 )
                 ->get();
 
-            // Para cada avaliação, busca os critérios
+            // Para cada avaliaÃ§Ã£o, busca os critÃ©rios
             $result = $avaliacoes->map(function ($av) {
                 $criterios = \Illuminate\Support\Facades\DB::table('AVALIACAO_CRITERIO')
                     ->where('AVALIACAO_ID', $av->AVALIACAO_ID)
@@ -10277,13 +4806,13 @@ HTML;
         }
     });
 
-    // POST — salvar nova avaliação (gestor avalia servidor)
-    Route::post('/v3/avaliacoes', function (\Illuminate\Http\Request $request) {
+    // POST â€” salvar nova avaliaÃ§Ã£o (gestor avalia servidor)
+    Route::post('/avaliacoes', function (\Illuminate\Http\Request $request) {
         try {
             $usuario = session('usuario');
             $avaliadorId = $usuario['USUARIO_ID'] ?? $usuario['id'] ?? null;
 
-            // funcionario_id: gestor passa explicitamente; servidor logado usa o próprio ID
+            // funcionario_id: gestor passa explicitamente; servidor logado usa o prÃ³prio ID
             $funcId = $request->input('funcionario_id')
                 ?? $usuario['FUNCIONARIO_ID']
                 ?? $usuario['id']
@@ -10293,7 +4822,7 @@ HTML;
             $criterios = $request->input('criterios', []);
 
             if (!$funcId || empty($criterios)) {
-                return response()->json(['erro' => 'funcionario_id e criterios são obrigatórios.'], 422);
+                return response()->json(['erro' => 'funcionario_id e criterios sÃ£o obrigatÃ³rios.'], 422);
             }
 
             // Calcula nota final ponderada
@@ -10307,7 +4836,7 @@ HTML;
             }
             $notaFinal = $pesosTotal > 0 ? round($notaFinal / $pesosTotal, 1) : 0;
 
-            // Insere cabeçalho da avaliação
+            // Insere cabeÃ§alho da avaliaÃ§Ã£o
             $avaliacaoId = \Illuminate\Support\Facades\DB::table('AVALIACAO_DESEMPENHO')->insertGetId([
                 'FUNCIONARIO_ID' => $funcId,
                 'AVALIACAO_CICLO' => $ciclo,
@@ -10318,11 +4847,11 @@ HTML;
                 'updated_at' => now(),
             ]);
 
-            // Insere cada critério
+            // Insere cada critÃ©rio
             foreach ($criterios as $c) {
                 \Illuminate\Support\Facades\DB::table('AVALIACAO_CRITERIO')->insert([
                     'AVALIACAO_ID' => $avaliacaoId,
-                    'CRITERIO_NOME' => $c['nome'] ?? '—',
+                    'CRITERIO_NOME' => $c['nome'] ?? 'â€”',
                     'CRITERIO_PESO' => (int) ($c['peso'] ?? 20),
                     'CRITERIO_NOTA' => (int) ($c['nota'] ?? 0),
                     'CRITERIO_OBS' => $c['obs'] ?? null,
@@ -10342,68 +4871,136 @@ HTML;
         }
     });
 
-    // ── Módulo de Exoneração e Verbas Rescisórias ─────────────────
+    // â”€â”€ MÃ³dulo de ExoneraÃ§Ã£o e Verbas RescisÃ³rias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/exoneracao.php';
 
-    // ── Hora Extra, Plantão Extra e Folha por Secretaria ──────────
+    // â”€â”€ Hora Extra, PlantÃ£o Extra e Folha por Secretaria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/hora_extra.php';
 
-    // ── Verbas Indenizatórias Mensais ─────────────────────────────
+    // â”€â”€ Verbas IndenizatÃ³rias Mensais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/verba_indenizatoria.php';
 
-    // ── Consignações em Folha ─────────────────────────────────────
+    // â”€â”€ ConsignaÃ§Ãµes em Folha â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/consignacao.php';
 
-    // ── eSocial — Painel de Eventos ───────────────────────────────
+    // â”€â”€ eSocial â€” Painel de Eventos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/esocial.php';
 
-    // ── RPPS / IPAM ───────────────────────────────────────────────
+    // â”€â”€ RPPS / IPAM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/rpps.php';
 
-    // ── Diárias e Missões ─────────────────────────────────────────
+    // â”€â”€ DiÃ¡rias e MissÃµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/diarias.php';
 
-    // ── Estagiários ───────────────────────────────────────────────
+    // â”€â”€ EstagiÃ¡rios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/estagiarios.php';
 
-    // ── Acumulação de Cargos (LAT-01 / GAP-09) ────────────────────
+    // â”€â”€ AcumulaÃ§Ã£o de Cargos (LAT-01 / GAP-09) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/acumulacao.php';
 
-    // ── Transparência Pública (LAT-02 / GAP-10) ───────────────────
+    // â”€â”€ TransparÃªncia PÃºblica (LAT-02 / GAP-10) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/transparencia.php';
 
-    // ── PSS / Concursos (LAT-03 / GAP-11) ────────────────────────
+    // â”€â”€ PSS / Concursos (LAT-03 / GAP-11) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/pss.php';
 
-    // ── Terceirizados (LAT-04 / GAP-12) ──────────────────────────
+    // â”€â”€ Terceirizados (LAT-04 / GAP-12) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/terceirizados.php';
 
-    // ── SAGRES / TCE-MA (LAT-05 / GAP-13) ───────────────────────
+    // â”€â”€ SAGRES / TCE-MA (LAT-05 / GAP-13) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/sagres.php';
 
-    // ── Banco de Horas (GAP-05) ───────────────────────────────────
+    // â”€â”€ Banco de Horas (GAP-05) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/banco_horas.php';
 
-    // ── Atestados Médicos (GAP-06) ────────────────────────────────
+    // â”€â”€ Atestados MÃ©dicos (GAP-06) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/atestados.php';
 
-    // ── ERP / Fiscal — Orçamento Público (ERP-1) ─────────────────
+    // â”€â”€ ERP / Fiscal â€” OrÃ§amento PÃºblico (ERP-1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/orcamento.php';
 
-    // ── ERP / Fiscal — Execução da Despesa (ERP-2) ───────────────
+    // â”€â”€ ERP / Fiscal â€” ExecuÃ§Ã£o da Despesa (ERP-2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/execucao_despesa.php';
 
-    // ── ERP / Fiscal — Contabilidade Pública PCASP (ERP-3) ───────
+    // â”€â”€ ERP / Fiscal â€” Contabilidade PÃºblica PCASP (ERP-3) â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/contabilidade.php';
 
-    // ── ERP / Fiscal — Tesouraria (ERP-4) ────────────────────────
+    // â”€â”€ ERP / Fiscal â€” Tesouraria (ERP-4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/tesouraria.php';
 
-    // ── ERP / Fiscal — Receita Municipal (ERP-5) ─────────────────
+    // â”€â”€ ERP / Fiscal â€” Receita Municipal (ERP-5) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/receita_municipal.php';
 
-    // ── ERP / Fiscal — Controle Externo SAGRES/SICONFI (ERP-6) ──
+    // â”€â”€ ERP / Fiscal â€” Controle Externo SAGRES/SICONFI (ERP-6) â”€â”€
     require __DIR__ . '/controle_externo.php';
 
 });
 
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// AUTOCADASTRO — Rotas PÚBLICAS (sem autenticação)
+// Devem ficar FORA do grupo auth — o candidato não tem login ainda.
+// ═══════════════════════════════════════════════════════════════════════
+Route::prefix('api/v3')->middleware(['web'])->group(function () {
+
+    // Valida token e retorna dados pré-preenchidos (nome, email)
+    Route::get('/autocadastro/{token}', function ($token) {
+        try {
+            $reg = \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
+                ->where('TOKEN', $token)->first();
+
+            if (!$reg)
+                return response()->json(['status' => 'invalido', 'erro' => 'Token não encontrado'], 404);
+
+            if ($reg->expira_em && now()->gt($reg->expira_em)) {
+                \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
+                    ->where('TOKEN', $token)
+                    ->update(['TOKEN_STATUS' => 'expirado', 'updated_at' => now()]);
+                return response()->json(['status' => 'invalido', 'erro' => 'Token expirado']);
+            }
+
+            return response()->json([
+                'status' => $reg->TOKEN_STATUS,
+                'nome' => $reg->TOKEN_NOME,
+                'email' => $reg->TOKEN_EMAIL,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'invalido', 'erro' => $e->getMessage()], 500);
+        }
+    });
+
+    // Candidato envia o formulário preenchido
+    Route::post('/autocadastro/{token}', function (\Illuminate\Http\Request $request, $token) {
+        try {
+            $reg = \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
+                ->where('TOKEN', $token)
+                ->where('TOKEN_STATUS', 'pendente')
+                ->first();
+
+            if (!$reg)
+                return response()->json(['erro' => 'Token inválido ou já utilizado'], 404);
+
+            if ($reg->expira_em && now()->gt($reg->expira_em))
+                return response()->json(['erro' => 'Token expirado'], 422);
+
+            $dados = $request->except(['_token']);
+
+            if (isset($dados['dependentes']) && is_string($dados['dependentes']))
+                $dados['dependentes'] = json_decode($dados['dependentes'], true);
+
+            \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
+                ->where('TOKEN', $token)
+                ->update([
+                    'TOKEN_STATUS' => 'preenchido',
+                    'TOKEN_DADOS' => json_encode($dados),
+                    'usado_em' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json(['ok' => true, 'msg' => 'Dados recebidos. Aguarde a aprovação do RH.']);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
+    });
+});

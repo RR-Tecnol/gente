@@ -3,7 +3,8 @@ description: Regras de desenvolvimento e documentação do GENTE v3
 ---
 
 # GENTE — Regras de Desenvolvimento do Agente
-**Versão:** 4.2 — Estrutura de workflows + regras por lacunas identificadas
+**Versão:** 4.4 — Seção 17 atualizada em 23/03/2026 (auditoria Gravity — sprints 0–4 concluídas)
+                 Seções 22–25 adicionadas em 23/03/2026 (sprint segurança + gaps estratégicos)
 **Aplicação:** Lido automaticamente a cada sessão. O agente DEVE verificar este arquivo antes de iniciar qualquer tarefa.
 
 ---
@@ -18,7 +19,7 @@ description: Regras de desenvolvimento e documentação do GENTE v3
 ### Ler somente se relevante para a tarefa:
 - `docs/historico-problemas.md` — se a tarefa envolve um bug já registrado
 - `docs/historico-estrategias-erradas.md` — se a tarefa já foi tentada antes sem sucesso
-- `PLANO_IMPLEMENTACAO_GENTE_V3.md` — somente ao criar módulo completamente novo
+- `docs/PLANO_MESTRE_V3.md` — somente ao criar módulo completamente novo ou ao planejar sprint ERP
 
 ### Sobre documentação pós-task:
 - Usar `.agent/workflows/documentar-solucao.md` **somente** em tasks que alteraram comportamento funcional ou estrutura do sistema
@@ -32,6 +33,15 @@ description: Regras de desenvolvimento e documentação do GENTE v3
 | `.agent/workflows/sprint-seguranca.md` | Ao executar Sprint 0 (SEC-01 a SEC-05) |
 | `.agent/workflows/resolver-bug.md` | Ao diagnosticar e corrigir qualquer bug |
 | `.agent/workflows/documentar-solucao.md` | Ao concluir qualquer tarefa — templates de registro |
+
+### Documentos estratégicos (ler antes de planejar novas sprints):
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `docs/SPRINT_SEGURANCA.md` | 10 tasks de segurança — executar ANTES do deploy VPS |
+| `docs/GAPS_ESTRATEGICOS.md` | Gaps críticos: 13º, férias, rescisão, DIRF, RAIS, painel executivo, multi-tenancy |
+| `docs/SPRINT_EXECUCAO_V3.md` | Spec completa Blocos A–F para o Antygravity |
+| `docs/PLANO_MESTRE_V3.md` | Visão geral do projeto, estado atual, sequência de execução |
 
 ---
 
@@ -338,43 +348,39 @@ DB::transaction(function () use ($candidato, $request) {
 
 ---
 
-## 17. STATUS DOS MÓDULOS CRÍTICOS (atualizado 13/03/2026 — varredura direta)
+## 17. STATUS DOS MÓDULOS CRÍTICOS (atualizado 23/03/2026 — auditoria Gravity)
 
-> ⚠️ **Diagnóstico correto:** os `require` de todos os módulos estão FORA do bloco `isLocal()` (linhas 10.300+ do web.php). As rotas existem e estão nas URLs corretas.
-> O problema é que **ninguém consegue autenticar** (TASK-01/02), então nenhuma request chega nos módulos protegidos por middleware `auth`.
-> Corrigir login = desbloquear todos os módulos simultaneamente.
+> ✅ **Login e CORS resolvidos** (Sprint 0 — 15/03/2026). Todos os módulos acessíveis após auth.
+> ✅ **Motor de Folha E2E passou:** R$24.743 proventos, R$2.614 descontos (17/03/2026).
+> 🔴 **Bugs ativos (Sprint Cleanup):** IC-06 (margem cartão 5%→10%), BUG-SEED-01/02, BUG-MOTOR-01, BUG-SIDEBAR-01/04, BUG-AC-07.
+> Fonte de verdade: `docs/MAPA_ESTADO_REAL.md` — prevalece em caso de conflito.
 
 | Módulo | Frontend | Backend | Status real | Próxima ação |
 |--------|----------|---------|-------------|-------------|
-| LOGIN / AUTH | ✅ LoginView.vue | 🔴 preso dentro de isLocal() | 🔴 CAUSA RAIZ | Sprint 0 TASK-01 — fazer primeiro |
-| CORS / Sessão | — | config/cors.php | 🔴 BLOQUEANTE | Sprint 0 TASK-02 |
-| Progressão Funcional | ✅ ProgressaoFuncionalView.vue | ⚠️ progressao_funcional.php BOM | ⚠️ Risco 500 | Sprint 0 TASK-05 |
-| Funcionários (CRUD) | ✅ FuncionariosView.vue | ✅ funcionarios.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Folha Pagamento | ✅ FolhaPagamentoView.vue | ✅ folha.php | ✅ Rota OK — inativa por auth | View holerite PDF → Sprint 2 |
-| Consignação | ✅ ConsignacaoView.vue | ✅ consignacao.php | ✅ Rota OK — inativa por auth | Margem 10% → Sprint 2 |
-| eSocial | ✅ ESocialView.vue | ✅ esocial.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| RPPS/IPAM | ✅ RPPSView.vue | ✅ rpps.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Exoneração | ✅ ExoneracaoView.vue | ✅ exoneracao.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Hora Extra | ✅ HoraExtraView.vue | ✅ hora_extra.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Verba Indenizatória | ✅ VerbaIndenizatoriaView.vue | ✅ verba_indenizatoria.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Diárias | ✅ DiariasView.vue | ✅ diarias.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Estagiários | ✅ EstagiariosView.vue | ✅ estagiarios.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Acumulação de Cargos | ✅ AcumulacaoView.vue | ✅ acumulacao.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Transparência Pública | ✅ TransparenciaView.vue | ✅ transparencia.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| PSS / Concursos | ✅ PSSView.vue | ✅ pss.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Terceirizados | ✅ TerceirizadosView.vue | ✅ terceirizados.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| SAGRES / TCE-MA | ✅ SagresView.vue | ✅ sagres.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Banco de Horas | ✅ BancoHorasView.vue | ✅ banco_horas.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Atestados Médicos | ✅ AtestadosMedicosView.vue | ✅ atestados.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| ERP Orçamento | ✅ OrcamentoView.vue | ✅ orcamento.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| ERP Execução Despesa | ✅ ExecucaoDespesaView.vue | ✅ execucao_despesa.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| ERP Contabilidade | ✅ ContabilidadeView.vue | ✅ contabilidade.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| ERP Tesouraria | ✅ TesourariaView.vue | ✅ tesouraria.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| ERP Receita Municipal | ✅ ReceitaMunicipalView.vue | ✅ receita_municipal.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| ERP Controle Externo | ✅ ControleExternoView.vue | ✅ controle_externo.php | ✅ Rota OK — inativa por auth | Depende de TASK-01 |
-| Neoconsig | ❌ não existe | ❌ não existe | ❌ pendente | Sprint 3 — após Sprint 0 |
-| Notificações | ✅ NotificacoesView.vue | ⚠️ stub no web.php | ⚠️ 404 constante | Criar endpoint → após Sprint 0 |
-
+| Login / Auth | ✅ LoginView.vue | ✅ fora do isLocal() | ✅ Funcionando | — |
+| CORS / Sessão | — | config/cors.php | ✅ Funcionando | — |
+| Funcionários (CRUD) | ✅ | ✅ funcionarios.php | ✅ Funcional | — |
+| Folha Pagamento | ✅ | ✅ folha.php | ✅ Motor E2E OK | IC-07 holerite PDF — Sprint Cleanup |
+| Consignação | ✅ | ✅ consignacao.php | 🔴 Margem cartão 5% (ilegal) | IC-06 → Sprint Cleanup TASK-C1 |
+| Progressão Funcional | ✅ | ✅ BOM removido | ✅ Funcional | TASK-14/15 tabela salarial |
+| eSocial | ✅ | ✅ esocial.php | ✅ Funcional | — |
+| RPPS/IPAM | ✅ | ✅ rpps.php | ✅ Funcional | BUG-RPPS-01/02 pendentes |
+| Exoneração | ✅ | ✅ exoneracao.php | ✅ Funcional | — |
+| Hora Extra | ✅ | ✅ hora_extra.php | ✅ Funcional | BUG-HE-01/02 pendentes |
+| Verba Indenizatória | ✅ | ✅ | ✅ Funcional | — |
+| Diárias | ✅ | ✅ diarias.php | ✅ Funcional | — |
+| Estagiários | ✅ | ✅ estagiarios.php | ✅ Funcional | — |
+| Acumulação de Cargos | ⚠️ sem sidebar | ✅ acumulacao.php | 🔴 Invisível na UI | BUG-SIDEBAR-01 → Sprint Cleanup |
+| Transparência | ⚠️ sem sidebar | ✅ transparencia.php | 🔴 Invisível na UI | BUG-SIDEBAR-01 → Sprint Cleanup |
+| PSS / Concursos | ⚠️ sem sidebar | ✅ pss.php | 🔴 Invisível na UI | BUG-SIDEBAR-01 → Sprint Cleanup |
+| Terceirizados | ⚠️ sem sidebar | ✅ terceirizados.php | 🔴 Invisível na UI | BUG-SIDEBAR-01 → Sprint Cleanup |
+| SAGRES / TCE-MA | ⚠️ sem sidebar | ✅ sagres.php | 🔴 Invisível na UI | BUG-SIDEBAR-01 → Sprint Cleanup |
+| Banco de Horas | ✅ | ✅ banco_horas.php | ✅ Funcional | — |
+| Atestados Médicos | ✅ | ✅ atestados.php | ✅ Funcional | — |
+| Autocadastro | ✅ AutocadastroGestaoView | ✅ BUG-AC x6 corrigidos | ⚠️ BUG-AC-07 pendente | Dependentes na tabela errada |
+| ERP (6 módulos) | ✅ stubs | ✅ stubs | 🟡 Pós-contrato | — |
+| Neoconsig | ❌ não existe | ❌ não existe | 🔴 pendente | Sprint 6 |
+| Notificações | ✅ stub | ⚠️ stub web.php | ⚠️ 404 constante | Pós-PoC |
 
 ---
 
@@ -478,6 +484,145 @@ if (app()->isLocal()) {
 Quando `supports_credentials = true`, `allowed_origins` **nunca pode ser** `['*']` — o browser rejeita. Sempre listar origens explícitas.
 
 **Erro real que gerou esta regra:** Sprint Antigravity — sessão nunca estabelecida mesmo com login retornando 200.
+
+---
+
+---
+
+## 22. REGRA — PRÉ-CONDIÇÕES DE BLOCO (dependências entre sprints)
+
+Antes de iniciar qualquer task de um bloco, verificar no `MAPA_ESTADO_REAL.md` se as dependências estão marcadas como `RESOLVIDO` com data confirmada.
+
+**Mapa de dependências obrigatórias:**
+
+| Task | Depende de estar RESOLVIDO |
+|------|---------------------------|
+| C3 — Contabilidade PCASP | C1 (Orçamento) + C2 (Execução Despesa) |
+| C4 — Tesouraria | C2 (Empenho/Pagamento) |
+| C6 — SAGRES backend real | C3 (lançamentos contábeis funcionais) |
+| C7 — Controle Externo LRF | C1 + C3 (execução orçamentária) |
+| D3 — Depreciação NBCASP | C3 (ContabilidadeService::lancar()) |
+| D4 — Contratos Admin | D1 (tabelas PROCESSO_LICITATORIO criadas) |
+| A1b — AvaliacaoGestorView | A1 (backend avaliação funcional) |
+| TASK-A0 — Proporcional | Motor folha E2E validado |
+| GAP-13 — 13º salário | TASK-A0 resolvido |
+| GAP-FER — Férias | TASK-A0 resolvido |
+| GAP-RES — Rescisão | GAP-13 + GAP-FER resolvidos |
+
+**Protocolo de verificação:**
+```
+ANTES de iniciar qualquer task:
+1. Abrir docs/MAPA_ESTADO_REAL.md
+2. Localizar as dependências da tabela acima
+3. Confirmar status = RESOLVIDO com data
+4. Se qualquer dependência estiver pendente: PARAR e reportar
+5. NUNCA assumir que a task anterior funcionou — verificar o arquivo
+```
+
+**Por que esta regra existe:** o Antygravity pode criar código sintaticamente correto que funciona isolado mas quebra na integração porque a fundação ainda não existia. Ex: `ContabilidadeService::lancarFolha()` criado antes de `DOTACAO` existir — compila, não lança erro, mas nunca executa o que deveria.
+
+---
+
+## 23. REGRA DE SEGURANÇA — HEADERS HTTP OBRIGATÓRIOS EM PRODUÇÃO
+
+Antes de qualquer deploy em VPS, verificar que `SecurityHeaders` middleware está registrado globalmente em `Kernel.php`:
+
+```php
+// app/Http/Middleware/SecurityHeaders.php — deve estar em $middleware global
+\App\Http\Middleware\SecurityHeaders::class,
+```
+
+Headers obrigatórios: `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `Content-Security-Policy`.
+
+`Strict-Transport-Security` (HSTS): ativar **somente após HTTPS estar configurado** — remover o comentário no middleware.
+
+Spec completa: `docs/SPRINT_SEGURANCA.md` → SEC-PROD-01.
+
+---
+
+## 24. REGRA DE SEGURANÇA — UPLOAD DE ARQUIVOS
+
+Todo endpoint que aceita upload DEVE aplicar o middleware `upload.safe`:
+
+```php
+Route::post('/atestados', ...)->middleware('upload.safe');
+Route::post('/documentos', ...)->middleware('upload.safe');
+```
+
+O middleware `ValidateFileUpload` verifica: MIME real (não a extensão declarada), tamanho máximo 10 MB, extensão dupla suspeita (`arquivo.php.jpg` → rejeitado).
+
+Spec completa: `docs/SPRINT_SEGURANCA.md` → SEC-PROD-05.
+
+---
+
+## 24. REGRA DE SEGURANÇA — v-html COM CONTEÚDO DO USUÁRIO
+
+Qualquer uso de `v-html` com conteúdo que veio de input do usuário (comunicados, ouvidoria, pesquisas) DEVE sanitizar com DOMPurify:
+
+```js
+import { sanitize } from '@/plugins/sanitize'
+// No template:
+<div v-html="sanitize(conteudo)"></div>
+```
+
+Instalar: `npm install dompurify`. Plugin em `resources/gente-v3/src/plugins/sanitize.js`.
+
+Spec completa: `docs/SPRINT_SEGURANCA.md` → SEC-PROD-08.
+
+---
+
+## 26. REGRA — GAPS CRÍTICOS DA FOLHA (bloqueadores jurídicos pós-contrato)
+
+Os itens abaixo são obrigações legais — não podem ir para produção real sem eles:
+
+| Gap | Impacto |
+|-----|---------|
+| `GAP-13` — 13º salário | Ilegal processar folha anual sem 13º |
+| `GAP-FER` — pagamento de férias | Aprovação de férias sem cálculo financeiro |
+| `GAP-RES` — TRCT rescisão | Exoneração sem calcular verbas rescisórias |
+| `GAP-GFP` — SEFIP/GFIP | Obrigação mensal da Caixa para cargos RGPS |
+| `GAP-DIR` — DIRF | Obrigação anual da Receita Federal |
+| `GAP-RAS` — RAIS | Obrigação anual do MTE |
+
+Spec detalhada de todos: `docs/GAPS_ESTRATEGICOS.md`.
+
+Ordem de execução: implementar após assinatura do contrato com São Luís, antes de processar a primeira folha real em produção.
+
+---
+
+## 27. REGRA — DECISÕES DE UX PROIBIDAS AO AGENTE
+
+O Antygravity **nunca toma decisões de UX por conta própria**. Quando a spec de uma task não descreve explicitamente o layout, fluxo ou comportamento de uma view, o agente deve:
+
+1. **PARAR**
+2. Listar as decisões de UX pendentes como perguntas objetivas
+3. Aguardar resposta antes de criar qualquer arquivo Vue
+
+**O que conta como decisão de UX (requer aprovação antes de implementar):**
+- Qual ação é o botão primário de uma tela
+- Ordem e rótulo de tabs
+- O que aparece no estado vazio de uma lista
+- Comportamento de formulários (inline vs modal vs página separada)
+- Quais campos são obrigatórios vs opcionais numa tela de cadastro
+- O que o painel/hero exibe por padrão ao carregar
+
+**O que NÃO é decisão de UX (agente decide sozinho):**
+- Estilo visual (cores, bordas, animações) — seguir o padrão das views existentes
+- Estrutura interna do componente Vue (refs, computed, onMounted)
+- Endpoints chamados e mapeamento de dados
+- Tratamento de erros e fallbacks
+
+**Referência de estilo visual obrigatória:**
+Antes de criar qualquer view nova, ler `resources/gente-v3/src/views/rh/PesquisaAdminView.vue`
+como referência de padrão visual. Replicar: hero com gradiente escuro, tabs, cards com border-radius 20px, hero-kpis no canto superior direito.
+
+**Critério de aceite de UX mínimo para views admin:**
+Toda view administrativa deve ter:
+- Hero com título, subtítulo e pelo menos 1 KPI numérico visível
+- Ação primária (botão "Nova X" ou "Registrar X") claramente visível no hero ou topo da lista
+- Estado vazio com mensagem e ícone — nunca lista em branco sem explicação
+- Feedback visual após toda ação (toast de sucesso ou erro)
+- Confirmação antes de qualquer ação destrutiva (excluir, rejeitar, baixar bem)
 
 ---
 

@@ -70,7 +70,7 @@
             :key="dia.num"
             class="cal-day"
             :class="[dia.classe, { 'cal-selected': diaAberto === dia.num, 'cal-hoje': dia.isHoje }]"
-            @click="dia.temRegistro && abrirDia(dia)"
+            @click="(!dia.isFds && !dia.isFuturo) && abrirDia(dia)"
             :title="dia.titulo"
           >
             <span class="day-num">{{ dia.num }}</span>
@@ -417,7 +417,8 @@ const diasDoMes = computed(() => {
       classe = 'cal-day-falta'
       badge = '!'
       badgeClass = 'badge-red'
-      titulo = 'Falta'
+      titulo = 'Falta — clique para detalhes'
+      temRegistro = true  // BUG-EST-06: falta também é clicável
     } else {
       const nBatidas = reg.batidas.length
       const pares = nBatidas % 2 === 0
@@ -610,7 +611,7 @@ const diaFormatado = computed(() => {
 .cal-day-presente:hover { background: #dcfce7; transform: scale(1.05); }
 .cal-day-inconsistente { background: #fffbeb; }
 .cal-day-inconsistente:hover { background: #fef3c7; transform: scale(1.05); }
-.cal-day-falta { background: #fef2f2; }
+.cal-day-falta { background: #fef2f2; cursor: pointer; /* BUG-EST-06 */ }
 .cal-day-falta:hover { background: #fee2e2; transform: scale(1.05); }
 .cal-selected { outline: 2px solid #6366f1 !important; outline-offset: 1px; }
 .cal-hoje .day-num { background: #6366f1; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }

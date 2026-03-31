@@ -6,7 +6,7 @@
         <div>
           <span class="hero-eyebrow">🏦 Gestão Financeira</span>
           <h1 class="hero-title">Consignações em Folha</h1>
-          <p class="hero-sub">Controle de empréstimos e convênios — margem 30% empréstimos + 5% cartão (lei)</p>
+          <p class="hero-sub">Controle de empréstimos e convênios — margem 30% empréstimos + 10% cartão (Decreto 57.477/2021)</p>
         </div>
         <div class="hero-kpis">
           <div class="kpi-card blue"><span class="kpi-label">Contratos Ativos</span><span class="kpi-val">{{ totais.contratos_ativos ?? 0 }}</span></div>
@@ -120,7 +120,7 @@
           <span class="margem-pct">{{ pctEmp }}%</span>
         </div>
         <!-- Barra de Cartão (5%) -->
-        <div class="margem-label" style="margin-top:.75rem">💳 Cartão (5%)</div>
+        <div class="margem-label" style="margin-top:.75rem">💳 Cartão (10%)</div>
         <div class="margem-grid">
           <div class="mg-item"><span class="mg-lbl">Limite</span><span class="mg-val">{{ formatMoney(margem.margem_cartao_total) }}</span></div>
           <div class="mg-item"><span class="mg-lbl">Usado</span><span class="mg-val" style="color:#dc2626">{{ formatMoney(margem.margem_cartao_usada) }}</span></div>
@@ -163,7 +163,7 @@
           <div class="mr-kpi red"><span>Usado</span><strong>{{ formatMoney(margemConsulta.margem_emp_usada) }}</strong></div>
           <div class="mr-kpi green"><span>Disponível</span><strong>{{ formatMoney(margemConsulta.margem_emp_disponivel) }}</strong></div>
         </div>
-        <div class="margem-label" style="margin:.75rem 0 .25rem">💳 Cartão (5%)</div>
+        <div class="margem-label" style="margin:.75rem 0 .25rem">💳 Cartão (10%)</div>
         <div class="mr-kpis">
           <div class="mr-kpi blue"><span>Limite</span><strong>{{ formatMoney(margemConsulta.margem_cartao_total) }}</strong></div>
           <div class="mr-kpi red"><span>Usado</span><strong>{{ formatMoney(margemConsulta.margem_cartao_usada) }}</strong></div>

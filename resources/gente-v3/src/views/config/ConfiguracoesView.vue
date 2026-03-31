@@ -293,7 +293,8 @@
                     <th>Regime</th>
                     <th>Entrada</th>
                     <th>Saída</th>
-                    <th>Tolerância</th>
+                    <th>Tolerância / Almoço</th>
+                    <th v-if="authStore.isAdmin">Jornada Esp.</th>
                     <th>#</th>
                   </tr>
                 </thead>
@@ -310,7 +311,18 @@
                       </td>
                       <td><input type="time" v-model="funcEditando.HORA_ENTRADA" class="ponto-input" /></td>
                       <td><input type="time" v-model="funcEditando.HORA_SAIDA" class="ponto-input" /></td>
-                      <td><input type="number" v-model.number="funcEditando.TOLERANCIA" min="0" max="120" class="ponto-input ponto-input-sm" /></td>
+                      <td>
+                        <div style="display:flex;gap:4px;flex-direction:column">
+                          <input type="number" v-model.number="funcEditando.TOLERANCIA" min="0" max="120" placeholder="Tol." class="ponto-input ponto-input-sm" />
+                          <input type="number" v-model.number="funcEditando.INTERVALO_ALMOCO" min="0" max="240" placeholder="Almoço" class="ponto-input ponto-input-sm" />
+                        </div>
+                      </td>
+                      <td v-if="authStore.isAdmin">
+                        <div style="display:flex;gap:4px;flex-direction:column">
+                          <input type="number" v-model.number="funcEditando.JORNADA_FINANCEIRA_HORAS" step="0.1" placeholder="Horas" class="ponto-input ponto-input-sm" />
+                          <textarea v-if="funcEditando.JORNADA_FINANCEIRA_HORAS" v-model="funcEditando.JORNADA_FINANCEIRA_OBS" class="ponto-input" placeholder="Justificativa..." rows="2"></textarea>
+                        </div>
+                      </td>
                       <td class="vinc-actions">
                         <button class="vinc-btn vinc-save" :disabled="salvandoFunc" @click="salvarFuncPonto">{{ salvandoFunc ? '⏳' : '💾' }}</button>
                         <button class="vinc-btn vinc-cancel" @click="funcEditando = null">✕</button>
@@ -325,7 +337,16 @@
                       </td>
                       <td>{{ f.HORA_ENTRADA || '—' }}</td>
                       <td>{{ f.HORA_SAIDA || '—' }}</td>
-                      <td>{{ f.TOLERANCIA != null ? f.TOLERANCIA + ' min' : '—' }}</td>
+                      <td>
+                        {{ f.TOLERANCIA != null ? f.TOLERANCIA + 'm' : 'Pad.' }} / 
+                        {{ f.INTERVALO_ALMOCO != null ? f.INTERVALO_ALMOCO + 'm' : 'Pad.' }}
+                      </td>
+                      <td v-if="authStore.isAdmin">
+                        <span v-if="f.JORNADA_FINANCEIRA_HORAS" class="regime-badge regime-custom" :title="f.JORNADA_FINANCEIRA_OBS">
+                          {{ f.JORNADA_FINANCEIRA_HORAS }}h/dia
+                        </span>
+                        <span v-else class="regime-badge regime-padrao">Trâmite Normal</span>
+                      </td>
                       <td class="vinc-actions">
                         <button class="vinc-btn vinc-edit" @click="editarFuncPonto(f)">✏️</button>
                       </td>
@@ -560,7 +581,16 @@ const funcsFiltradas = computed(() => {
 })
 
 const editarFuncPonto = (f) => {
-  funcEditando.value = { ...f, REGIME: f.REGIME ?? '', HORA_ENTRADA: f.HORA_ENTRADA ?? '', HORA_SAIDA: f.HORA_SAIDA ?? '', TOLERANCIA: f.TOLERANCIA ?? '' }
+  funcEditando.value = {
+    ...f, 
+    REGIME: f.REGIME ?? '', 
+    HORA_ENTRADA: f.HORA_ENTRADA ?? '', 
+    HORA_SAIDA: f.HORA_SAIDA ?? '', 
+    TOLERANCIA: f.TOLERANCIA ?? '',
+    INTERVALO_ALMOCO: f.INTERVALO_ALMOCO ?? '',
+    JORNADA_FINANCEIRA_HORAS: f.JORNADA_FINANCEIRA_HORAS ?? '',
+    JORNADA_FINANCEIRA_OBS: f.JORNADA_FINANCEIRA_OBS ?? ''
+  }
 }
 
 const salvarFuncPonto = async () => {
@@ -568,10 +598,13 @@ const salvarFuncPonto = async () => {
   salvandoFunc.value = true; funcMsg.value = ''
   try {
     await api.put(`/api/v3/ponto/config/funcionarios/${funcEditando.value.FUNCIONARIO_ID}`, {
-      regime:       funcEditando.value.REGIME || null,
-      hora_entrada: funcEditando.value.HORA_ENTRADA || null,
-      hora_saida:   funcEditando.value.HORA_SAIDA || null,
-      tolerancia:   funcEditando.value.TOLERANCIA !== '' ? funcEditando.value.TOLERANCIA : null,
+      REGIME:                   funcEditando.value.REGIME || null,
+      HORA_ENTRADA:             funcEditando.value.HORA_ENTRADA || null,
+      HORA_SAIDA:               funcEditando.value.HORA_SAIDA || null,
+      TOLERANCIA:               funcEditando.value.TOLERANCIA !== '' ? funcEditando.value.TOLERANCIA : null,
+      INTERVALO_ALMOCO:         funcEditando.value.INTERVALO_ALMOCO !== '' ? funcEditando.value.INTERVALO_ALMOCO : null,
+      JORNADA_FINANCEIRA_HORAS: funcEditando.value.JORNADA_FINANCEIRA_HORAS !== '' ? funcEditando.value.JORNADA_FINANCEIRA_HORAS : null,
+      JORNADA_FINANCEIRA_OBS:   funcEditando.value.JORNADA_FINANCEIRA_OBS || null,
     })
     await carregarFuncsPonto()
     funcEditando.value = null

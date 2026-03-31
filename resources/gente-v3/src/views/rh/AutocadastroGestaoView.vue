@@ -121,7 +121,11 @@
             <button v-else-if="t.TOKEN_STATUS === 'pendente'" class="btn-act btn-copiar" @click="copiarToken(t.TOKEN)">
               📋 Copiar link
             </button>
-            <button v-if="!['aprovado', 'revogado'].includes(t.TOKEN_STATUS)" class="btn-act btn-revogar" @click="revogar(t)">
+            <!-- BUG-EST-09: Ver Perfil para aprovados com FUNCIONARIO_ID -->
+            <button v-if="t.TOKEN_STATUS === 'aprovado' && t.FUNCIONARIO_ID" class="btn-act btn-perfil" @click="verPerfil(t.FUNCIONARIO_ID)">
+              👤 Ver Perfil
+            </button>
+            <button v-if="!['aprovado', 'revogado'].includes(t.TOKEN_STATUS)" class="btn-act btn-revogar" @click="confirmarRevogar(t)">
               ✕ Revogar
             </button>
           </div>
@@ -185,6 +189,29 @@
       </div>
     </transition>
 
+    </transition>
+
+    <!-- MODAL: confirmar revogação (BUG-EST-04) -->
+    <transition name="modal">
+      <div v-if="modalRevogar.visible" class="modal-overlay" @click.self="modalRevogar.visible = false">
+        <div class="modal-card">
+          <div class="modal-hdr">
+            <h3>Revogar Link</h3>
+            <button class="modal-close" @click="modalRevogar.visible = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:14px;color:#475569;margin:0 0 16px">
+              Revogar o link de <strong>{{ modalRevogar.nome }}</strong>? O candidato não poderá mais preencher o formulário.
+            </p>
+            <div class="modal-actions">
+              <button class="btn-modal-cancel" @click="modalRevogar.visible = false">Cancelar</button>
+              <button class="btn-modal-confirm" @click="revogar(modalRevogar.token); modalRevogar.visible = false">✕ Revogar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- TOAST -->
     <transition name="toast">
       <div v-if="toast.visible" class="toast">{{ toast.msg }}</div>
@@ -195,6 +222,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 
 const loaded    = ref(false)
@@ -208,6 +236,8 @@ const copiado     = ref(false)
 const erroAprovacao = ref('')
 const filtroAtivo = ref('todos')
 const toast = ref({ visible: false, msg: '' })
+const modalRevogar = ref({ visible: false, nome: '', token: null }) // BUG-EST-04
+const router = useRouter()
 
 // Form de geração
 const novoNome    = ref('')
@@ -287,11 +317,16 @@ const abrir = (t) => {
 const aprovar = async (token) => {
   aprovando.value = true; erroAprovacao.value = ''
   try {
-    await api.post(`/api/v3/autocadastro/${token}/aprovar`)
+    const { data } = await api.post(`/api/v3/autocadastro/${token}/aprovar`)
     const idx = tokens.value.findIndex(t => t.TOKEN === token)
-    if (idx !== -1) tokens.value[idx].TOKEN_STATUS = 'aprovado'
+    if (idx !== -1) {
+      tokens.value[idx].TOKEN_STATUS = 'aprovado'
+      if (data.funcionario_id) tokens.value[idx].FUNCIONARIO_ID = data.funcionario_id
+    }
     tokenAberto.value = null
-    showToast('✅ Cadastro aprovado! Conta criada com sucesso.')
+    // BUG-EST-09: exibir matrícula e login no toast
+    const mat = data.matricula ? ` Matrícula: ${data.matricula} | Login: ${data.login ?? ''}` : ''
+    showToast(`✅ Cadastro aprovado!${mat}`)
   } catch (e) {
     erroAprovacao.value = e.response?.data?.erro || 'Erro ao aprovar.'
   } finally {
@@ -299,8 +334,15 @@ const aprovar = async (token) => {
   }
 }
 
+// BUG-EST-09: navegar para perfil do funcionário
+const verPerfil = (funcId) => router.push(`/funcionarios/${funcId}`)
+
+// BUG-EST-04: substituir confirm() por modal
+const confirmarRevogar = (t) => {
+  modalRevogar.value = { visible: true, nome: t.TOKEN_NOME || t.TOKEN_EMAIL || 'este candidato', token: t }
+}
+
 const revogar = async (t) => {
-  if (!confirm(`Revogar o link de ${t.TOKEN_NOME || t.TOKEN_EMAIL || 'este candidato'}?`)) return
   try {
     await api.delete(`/api/v3/autocadastro/${t.TOKEN}`)
     const idx = tokens.value.findIndex(x => x.TOKEN === t.TOKEN)
@@ -404,6 +446,19 @@ const estadoCivilLabel = (v) => ({ '1': 'Solteiro(a)', '2': 'Casado(a)', '3': 'S
 .btn-copiar:hover { background: #dbeafe; }
 .btn-revogar { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
 .btn-revogar:hover { background: #fee2e2; }
+.btn-perfil  { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
+.btn-perfil:hover { background: #e0f2fe; }
+
+/* MODAL DE CONFIRMAÇÃO */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(3px); z-index: 200; display: flex; align-items: center; justify-content: center; }
+.modal-card { background: #fff; border-radius: 18px; padding: 0; width: min(400px, 92vw); box-shadow: 0 24px 64px rgba(0,0,0,0.18); overflow: hidden; }
+.modal-hdr { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
+.modal-hdr h3 { font-size: 15px; font-weight: 800; color: #1e293b; margin: 0; }
+.modal-close { border: none; background: #f1f5f9; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; color: #64748b; font-size: 13px; }
+.modal-body { padding: 16px 20px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.btn-modal-cancel  { padding: 8px 18px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff; color: #64748b; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-modal-confirm { padding: 8px 18px; border: none; border-radius: 10px; background: #ef4444; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
 /* STATE BOX */
 .state-box { display: flex; flex-direction: column; align-items: center; padding: 48px; color: #94a3b8; gap: 10px; }

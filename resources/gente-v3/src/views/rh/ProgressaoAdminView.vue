@@ -106,7 +106,14 @@
     <div v-if="abaAtiva === 'todos'" class="card" :class="{ loaded }">
       <div class="card-hdr">
         <h2 class="card-title">👥 Todos os Servidores</h2>
-        <input v-model="buscaTodos" class="search-input" placeholder="🔍 Buscar..." />
+        <div class="card-acts">
+          <!-- BUG-EST-12: filtro por setor -->
+          <select v-model="filtroSetor" class="search-input" style="width:200px">
+            <option value="">Todos os setores</option>
+            <option v-for="s in setores" :key="s.SETOR_ID ?? s.id" :value="s.SETOR_ID ?? s.id">{{ s.SETOR_NOME ?? s.nome }}</option>
+          </select>
+          <input v-model="buscaTodos" class="search-input" placeholder="🔍 Buscar..." />
+        </div>
       </div>
       <div v-if="carregando" class="loading-txt">⏳ Carregando...</div>
       <div v-else class="table-wrap">
@@ -211,7 +218,129 @@
       </div>
     </div>
 
-    <!-- ABA 4: Configurações -->
+    <!-- ABA 4: Tabela Salarial (TASK-14) -->
+    <div v-if="abaAtiva === 'tabela'" class="card" :class="{ loaded }">
+      <div class="card-hdr">
+        <h2 class="card-title">📊 Tabela Salarial por Carreira</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input v-model="tabelaBusca" class="search-input" placeholder="🔍 Buscar cargo ou carreira..." />
+          <button class="act-btn act-outline" @click="carregarTabelaSalarial">🔄 Atualizar</button>
+        </div>
+      </div>
+
+      <div v-if="carregandoTabela" class="loading-txt">⏳ Carregando tabela salarial...</div>
+      <div v-else-if="!cargosTabela.length" class="empty-msg">
+        Nenhum cargo cadastrado. Execute a migration e adicione cargos.
+      </div>
+      <template v-else>
+        <div v-for="([carreira, cargos]) in cargosByCarreira" :key="carreira" class="carreira-group">
+          <div class="cg-header">
+            <span class="cg-title">{{ carreira }}</span>
+            <span class="cg-count">{{ cargos.length }} cargo(s)</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr>
+                <th>Cargo</th><th>Classe</th><th>Ref.</th>
+                <th>Vencimento Base</th><th>CH (h/mês)</th><th>CBO</th><th></th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="c in cargos" :key="c.cargo_id">
+                  <!-- Modo visualização -->
+                  <template v-if="editandoCargoId !== c.cargo_id">
+                    <td class="td-nome">{{ c.nome }}</td>
+                    <td><span class="badge-classe">{{ c.classe || '—' }}</span></td>
+                    <td><code class="ref-badge">{{ c.referencia || '—' }}</code></td>
+                    <td class="td-money td-new">{{ c.salario_base != null ? 'R$ ' + fmtMoeda(c.salario_base) : '—' }}</td>
+                    <td class="td-meses">{{ c.carga_horaria ? c.carga_horaria + 'h' : '—' }}</td>
+                    <td class="td-cargo">{{ c.cbo || '—' }}</td>
+                    <td><button class="mini-btn" title="Editar" @click="iniciarEdicaoCargo(c)">✏️</button></td>
+                  </template>
+                  <!-- Modo edição inline -->
+                  <template v-else>
+                    <td><input v-model="editandoCargo.nome" class="field-input-sm" disabled /></td>
+                    <td><input v-model="editandoCargo.classe" class="field-input-sm" placeholder="A, B..." /></td>
+                    <td><input v-model="editandoCargo.referencia" class="field-input-sm" placeholder="1, 2..." /></td>
+                    <td><input v-model.number="editandoCargo.salario_base" class="field-input-sm" type="number" step="0.01" placeholder="0,00" /></td>
+                    <td><input v-model.number="editandoCargo.carga_horaria" class="field-input-sm" type="number" placeholder="200" /></td>
+                    <td><input v-model="editandoCargo.cbo" class="field-input-sm" placeholder="13124" /></td>
+                    <td style="display:flex;gap:4px">
+                      <button class="act-btn act-primary act-sm" :disabled="salvandoTabela" @click="salvarCargo">
+                        {{ salvandoTabela ? '⏳' : '💾' }}
+                      </button>
+                      <button class="act-btn act-outline act-sm" @click="cancelarEdicaoCargo">✕</button>
+                    </td>
+                  </template>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ABA 5: Histórico de Aprovações (BUG-EST-13) -->
+    <div v-if="abaAtiva === 'historico'" class="card" :class="{ loaded }">
+      <div class="card-hdr">
+        <h2 class="card-title">📜 Histórico de Aprovações</h2>
+        <div class="card-acts">
+          <input v-model="buscaHist" class="search-input" placeholder="🔍 Servidor ou ato..." @input="buscarHistorico(1)" />
+        </div>
+      </div>
+
+      <div v-if="carregandoHist" class="loading-txt">⏳ Carregando histórico...</div>
+      <div v-else-if="!historico.itens?.length" class="empty-msg">
+        Nenhum registro de progressão encontrado ainda.
+        <span style="display:block;font-size:12px;color:#94a3b8;margin-top:4px">As aprovações futuras aparecerão aqui.</span>
+      </div>
+      <div v-else>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Tipo</th>
+              <th>Servidor</th>
+              <th>Cargo</th>
+              <th>Classe/Ref. De → Para</th>
+              <th>Salário De → Para</th>
+              <th>Ato Administrativo</th>
+              <th>Aprovado por</th>
+              <th>Data</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="h in historico.itens" :key="h.id">
+                <td>
+                  <span class="status-badge" :class="h.tipo === 'promocao' ? 'sb-prom' : 'sb-ok'">
+                    {{ h.tipo === 'promocao' ? '⬆️ Promoção' : '📈 Progressão' }}
+                  </span>
+                </td>
+                <td class="td-nome">{{ h.servidor }}</td>
+                <td class="td-cargo">{{ h.cargo ?? '—' }}</td>
+                <td>
+                  <code class="ref-badge">{{ h.classe_de ?? '—' }}/{{ h.ref_de ?? '—' }}</code>
+                  <span style="color:#94a3b8;margin:0 4px">→</span>
+                  <code class="ref-badge ref-new">{{ h.classe_para ?? '—' }}/{{ h.ref_para ?? '—' }}</code>
+                </td>
+                <td class="td-money">
+                  <span style="color:#94a3b8">{{ h.salario_de ? 'R$ ' + fmtMoeda(h.salario_de) : '—' }}</span>
+                  <span v-if="h.salario_para"> → <strong>R$ {{ fmtMoeda(h.salario_para) }}</strong></span>
+                </td>
+                <td style="font-size:12px;color:#475569">{{ h.ato ?? '—' }}</td>
+                <td style="font-size:12px;color:#64748b">{{ h.aprovador ?? 'Sistema' }}</td>
+                <td style="font-size:12px;white-space:nowrap">{{ h.data ? new Date(h.data).toLocaleDateString('pt-BR') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginação -->
+        <div class="hist-pag" v-if="historico.total_paginas > 1">
+          <button class="act-btn act-outline" :disabled="historico.pagina <= 1" @click="buscarHistorico(historico.pagina - 1)">‹ Anterior</button>
+          <span style="font-size:13px;color:#64748b">{{ historico.pagina }} / {{ historico.total_paginas }} ({{ historico.total }} registros)</span>
+          <button class="act-btn act-outline" :disabled="historico.pagina >= historico.total_paginas" @click="buscarHistorico(historico.pagina + 1)">Próximo ›</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 6: Configurações -->
     <div v-if="abaAtiva === 'config'" class="card" :class="{ loaded }">
       <div class="card-hdr"><h2 class="card-title">⚙️ Configuração do Motor</h2></div>
       <div class="config-section">
@@ -265,11 +394,37 @@
     <transition name="toast">
       <div v-if="toast.visible" class="toast" :class="toast.type">{{ toast.ico }} {{ toast.msg }}</div>
     </transition>
+
+    <!-- Modal Aplicar em Lote (BUG-EST-04) -->
+    <transition name="modal">
+      <div v-if="modalLote.visible" class="modal-overlay" @click.self="modalLote.visible = false">
+        <div class="modal-card">
+          <div class="modal-hdr">
+            <h3>⚡ Aplicar Progressão em Lote</h3>
+            <button class="modal-close" @click="modalLote.visible = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:14px;color:#475569;margin:0 0 14px">
+              Confirmar progressão para <strong>{{ selecionados.length }} servidor(es)</strong>?
+            </p>
+            <label class="field-lbl">Ato Administrativo (opcional)</label>
+            <input v-model="modalLote.ato" class="field-input" placeholder="Ex: Portaria 023/2026" />
+            <div v-if="modalLote.erro" class="err-msg">⚠️ {{ modalLote.erro }}</div>
+            <div class="modal-actions">
+              <button class="modal-cancel" @click="modalLote.visible = false">Cancelar</button>
+              <button class="modal-submit" @click="confirmarLote" :disabled="modalLote.salvando">
+                {{ modalLote.salvando ? '⏳ Aplicando...' : 'Confirmar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/plugins/axios'
 
 const loaded      = ref(false)
@@ -290,6 +445,8 @@ const abas = [
   { id: 'elegiveis', ico: '✅', label: 'Elegíveis' },
   { id: 'todos',     ico: '👥', label: 'Todos' },
   { id: 'impacto',   ico: '💰', label: 'Impacto LRF' },
+  { id: 'tabela',    ico: '📊', label: 'Tabela Salarial' },
+  { id: 'historico', ico: '📜', label: 'Histórico' }, // BUG-EST-13
   { id: 'config',    ico: '⚙️', label: 'Configuração' },
 ]
 
@@ -302,6 +459,75 @@ const impacto    = ref({})
 const carreiras  = ref([])
 const cfg        = ref({ intersticio: 24, nota_minima: 7.0, anuenio_pct: 1.0 })
 const formRcl    = ref({ ano: new Date().getFullYear(), rcl: 0, folha_mensal: 0 })
+// BUG-EST-12: filtro de setor
+const filtroSetor  = ref('')
+const setores      = ref([])
+// BUG-EST-13: histórico
+const historico    = ref({ itens: [], total: 0, pagina: 1, total_paginas: 1 })
+const buscaHist    = ref('')
+const carregandoHist = ref(false)
+
+// ── Tabela Salarial ──────────────────────────────────────────────
+const cargosTabela     = ref([])
+const carregandoTabela = ref(false)
+const tabelaBusca      = ref('')
+const editandoCargoId  = ref(null)
+const editandoCargo    = ref({})
+const salvandoTabela   = ref(false)
+
+const cargosByCarreira = computed(() => {
+  const lista = tabelaBusca.value
+    ? cargosTabela.value.filter(c =>
+        (c.nome ?? '').toLowerCase().includes(tabelaBusca.value.toLowerCase()) ||
+        (c.carreira ?? '').toLowerCase().includes(tabelaBusca.value.toLowerCase())
+      )
+    : cargosTabela.value
+  const grupos = {}
+  for (const c of lista) {
+    const k = c.carreira || 'Outros'
+    if (!grupos[k]) grupos[k] = []
+    grupos[k].push(c)
+  }
+  return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b))
+})
+
+const carregarTabelaSalarial = async () => {
+  carregandoTabela.value = true
+  try {
+    const { data } = await api.get('/api/v3/cargos', { params: { ativo: 1 } })
+    cargosTabela.value = data.cargos ?? []
+  } catch { cargosTabela.value = [] }
+  finally { carregandoTabela.value = false }
+}
+
+const iniciarEdicaoCargo = (c) => {
+  editandoCargoId.value = c.cargo_id
+  editandoCargo.value = { ...c }
+}
+
+const cancelarEdicaoCargo = () => {
+  editandoCargoId.value = null
+  editandoCargo.value = {}
+}
+
+const salvarCargo = async () => {
+  salvandoTabela.value = true
+  try {
+    await api.put(`/api/v3/cargos/${editandoCargoId.value}`, {
+      CARGO_CARREIRA:    editandoCargo.value.carreira,
+      CARGO_CLASSE:      editandoCargo.value.classe,
+      CARGO_REFERENCIA:  editandoCargo.value.referencia,
+      CARGO_SALARIO_BASE: editandoCargo.value.salario_base,
+      CARGO_CARGA_HORARIA: editandoCargo.value.carga_horaria,
+      CARGO_CODIGO_CBO:  editandoCargo.value.cbo,
+    })
+    mostrarToast('success', '✅', 'Cargo atualizado!')
+    editandoCargoId.value = null
+    await carregarTabelaSalarial()
+  } catch (e) {
+    mostrarToast('error', '❌', e.response?.data?.erro || 'Erro ao salvar.')
+  } finally { salvandoTabela.value = false }
+}
 
 const modalAto = ref({ visible: false, id: null, nome: '', ato: '', salvando: false, erro: '', ok: '' })
 const toast    = ref({ visible: false, type: '', ico: '', msg: '' })
@@ -314,9 +540,16 @@ const mostrarToast = (type, ico, msg) => {
 const fmtMoeda = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(Number(v) || 0)
 
 const todosFiltered = computed(() => {
-  if (!buscaTodos.value) return todos.value
-  const q = buscaTodos.value.toLowerCase()
-  return todos.value.filter(s => s.nome?.toLowerCase().includes(q) || s.cargo?.toLowerCase().includes(q))
+  let list = todos.value
+  if (filtroSetor.value) {
+    // BUG-EST-12: filtro local por setor (setor_nome vem do backend via join)
+    list = list.filter(s => String(s.setor_id) === String(filtroSetor.value))
+  }
+  if (buscaTodos.value) {
+    const q = buscaTodos.value.toLowerCase()
+    list = list.filter(s => s.nome?.toLowerCase().includes(q) || s.cargo?.toLowerCase().includes(q))
+  }
+  return list
 })
 
 const lrfClass = computed(() => {
@@ -348,6 +581,24 @@ const carregarImpacto = async () => {
   } catch { impacto.value = {} }
 }
 
+const carregarSetores = async () => {
+  try {
+    const { data } = await api.get('/api/v3/setores')
+    setores.value = data.itens ?? data.setores ?? data ?? []
+  } catch { setores.value = [] }
+}
+
+const buscarHistorico = async (pagina = 1) => {
+  carregandoHist.value = true
+  try {
+    const { data } = await api.get('/api/v3/progressao-funcional/historico', {
+      params: { page: pagina, per_page: 20, busca: buscaHist.value || undefined }
+    })
+    historico.value = data
+  } catch { historico.value = { itens: [], total: 0, pagina: 1, total_paginas: 1 } }
+  finally { carregandoHist.value = false }
+}
+
 const carregarConfig = async () => {
   try {
     const { data } = await api.get('/api/v3/progressao-funcional/carreiras')
@@ -362,13 +613,21 @@ const carregarConfig = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([carregarElegiveis(), carregarTodos(), carregarImpacto(), carregarConfig()])
+  await Promise.all([carregarElegiveis(), carregarTodos(), carregarImpacto(), carregarConfig(), carregarTabelaSalarial(), carregarSetores()])
   setTimeout(() => { loaded.value = true }, 80)
+})
+
+watch(abaAtiva, (v) => {
+  if (v === 'tabela') carregarTabelaSalarial()
+  if (v === 'historico') buscarHistorico() // BUG-EST-13
 })
 
 const toggleAll = (e) => {
   selecionados.value = e.target.checked ? elegiveis.value.map(s => s.id) : []
 }
+
+// BUG-EST-04: modal de lote sem window.confirm()
+const modalLote = ref({ visible: false, ato: '', salvando: false, erro: '' })
 
 const aplicarUm = (s) => {
   modalAto.value = { visible: true, id: s.id, nome: s.nome, ato: '', salvando: false, erro: '', ok: '' }
@@ -384,21 +643,48 @@ const confirmarAplicacao = async () => {
       modalAto.value.visible = false
       await Promise.all([carregarElegiveis(), carregarTodos(), carregarImpacto()])
     }, 1200)
-  } catch (e) { modalAto.value.erro = e.response?.data?.erro || 'Erro ao aplicar progressão.' }
+  } catch (e) {
+    const msg = e.response?.data?.erro || 'Erro ao aplicar progressão.'
+    const teto = e.response?.data?.teto ?? false
+    modalAto.value.erro = teto
+      ? '⚠️ Servidor no teto da carreira. Use "Promover" para mudar de classe.'
+      : msg
+  }
   finally { modalAto.value.salvando = false }
 }
 
-const aplicarLote = async () => {
-  if (!confirm(`Aplicar progressão para ${selecionados.value.length} servidor(es)?`)) return
+const aplicarLote = () => {
+  if (selecionados.value.length === 0) return
+  modalLote.value = { visible: true, ato: '', salvando: false, erro: '' }
+}
+
+const confirmarLote = async () => {
+  modalLote.value.salvando = true; modalLote.value.erro = ''
   aplicandoLote.value = true
-  let ok = 0, erros = 0
+  let ok = 0
+  const detalhes = [] // BUG-EST-05: coletar detalhes de cada erro
   for (const id of selecionados.value) {
-    try { await api.post(`/api/v3/progressao-funcional/aplicar/${id}`, {}); ok++ }
-    catch { erros++ }
+    try {
+      await api.post(`/api/v3/progressao-funcional/aplicar/${id}`, { ato: modalLote.value.ato })
+      ok++
+    } catch (e) {
+      const err = e.response?.data
+      const teto = err?.teto ?? false
+      const nome = elegiveis.value.find(s => s.id === id)?.nome ?? `#${id}`
+      detalhes.push(teto ? `${nome}: no teto da carreira` : `${nome}: ${err?.bloqueios?.[0] ?? 'erro'}`)
+    }
   }
-  mostrarToast('success', '✅', `${ok} progressões aplicadas${erros ? `. ${erros} erros.` : '.'}`)
-  selecionados.value = []
+  if (detalhes.length) {
+    modalLote.value.erro = `${detalhes.length} servidor(es) não processado(s): ${detalhes.join(' | ')}`
+    mostrarToast('success', '⚠️', `${ok} aplicada(s). ${detalhes.length} erro(s) — veja o modal.`)
+  } else {
+    mostrarToast('success', '✅', `${ok} progressões aplicadas com sucesso!`)
+    modalLote.value.visible = false
+  }
+  if (ok > 0) selecionados.value = selecionados.value.filter(id => !selecionados.value.includes(id))
+  selecionados.value = detalhes.length ? selecionados.value : []
   aplicandoLote.value = false
+  modalLote.value.salvando = false
   await Promise.all([carregarElegiveis(), carregarTodos(), carregarImpacto()])
 }
 
@@ -471,7 +757,8 @@ const exportarLista = () => {
 .card.loaded { opacity: 1; transform: none; }
 .card-hdr { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
 .card-title { font-size: 15px; font-weight: 800; color: #1e293b; margin: 0; }
-.card-acts { display: flex; gap: 8px; }
+.card-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hist-pag { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9; } /* BUG-EST-13 */
 .act-btn { padding: 9px 16px; border-radius: 12px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
 .act-primary { background: linear-gradient(135deg,#4f46e5,#6366f1); color: #fff; }
 .act-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -576,5 +863,13 @@ const exportarLista = () => {
 .toast.error { background: #dc2626; }
 .toast-enter-active,.toast-leave-active { transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
 .toast-enter-from,.toast-leave-to { opacity: 0; transform: translateX(20px); }
+/* Tabela Salarial */
+.carreira-group { margin-bottom: 24px; }
+.cg-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: linear-gradient(90deg,#f5f3ff,#eff6ff); border-radius: 12px; margin-bottom: 8px; }
+.cg-title { font-size: 15px; font-weight: 800; color: #4f46e5; }
+.cg-count { font-size: 11px; font-weight: 700; color: #94a3b8; background: #fff; padding: 3px 10px; border-radius: 99px; }
+.field-input-sm { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-family: inherit; outline: none; width: 100%; box-sizing: border-box; }
+.field-input-sm:focus { border-color: #6366f1; }
+.field-input-sm:disabled { background: #f8fafc; color: #94a3b8; }
 @media (max-width: 700px) { .config-grid { grid-template-columns: 1fr; } .hero-inner { flex-direction: column; } }
 </style>

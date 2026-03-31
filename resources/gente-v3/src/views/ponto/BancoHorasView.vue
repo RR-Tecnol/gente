@@ -7,12 +7,19 @@
         <div>
           <span class="hero-eyebrow">⏱️ Ponto Eletrônico</span>
           <h1 class="hero-title">Banco de Horas</h1>
-          <p class="hero-sub">{{ mesLabel }} · Análise detalhada do saldo de horas</p>
+          <p class="hero-sub">{{ modoEquipe ? 'Visão da equipe' : mesLabel }} · {{ modoEquipe ? 'Saldo consolidado por membro' : 'Análise detalhada do saldo de horas' }}</p>
         </div>
-        <div class="month-nav">
-          <button class="mnav-btn" @click="mesAnterior">‹</button>
-          <span class="mes-label-nav">{{ mesLabel }}</span>
-          <button class="mnav-btn" @click="mesPosterior">›</button>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <!-- BUG-EST-15: toggle gestor/equipe -->
+          <div class="modo-toggle">
+            <button :class="['mt-btn', { active: !modoEquipe }]" @click="modoEquipe = false">👤 Meu Saldo</button>
+            <button :class="['mt-btn', { active: modoEquipe }]" @click="modoEquipe = true">👥 Equipe</button>
+          </div>
+          <div class="month-nav" v-if="!modoEquipe">
+            <button class="mnav-btn" @click="mesAnterior">‹</button>
+            <span class="mes-label-nav">{{ mesLabel }}</span>
+            <button class="mnav-btn" @click="mesPosterior">›</button>
+          </div>
         </div>
       </div>
     </div>
@@ -128,11 +135,42 @@
       </div>
     </div>
 
+    <!-- BUG-EST-15: Visão da equipe (gestor) -->
+    <div v-if="modoEquipe" class="table-card" :class="{ loaded }" style="margin-top:8px">
+      <div class="tc-hdr">
+        <h2 class="tc-title">👥 Banco de Horas da Equipe — {{ equipeResp.setor ?? 'Meu Setor' }}</h2>
+        <button class="f-btn active" @click="fetchEquipe">🔄 Atualizar</button>
+      </div>
+      <div v-if="carregandoEquipe" class="loading-bar" style="margin:16px"><span></span></div>
+      <div v-else-if="!equipeResp.membros?.length" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px">
+        Nenhum membro da equipe encontrado ou sem dados de banco de horas.
+      </div>
+      <div v-else class="table-scroll">
+        <table class="bh-table">
+          <thead><tr>
+            <th>Servidor</th><th>Cargo</th><th>Matrícula</th>
+            <th>Saldo Mês</th><th>Créd. Mês</th><th>Déb. Mês</th><th>Saldo Acumulado</th>
+          </tr></thead>
+          <tbody>
+            <tr v-for="m in equipeResp.membros" :key="m.funcionario_id" class="bh-row">
+              <td class="td-nome">{{ m.nome }}</td>
+              <td style="font-size:12px;color:#64748b">{{ m.cargo }}</td>
+              <td style="font-family:monospace;font-size:12px">{{ m.matricula }}</td>
+              <td><span class="saldo-chip" :class="m.saldo_mes >= 0 ? 'saldo-pos' : 'saldo-neg'">{{ m.saldo_mes >= 0 ? '+' : '' }}{{ m.saldo_mes }}h</span></td>
+              <td style="color:#065f46;font-weight:700">+{{ m.cred_mes }}h</td>
+              <td style="color:#991b1b">-{{ m.deb_mes }}h</td>
+              <td><span class="saldo-chip" :class="m.saldo_acumulado >= 0 ? 'saldo-pos' : 'saldo-neg'">{{ m.saldo_acumulado >= 0 ? '+' : '' }}{{ m.saldo_acumulado }}h</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/plugins/axios'
 
 const loaded = ref(false)
@@ -142,6 +180,10 @@ const registros = ref([])
 const loading = ref(false)
 const usingRealData = ref(false)
 const saldoAcumuladoBackend = ref(null)
+// BUG-EST-15: modo equipe
+const modoEquipe   = ref(false)
+const equipeResp   = ref({ membros: [], setor: null })
+const carregandoEquipe = ref(false)
 
 const filterOpts = [
   { val: 'todos', label: 'Todos' },
@@ -238,21 +280,16 @@ const fetchRegistros = async () => {
   loading.value = true
   const comp = `${mesAtual.value.getFullYear()}-${String(mesAtual.value.getMonth() + 1).padStart(2,'0')}`
   try {
-    // 1. Busca apurações mensais (banco-horas)
     const { data: bh } = await api.get('/api/v3/banco-horas')
     if (!bh.fallback && bh.apuracoes?.length) {
       const apuMes = bh.apuracoes.find(a => a.competencia === comp)
       if (apuMes) saldoAcumuladoBackend.value = apuMes.saldo_acumulado ?? null
     }
-
-    // 2. Busca registros diários reais do ponto
     const { data: ponto } = await api.get('/api/v3/ponto', { params: { competencia: comp } })
     if (!ponto.fallback && ponto.registros?.length) {
       montarComDadosReais(ponto.registros)
       return
     }
-
-    // 3. Fallback: mock
     gerarMock()
   } catch {
     gerarMock()
@@ -261,10 +298,22 @@ const fetchRegistros = async () => {
   }
 }
 
+const fetchEquipe = async () => {
+  carregandoEquipe.value = true
+  try {
+    const comp = `${mesAtual.value.getFullYear()}-${String(mesAtual.value.getMonth() + 1).padStart(2,'0')}`
+    const { data } = await api.get('/api/v3/banco-horas/equipe', { params: { competencia: comp } })
+    equipeResp.value = data
+  } catch { equipeResp.value = { membros: [], setor: null } }
+  finally { carregandoEquipe.value = false }
+}
+
 onMounted(async () => {
   await fetchRegistros()
   setTimeout(() => { loaded.value = true }, 80)
 })
+
+watch(modoEquipe, (v) => { if (v) fetchEquipe() })
 
 const mesAnterior = () => { const d = new Date(mesAtual.value); d.setMonth(d.getMonth() - 1); mesAtual.value = d; fetchRegistros() }
 const mesPosterior = () => { const d = new Date(mesAtual.value); d.setMonth(d.getMonth() + 1); mesAtual.value = d; fetchRegistros() }
@@ -406,4 +455,8 @@ const saldoClass  = (m) => m === null ? '' : m >= 60 ? 'saldo-pos' : m < -15 ? '
   .bh-table th:nth-child(5), .bh-table td:nth-child(5) { display: none; }
   .kc-val { font-size: 18px; }
 }
+.modo-toggle { display: flex; border: 1.5px solid rgba(255,255,255,0.2); border-radius: 12px; overflow: hidden; }
+.mt-btn { padding: 7px 14px; background: transparent; border: none; color: rgba(255,255,255,0.6); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.mt-btn.active { background: rgba(255,255,255,0.18); color: #fff; }
+.td-nome { font-weight: 700; color: #1e293b; }
 </style>

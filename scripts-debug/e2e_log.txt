@@ -1,0 +1,17 @@
+PASSO 1 — Criar/recuperar folha 202503
+  Já existe FOLHA_ID=6
+
+PASSO 2 — Folha: null
+
+PASSO 3 — Rodando motor para FOLHA_ID=6
+ok=true
+  ok: 1
+  folha_id: 6
+  competencia: 202503
+  servidores: 50
+  total_proventos: 24743.61
+  total_descontos: 2614.03
+  total_liquido: 22129.57
+  total_comp_sm: 6072
+
+PASSO 4 — DETALHE_FOLHA count: 50

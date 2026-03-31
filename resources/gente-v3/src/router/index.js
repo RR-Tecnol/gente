@@ -10,11 +10,22 @@ const ROLE_HIERARCHY = ['admin', 'rh', 'gestor', 'funcionario']
 
 function userRole(perfil) {
     if (!perfil) return null
-    const p = perfil.toLowerCase()
-    if (['admin', 'administrador'].includes(p)) return 'admin'
-    if (['rh', 'recursos humanos'].includes(p)) return 'rh'
-    if (['gestor'].includes(p)) return 'gestor'
-    return 'funcionario'
+    const p = perfil.toLowerCase().trim()
+
+    // admin — Desenvolvedor, Administrador, Manutenção, Equipe SISGEP
+    if (['admin', 'administrador', 'administrator', 'desenvolvedor',
+        'developer', 'manutenção', 'manutencao', 'equipe sisgep'].includes(p)) return 'admin'
+
+    // rh — RH Folha, RH Unidade, RH APS, RH Rede, Operacional, Direitos e Deveres, Recrutador
+    if (['rh', 'rh folha', 'rh unidade', 'rh aps', 'rh rede',
+        'operacional', 'direitos e deveres', 'recrutador',
+        'recursos humanos'].includes(p)) return 'rh'
+
+    // gestor — Gestão, Coordenador de Setor, Diretor/Gestor de Unidade
+    if (['gestor', 'gestão', 'gestao', 'coordenador de setor', 'coordenador',
+        'diretor / gestor de unidade', 'diretor', 'gestor de unidade'].includes(p)) return 'gestor'
+
+    return 'funcionario' // Externo e demais
 }
 
 function hasAccess(perfil, requiredRoles) {
@@ -259,6 +270,12 @@ const routes = [
                 meta: { roles: ['admin', 'rh'] }
             },
             {
+                path: 'consignatarias',
+                name: 'Consignatarias',
+                component: () => import('../views/rh/ConsignatariasView.vue'),
+                meta: { roles: ['admin'] }
+            },
+            {
                 path: 'esocial',
                 name: 'ESocial',
                 component: () => import('../views/rh/ESocialView.vue'),
@@ -337,9 +354,39 @@ const routes = [
                 meta: { roles: ['admin', 'rh'] }
             },
             {
+                path: 'avaliacao-gestor',
+                name: 'AvaliacaoGestor',
+                component: () => import('../views/rh/AvaliacaoGestorView.vue'),
+                meta: { roles: ['admin', 'rh', 'gestor'] }
+            },
+            {
+                path: 'beneficios',
+                name: 'Beneficios',
+                component: () => import('../views/rh/BeneficiosAdminView.vue'),
+                meta: { roles: ['admin', 'rh'] }
+            },
+            {
+                path: 'medicina-admin',
+                name: 'MedicinaAdmin',
+                component: () => import('../views/rh/MedicinaAdminView.vue'),
+                meta: { roles: ['admin', 'rh'] }
+            },
+            {
+                path: 'seguranca-admin',
+                name: 'SegurancaAdmin',
+                component: () => import('../views/rh/SegurancaAdminView.vue'),
+                meta: { roles: ['admin', 'rh', 'sesmt'] }
+            },
+            {
                 path: 'treinamentos',
                 name: 'Treinamentos',
                 component: () => import('../views/rh/TreinamentosView.vue'),
+                meta: { roles: ['admin', 'rh'] }
+            },
+            {
+                path: 'treinamentos-admin',
+                name: 'TreinamentosAdmin',
+                component: () => import('../views/rh/TreinamentosAdminView.vue'),
                 meta: { roles: ['admin', 'rh'] }
             },
             {
@@ -444,6 +491,36 @@ const routes = [
                 meta: { roles: ['admin'] }
             },
             {
+                path: 'compras',
+                name: 'Compras',
+                component: () => import('../views/administrativo/ComprasView.vue'),
+                meta: { roles: ['admin'] }
+            },
+            {
+                path: 'almoxarifado',
+                name: 'Almoxarifado',
+                component: () => import('../views/administrativo/AlmoxarifadoView.vue'),
+                meta: { roles: ['admin'] }
+            },
+            {
+                path: 'patrimonio',
+                name: 'Patrimonio',
+                component: () => import('../views/administrativo/PatrimonioView.vue'),
+                meta: { roles: ['admin'] }
+            },
+            {
+                path: 'contratos-admin',
+                name: 'ContratosAdmin',
+                component: () => import('../views/administrativo/ContratosAdminView.vue'),
+                meta: { roles: ['admin'] }
+            },
+            {
+                path: 'frotas',
+                name: 'Frotas',
+                component: () => import('../views/administrativo/FrotasView.vue'),
+                meta: { roles: ['admin'] }
+            },
+            {
                 path: 'tesouraria',
                 name: 'Tesouraria',
                 component: () => import('../views/financeiro/TesourariaView.vue'),
@@ -459,6 +536,12 @@ const routes = [
                 path: 'controle-externo',
                 name: 'ControleExterno',
                 component: () => import('../views/financeiro/ControleExternoView.vue'),
+                meta: { roles: ['admin'] }
+            },
+            {
+                path: 'oss',
+                name: 'Oss',
+                component: () => import('../views/saude/OssView.vue'),
                 meta: { roles: ['admin'] }
             },
 

@@ -44,17 +44,26 @@ Route::post('/esocial/eventos', function (Request $request) {
         if (!$request->funcionario_id || !$request->tipo_evento)
             return response()->json(['erro' => 'funcionario_id e tipo_evento são obrigatórios.'], 422);
 
-        $func = DB::table('FUNCIONARIO as f')
-            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-            ->where('f.FUNCIONARIO_ID', $request->funcionario_id)
-            ->select('f.*', 'p.PESSOA_NOME', 'p.CPF', 'p.PESSOA_NASCIMENTO')
-            ->first();
-
-        if (!$func)
-            return response()->json(['erro' => 'Servidor não encontrado.'], 404);
-
-        // Gerar payload XML simplificado (estrutura de exemplo)
-        $xml = "<!-- eSocial {$request->tipo_evento} | CPF: {$func->CPF} | {$func->PESSOA_NOME} -->";
+        $xmlService = new \App\Services\EsocialXmlService();
+        $xml = '';
+        
+        switch ($request->tipo_evento) {
+            case 'S-1200':
+                if (!$request->competencia) return response()->json(['erro' => 'competencia obrigatória para S-1200'], 422);
+                $xml = $xmlService->gerarS1200($request->funcionario_id, $request->competencia);
+                break;
+            case 'S-2200':
+                $xml = $xmlService->gerarS2200($request->funcionario_id);
+                break;
+            case 'S-2206':
+                $xml = $xmlService->gerarS2206($request->funcionario_id);
+                break;
+            case 'S-2299':
+                $xml = $xmlService->gerarS2299($request->funcionario_id, $request->data_desligamento ?? null);
+                break;
+            default:
+                return response()->json(['erro' => 'Tipo de evento não suportado.'], 400);
+        }
 
         $id = DB::table('ESOCIAL_EVENTO')->insertGetId([
             'FUNCIONARIO_ID' => $request->funcionario_id,
@@ -68,9 +77,24 @@ Route::post('/esocial/eventos', function (Request $request) {
             'updated_at' => now(),
         ]);
 
-        return response()->json(['ok' => true, 'evento_id' => $id]);
+        return response()->json(['ok' => true, 'evento_id' => $id, 'xml' => $xml]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+// ── GET: endpoint explícito para teste S-1200 ──────────────
+Route::get('/esocial/gerar/S-1200/{competencia}', function (string $competencia) {
+    try {
+        $firstFuncionario = DB::table('FUNCIONARIO')->orderBy('FUNCIONARIO_ID')->first();
+        if (!$firstFuncionario) return response('Nenhum funcionário ativo', 404);
+        
+        $xmlService = new \App\Services\EsocialXmlService();
+        $xml = $xmlService->gerarS1200($firstFuncionario->FUNCIONARIO_ID, $competencia);
+        
+        return response($xml, 200)->header('Content-Type', 'application/xml');
+    } catch (\Throwable $e) {
+        return response($e->getMessage(), 500);
     }
 });
 

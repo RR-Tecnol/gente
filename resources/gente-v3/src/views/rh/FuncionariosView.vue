@@ -491,6 +491,7 @@ const filtroAtivo  = ref('1')
 const paginaAtual  = ref(1)
 const ultimaPagina = ref(1)
 const total        = ref(0)
+const totalAtivos  = ref(0)
 
 const apoio = ref({ setores: [], vinculos: [], atribuicoes: [] })
 
@@ -529,9 +530,8 @@ const formVazio = () => ({
 const form = ref(formVazio())
 
 // ── Computed ────────────────────────────────────────────────
-const ativos = computed(() =>
-  funcionarios.value.filter(f => !f.FUNCIONARIO_DATA_FIM).length
-)
+// BUG-EST-07: usar total do backend em vez de contar só a página atual
+const ativos = computed(() => totalAtivos.value)
 
 // ── Carregamento ────────────────────────────────────────────
 onMounted(async () => {
@@ -551,6 +551,8 @@ const fetchFuncionarios = async (pag = 1) => {
     funcionarios.value = data.data ?? data
     ultimaPagina.value = data.last_page ?? 1
     total.value        = data.total ?? funcionarios.value.length
+    // BUG-EST-07: total_ativos do backend ou fallback local (conta apenas a página)
+    totalAtivos.value  = data.total_ativos ?? funcionarios.value.filter(f => !f.FUNCIONARIO_DATA_FIM).length
   } catch (e) {
     erro.value = e.response?.data?.message || 'Erro ao carregar funcionários.'
   } finally {

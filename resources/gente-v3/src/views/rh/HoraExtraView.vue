@@ -289,6 +289,8 @@ onMounted(async () => { await carregarLista(); setTimeout(() => loaded.value = t
 .status-badge.pendente { background: #fef3c7; color: #92400e; }
 .status-badge.aprovada { background: #dcfce7; color: #15803d; }
 .status-badge.rejeitada { background: #fee2e2; color: #991b1b; }
+.status-badge.incluida_folha { background: #dbeafe; color: #1d4ed8; } /* BUG-HE-02 */
+.status-badge.paga { background: #d1fae5; color: #065f46; }
 .money.amber { color: #b45309; font-weight: 600; text-align: right; }
 .act-btn { border: none; border-radius: 6px; padding: .3rem .65rem; font-size: .75rem; cursor: pointer; font-weight: 600; margin-right: .25rem; }
 .act-btn.green { background: #dcfce7; color: #15803d; }

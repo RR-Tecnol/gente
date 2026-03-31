@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import { useRouter, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import api from '../services/api'
 
 const TIPOS = {
@@ -107,6 +108,16 @@ export default function HomeScreen() {
             <TouchableOpacity style={s.btnHistorico} onPress={() => router.push('/historico')}>
                 <Text style={s.btnHistoricoText}>📋 Ver Histórico de Ponto</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={s.btnSecundario} onPress={() => router.push('/holerites')}>
+                <Ionicons name="document-text-outline" size={20} color="#3b82f6" />
+                <Text style={s.btnSecundarioText}>Meus Holerites</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={s.btnSecundario} onPress={() => router.push('/escala')}>
+                <Ionicons name="calendar-outline" size={20} color="#3b82f6" />
+                <Text style={s.btnSecundarioText}>Minha Escala</Text>
+            </TouchableOpacity>
         </ScrollView>
     )
 }
@@ -141,4 +152,6 @@ const s = StyleSheet.create({
     btnPontoText: { color: '#fff', fontWeight: '700', fontSize: 17 },
     btnHistorico: { marginHorizontal: 24, marginTop: 14, padding: 14, alignItems: 'center' },
     btnHistoricoText: { color: '#64748b', fontSize: 14 },
+    btnSecundario: { marginHorizontal: 24, marginTop: 12, backgroundColor: '#1e293b', borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
+    btnSecundarioText: { color: '#f1f5f9', fontWeight: '600', fontSize: 15 },
 })

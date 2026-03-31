@@ -44,12 +44,8 @@ class ContraChequeService
                 'valor' => number_format($item->EVENTO_DETALHE_FOLHA_VALOR, 2, ',', '.')
             ];
 
-            // Padrão de Negócio: Se tem 'FALTA' ou 'DESCONTO' ou Impsoto no nome/tipo, vai pra coluna 2
-            if (
-                strpos(strtoupper($item->evento->EVENTO_DESCRICAO), 'FALTA') !== false ||
-                strpos(strtoupper($item->evento->EVENTO_DESCRICAO), 'INSS') !== false ||
-                strpos(strtoupper($item->evento->EVENTO_DESCRICAO), 'IRRF') !== false
-            ) {
+            // BUG-S2-09: usar EVENTO_TIPO (P=Provento, D=Desconto) em vez de strpos no nome
+            if (($item->evento->EVENTO_TIPO ?? 'P') === 'D') {
                 $descontos[] = $evento;
             } else {
                 $proventos[] = $evento;
@@ -76,13 +72,13 @@ class ContraChequeService
 
             'total_proventos' => number_format($detalheFolha->DETALHE_FOLHA_PROVENTOS, 2, ',', '.'),
             'total_descontos' => number_format($detalheFolha->DETALHE_FOLHA_DESCONTOS, 2, ',', '.'),
-            'liquido' => number_format($detalheFolha->DETALHE_FOLHA_PROVENTOS - $detalheFolha->DETALHE_FOLHA_DESCONTOS, 2, ',', '.'),
+            'liquido' => number_format($detalheFolha->DETALHE_FOLHA_LIQUIDO ?? ($detalheFolha->DETALHE_FOLHA_PROVENTOS - $detalheFolha->DETALHE_FOLHA_DESCONTOS), 2, ',', '.'),
 
-            // Base de Cálculos (Mocks para a PoC)
-            'base_irrf' => '0,00',
-            'base_fgts' => '0,00',
+            // BUG-S2-11: bases reais do motor em vez de hardcoded
+            'base_irrf' => number_format($detalheFolha->DETALHE_BASE_IRRF ?? 0, 2, ',', '.'),
+            'base_fgts' => '0,00', // FGTS não se aplica ao RPPS
             'fx_irrf' => '0,00',
-            'base_prev' => number_format($detalheFolha->DETALHE_FOLHA_PROVENTOS, 2, ',', '.')
+            'base_prev' => number_format($detalheFolha->DETALHE_BASE_PREV ?? $detalheFolha->DETALHE_FOLHA_PROVENTOS, 2, ',', '.')
         ];
 
         // 4. Renderizar o PDF usando a lib Mpdf/DomPDF

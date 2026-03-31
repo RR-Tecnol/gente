@@ -75,7 +75,7 @@ Route::post('/rpps/calcular', function (Request $req) {
         $servidores = DB::table('DETALHE_FOLHA as df')
             ->join('FOLHA as fl', 'fl.FOLHA_ID', '=', 'df.FOLHA_ID')
             ->where('fl.FOLHA_COMPETENCIA', str_replace('-', '', $comp))
-            ->select('df.FUNCIONARIO_ID', DB::raw('SUM(df.DETALHE_FOLHA_PROVENTOS) as base'))
+            ->select('df.FUNCIONARIO_ID', DB::raw('SUM(COALESCE(df.DETALHE_BASE_PREV, df.DETALHE_FOLHA_PROVENTOS, 0)) as base')) // BUG-RPPS-01: usar base previdenciária real
             ->groupBy('df.FUNCIONARIO_ID')
             ->get();
 

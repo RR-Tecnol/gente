@@ -24,7 +24,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         // Reescreve o domínio dos cookies para que o browser em :5173 os aceite
-        cookieDomainRewrite: '127.0.0.1',
+        cookieDomainRewrite: 'localhost',
         // Garante que o header Set-Cookie não tem Secure (sem HTTPS)
         configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes) => {

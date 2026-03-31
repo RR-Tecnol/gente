@@ -9,6 +9,64 @@ description: Registro cronológico de bugs resolvidos no GENTE — consultar ant
 
 ---
 
+## [2026-03-17] SIDEBAR-01 — 8 módulos ausentes da sidebar + 15 perfis não reconhecidos
+
+**Sprint / Módulo:** Sprint 2 / DashboardLayout — Sidebar
+
+**Sintoma:** Módulos com rota válida no router (`/rpps`, `/diarias`, `/estagiarios`, etc.) nunca apareciam na sidebar porque faltavam entradas em `ALL_NAV_ITEMS`. Perfis do banco como "RH Folha", "Coordenador de Setor" e "Equipe SISGEP" não eram reconhecidos pelo `userRoleLevel()` — mapeados erroneamente como `funcionario`.
+
+**Causa raiz:**
+- `ALL_NAV_ITEMS` tinha 8 módulos sem entrada: `/rpps`, `/diarias`, `/acumulacao-cargos`, `/transparencia`, `/pss`, `/estagiarios`, `/terceirizados`, `/sagres-tce`
+- 7 módulos de configuração ausentes: `/configuracao-sistema`, `/parametros-financeiros`, `/vinculos`, `/turnos`, `/feriados`, `/tabelas-auxiliares`, `/eventos-folha`
+- `userRoleLevel()` só reconhecia 3 perfis; banco tem 15
+- `routeMap` sem as 16 rotas novas — breadcrumb mostrava "Módulo" genérico
+- `UsuariosPMSLzSeeder` não existia — sem usuários de teste para cada perfil
+
+**Solução:**
+- `ALL_NAV_ITEMS` reorganizado em 9 seções lógicas com todos os módulos
+- `userRoleLevel()` e `userRole()` expandidos para reconhecer os 15 perfis reais
+- `routeMap` com 16 entradas adicionadas
+- `UsuariosPMSLzSeeder.php` criado com 17 usuários (1 por perfil, senha `md5('gente@2026')`)
+- Registrado no `DatabaseSeeder`
+
+**Arquivos:** `DashboardLayout.vue`, `router/index.js`, `database/seeders/UsuariosPMSLzSeeder.php`
+**Validado:** ✅ 17/03/2026 — sidebar exibindo corretamente por perfil
+
+---
+
+## [2026-03-17] BUG-AC-01 a 06 — Aprovação do Autocadastro não criava PESSOA/USUARIO/FUNCIONARIO
+
+**Sprint / Módulo:** Emergencial / Autocadastro
+
+**Sintoma:** `POST /autocadastro/{token}/aprovar` retornava 500 com erros de coluna inexistente (`PESSOA_SEXO_ID`, `created_at`, etc.). Quando não dava erro, o usuário era aprovado sem matrícula, sem perfil e sem conseguir logar.
+
+**Causa raiz (6 bugs):**
+1. **BUG-AC-01:** `FUNCIONARIO_MATRICULA` nunca inserido no INSERT do FUNCIONARIO
+2. **BUG-AC-02:** CPF em `PESSOA_CPF` (não existe) — correto é `PESSOA_CPF_NUMERO`
+3. **BUG-AC-03:** Cinco campos com nome errado na tabela PESSOA:
+   - `PESSOA_SEXO_ID` → `PESSOA_SEXO`
+   - `ESTADO_CIVIL_ID` → `ESTADO_CIVIL`
+   - `PESSOA_GRAU_INSTRUCAO` → `ESCOLARIDADE_ID`
+   - `PESSOA_RACA_COR` → `PESSOA_RACA`
+   - `PESSOA_RG_ORG_EMISSOR` → `PESSOA_ORG_EMISSOR`
+4. **BUG-AC-04:** `DB::table('USUARIO')->insert()` sem `insertGetId()` → `USUARIO_ID` nunca capturado → PESSOA.USUARIO_ID = null
+5. **BUG-AC-05:** `USUARIO_PERFIL` nunca criado → sidebar vazia, acesso zero
+6. **BUG-AC-06:** `Hash::make()` (bcrypt) em sistema que valida MD5
+7. **Extra:** `created_at`/`updated_at`, `PESSOA_ATIVO`, `PESSOA_DATA_CADASTRO` inseridos em tabelas que não têm essas colunas
+
+**Solução:**
+- Endpoint reescrito com campos reais das migrations (verificados via `Schema::getColumnListing()`)
+- Matrícula gerada no formato `YYYY-NNNN` sequencial por ano
+- `insertGetId()` usado para USUARIO e PESSOA; vínculos PESSOA.USUARIO_ID e FUNCIONARIO.USUARIO_ID preenchidos
+- `USUARIO_PERFIL` criado com `PERFIL_ID = 5` (Externo)
+- Senha armazenada como `md5($dados['senha'])`
+- Colunas inexistentes removidas de todos os INSERTs e UPDATEs
+
+**Arquivo:** `routes/web.php` — `Route::post('/autocadastro/{token}/aprovar', ...)`
+**Validado:** ✅ 17/03/2026 — aprovação criou PESSOA + USUARIO + FUNCIONARIO com matrícula gerada
+
+---
+
 ## [2026-03-11] GAP-07 — PDF Holerite referenciava view inexistente
 
 **Sprint / Módulo:** Sprint 3 / Folha de Pagamento
@@ -821,5 +879,214 @@ Comando ou sintoma diagnóstico.
 
 **Arquivos alterados:**
 - `resources/gente-v3/src/views/rh/ConsignacaoView.vue`
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-15] cookieDomainRewrite: '127.0.0.1' quebra sessão ao acessar via localhost
+
+**Sprint / Módulo:** Sprint 0 / Infraestrutura local
+
+**Sintoma:**
+> Login retorna 200, `router.push('/dashboard')` é chamado, mas navegação guard dispara `GET /api/auth/me` → 401. Usuário é redirecionado de volta ao login.
+
+**Causa raiz:**
+`vite.config.js` tinha `cookieDomainRewrite: '127.0.0.1'`. O cookie de sessão, que o Laravel define com `Domain=localhost` (SESSION_DOMAIN=localhost no .env), era reescrito para `Domain=127.0.0.1` pelo proxy Vite. O browser em `localhost:5173` não envia cookies com `Domain=127.0.0.1` → sessão perdida na requisição seguinte.
+
+**Solução que funcionou:**
+```js
+// ❌ ERRADO — cookie reescrito para 127.0.0.1, browser em localhost não o envia:
+cookieDomainRewrite: '127.0.0.1'
+
+// ✅ CORRETO — cookie mantém Domain=localhost, browser em localhost:5173 o envia:
+cookieDomainRewrite: 'localhost'
+```
+
+**O que NÃO funcionou:**
+- Mudar `host` do Vite para `'localhost'` (sem mexer no cookieDomainRewrite) — não resolveu o 401
+- Acessar via `127.0.0.1:5173` — funcionou, mas não é o URL padrão usado
+
+**Como identificar no futuro:**
+Login retorna 200, `router.push` é chamado, mas `GET /api/auth/me` retorna 401 imediatamente após. Verificar `cookieDomainRewrite` no vite.config.js e SESSION_DOMAIN no .env — devem ser o mesmo domínio que o browser usa para acessar.
+
+**Arquivos alterados:**
+- `resources/gente-v3/vite.config.js` — `cookieDomainRewrite: '127.0.0.1'` → `'localhost'`
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-15] Migração OneDrive → Desktop: views Vue 3 não copiadas (arquivos somente-online)
+
+**Sprint / Módulo:** Infraestrutura local
+
+**Sintoma:**
+> Vite inicia mas mostra `[plugin:vite:import-analysis] Failed to resolve import "../views/auth/LoginView.vue"`. Apenas 4 de 71 views existem no Desktop.
+
+**Causa raiz:**
+OneDrive mantém arquivos em modo "somente online" (placeholder na nuvem, não baixado localmente). Ao copiar a pasta no Explorer, apenas os arquivos ja baixados localmente são copiados. Os demais (a maioria das views Vue) ficam no OneDrive.
+
+**Solução que funcionou:**
+Copiar a pasta `resources/gente-v3/src/views` diretamente do OneDrive para o Desktop via PowerShell ou Explorer após selecionar "Sempre manter neste dispositivo" no OneDrive.
+
+**Como identificar no futuro:**
+`(Get-ChildItem -Recurse "C:\...\Desktop\projeto\resources\gente-v3\src\views" -Filter "*.vue").Count` mostra número muito menor que o esperado. Verificar o mesmo path no OneDrive.
+
+**Arquivos alterados:**
+- `resources/gente-v3/src/views/` — copiado do OneDrive (67 views restauradas)
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-15] node_modules corrompidos após migração de pasta
+
+**Sprint / Módulo:** Infraestrutura local
+
+**Sintoma:**
+> `npm run dev` falha com `Cannot find module './utils/dynamic-import-loader'` ou `Cannot find module 'fs-extra'`.
+
+**Causa raiz:**
+`node_modules` copiado entre pastas (ou do OneDrive) pode ter arquivos truncados ou links simbólicos quebrados.
+
+**Solução que funcionou:**
+```powershell
+Remove-Item -Recurse -Force node_modules
+npm cache clean --force
+npm install
+```
+
+**Arquivos alterados:**
+- `node_modules/` — reinstalado limpo
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-15] php.ini com extensões inexistentes causando Warning e exit code 1
+
+**Sprint / Módulo:** Infraestrutura local
+
+**Sintoma:**
+> `php artisan serve` falha com exit code 1. `php -v` retorna `PHP Warning: Unable to load dynamic library 'pdo_firebird'`.
+
+**Causa raiz:**
+`C:\tools\php81\php.ini` tinha extensões habilitadas (`pdo_firebird`, `pdo_oci`, `pdo_odbc`, `pdo_pgsql`) cujas DLLs não existiam na pasta `ext/`. O PHP inicializava com warnings e exit code 1.
+
+**Solução que funcionou:**
+Comentar as extensões desnecessárias no `php.ini`:
+```ini
+;extension=pdo_firebird
+;extension=pdo_oci
+;extension=pdo_odbc
+;extension=pdo_pgsql
+```
+
+**Como identificar no futuro:**
+```powershell
+php -v 2>&1 | Out-String
+# Se mostrar "Unable to load dynamic library 'XXX'" → comentar no php.ini
+```
+
+**Arquivos alterados:**
+- `C:\tools\php81\php.ini` — extensões sem DLL comentadas
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-16] BUG-S1-01 — Consignação 500: `Request::$funcionario_id`
+
+**Sprint / Módulo:** Sprint 1 / Consignação
+
+**Sintoma:**
+> `GET /api/v3/consignacao` → 500 `{"erro":"Undefined property: Illuminate\\Support\\Facades\\Request::$funcionario_id"}`
+
+**Causa raiz:**
+`routes/consignacao.php` não tem `use` statements (comentário do arquivo: "rotas sem use statements"). O type hint `function (Request $request)` resolvia para `Illuminate\Support\Facades\Request` (Facade) em vez de `Illuminate\Http\Request`. Em PHP 8.2, acessar propriedade não existente no Facade gera fatal error.
+
+**Solução:**
+```powershell
+(Get-Content routes\consignacao.php -Raw) -replace 'function \(Request \$request\)', 'function (\Illuminate\Http\Request $request)' | Set-Content ...
+```
+
+**Arquivos alterados:**
+- `routes/consignacao.php` — type hint FQCN em todos os closures
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-16] BUG-S1-02 — `arquivoFerias` undefined em FeriasLicencasView.vue
+
+**Sprint / Módulo:** Sprint 1 / Férias e Licenças
+
+**Sintoma:**
+> Vue warn: `Property "arquivoFerias" was accessed during render but is not defined on instance`
+
+**Causa raiz:**
+Template usava `arquivoFerias`, `onArquivoFerias()` e `onDropFerias()` para upload de arquivo, mas nenhum estava declarado no `<script setup>`.
+
+**Solução:**
+Adicionado após `const loadingSaldo = ref(false)`:
+```js
+const arquivoFerias  = ref(null)
+const onArquivoFerias = (e) => { arquivoFerias.value = e.target.files[0] ?? null }
+const onDropFerias    = (e) => { arquivoFerias.value = e.dataTransfer.files[0] ?? null }
+```
+
+**Arquivos alterados:**
+- `resources/gente-v3/src/views/rh/FeriasLicencasView.vue`
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-16] BUG-S1-03 — Progressão Funcional: `fallback: true` / `no such column: c.CARGO_SALARIO`
+
+**Sprint / Módulo:** Sprint 1 / Progressão Funcional
+
+**Sintoma:**
+> API retorna `{"fallback":true,"erro":"SQLSTATE[HY000]: General error: 1 no such column: c.CARGO_SALARIO"}` — UI exibe "Ref. undefined"
+
+**Causa raiz:**
+A migration que criou a tabela `CARGO` no SQLite (`2026_02_23_000001_create_remaining_domain_tables.php`) só incluiu `CARGO_ID`, `CARGO_NOME` e `CARGO_ATIVO`. `CARGO_SALARIO` existe no SQL Server legado mas nunca foi adicionado ao SQLite. Idem a `CARGO_ID` na tabela `FUNCIONARIO` e outros campos de progressão.
+
+**Solução:**
+Duas novas migrations criadas:
+- `2026_03_16_000001_add_salario_to_cargo.php` — adiciona `CARGO_SALARIO decimal(12,2)` em `CARGO`
+- `2026_03_16_000002_add_progressao_columns_to_funcionario.php` — adiciona `CARGO_ID`, `FUNCIONARIO_DATA_INICIO`, `FUNCIONARIO_ESTAGIO_PROBATORIO`, `FUNCIONARIO_DATA_ULTIMA_PROGRESSAO` em `FUNCIONARIO`
+
+Ambas com `Schema::hasColumn()` guard para idempotência.
+
+**Como identificar no futuro:**
+API retorna `fallback: true` + erro de coluna não existente. Verificar se a coluna existe na migration de dev vs SQL Server.
+
+**Arquivos alterados:**
+- `database/migrations/2026_03_16_000001_add_salario_to_cargo.php` — [NEW]
+- `database/migrations/2026_03_16_000002_add_progressao_columns_to_funcionario.php` — [NEW]
+
+**Status:** ✅ Resolvido
+
+---
+
+## [2026-03-16] BUG-S1-04 — `/funcionario/{id}` 500: `atribuicao` relationship undefined
+
+**Sprint / Módulo:** Sprint 1 / Funcionários
+
+**Sintoma:**
+> Tela de perfil do funcionário mostra "Call to undefined relationship [atribuicao] on model [App\Models\Lotacao]"
+
+**Causa raiz:**
+`routes/web.php` linha ~1967 ainda tinha `'lotacoes.atribuicao'` (relação legada que não existe no model `Lotacao`). A correção com `atribuicaoLotacoes.atribuicao` havia sido feita em outros lugares do arquivo mas não nesse endpoint específico (migração incompleta OneDrive → Desktop).
+
+**Solução:**
+```powershell
+(Get-Content routes\web.php -Raw) -replace "'lotacoes.setor', 'lotacoes.vinculo', 'lotacoes.atribuicao'", "'lotacoes.setor', 'lotacoes.vinculo', 'lotacoes.atribuicaoLotacoes.atribuicao'" | Set-Content ...
+```
+
+**Arquivos alterados:**
+- `routes/web.php` — `'lotacoes.atribuicao'` → `'lotacoes.atribuicaoLotacoes.atribuicao'`
 
 **Status:** ✅ Resolvido

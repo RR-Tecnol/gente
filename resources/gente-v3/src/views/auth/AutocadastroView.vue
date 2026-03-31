@@ -87,8 +87,9 @@
           </div>
           <div class="form-row2">
             <div class="form-field">
-              <label>PIS / PASEP</label>
-              <input v-model="form.pis" type="text" placeholder="000.00000.00-0" />
+              <label>PIS / PASEP <span class="req">*</span> <span class="campo-hint">(11 dígitos)</span></label>
+              <input v-model="form.pis" type="text" placeholder="000.00000.00-0" @input="mascararPis" maxlength="14" />
+              <span v-if="form.pis && form.pis.replace(/\D/g,'').length < 11" class="campo-aviso">⚠️ PIS/PASEP exige 11 dígitos (crítico para eSocial)</span>
             </div>
             <div class="form-field">
               <label>Estado Civil</label>
@@ -143,7 +144,7 @@
             </div>
             <div class="form-field">
               <label>Telefone / WhatsApp</label>
-              <input v-model="form.telefone" type="text" placeholder="(00) 00000-0000" />
+              <input v-model="form.telefone" type="text" placeholder="(00) 00000-0000" @input="mascararTelefone" maxlength="15" />
             </div>
           </div>
         </div>
@@ -154,7 +155,7 @@
           <div class="form-row2">
             <div class="form-field">
               <label>CEP</label>
-              <input v-model="form.cep" type="text" placeholder="00000-000" @blur="buscarCep" maxlength="9" />
+              <input v-model="form.cep" type="text" placeholder="00000-000" @input="mascararCep" @blur="buscarCep" maxlength="9" />
             </div>
           </div>
           <div class="form-row2">
@@ -407,7 +408,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
+import api from '@/plugins/axios'
 
 const route = useRoute()
 const token = route.params.token
@@ -473,7 +474,7 @@ const removeArquivo = (campo) => {
 
 onMounted(async () => {
   try {
-    const { data } = await axios.get(`/api/v3/autocadastro/${token}`)
+    const { data } = await api.get(`/api/v3/autocadastro/${token}`)
     tokenStatus.value = data.status ?? 'pendente'
     if (data.nome)  form.value.nome  = data.nome
     if (data.email) form.value.email = data.email
@@ -501,7 +502,7 @@ const enviar = async () => {
     for (const [k, f] of Object.entries(arquivos.value)) {
       if (f) fd.append(k, f)
     }
-    await axios.post(`/api/v3/autocadastro/${token}`, fd, {
+    await api.post(`/api/v3/autocadastro/${token}`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     tokenStatus.value = 'preenchido'
@@ -516,7 +517,7 @@ const buscarCep = async () => {
   const cep = form.value.cep.replace(/\D/g, '')
   if (cep.length !== 8) return
   try {
-    const { data } = await axios.get(`https://viacep.com.br/ws/${cep}/json/`)
+    const { data } = await api.get(`https://viacep.com.br/ws/${cep}/json/`)
     if (!data.erro) {
       form.value.logradouro = data.logradouro || ''
       form.value.bairro     = data.bairro     || ''
@@ -540,6 +541,31 @@ const mascararCpfDep = (dep) => {
   else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3')
   else if (v.length > 3) v = v.replace(/(\d{3})(\d{0,3})/, '$1.$2')
   dep.cpf = v
+}
+
+// BUG-EST-10: máscara PIS/PASEP — 000.00000.00-0
+const mascararPis = () => {
+  let v = form.value.pis.replace(/\D/g, '').slice(0, 11)
+  if (v.length > 9)      v = v.replace(/(\d{3})(\d{5})(\d{2})(\d{0,1})/, '$1.$2.$3-$4')
+  else if (v.length > 8) v = v.replace(/(\d{3})(\d{5})(\d{0,2})/, '$1.$2.$3')
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d{0,5})/, '$1.$2')
+  form.value.pis = v
+}
+
+// BUG-EST-10: máscara telefone — (00) 00000-0000
+const mascararTelefone = () => {
+  let v = form.value.telefone.replace(/\D/g, '').slice(0, 11)
+  if (v.length > 10)     v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+  else if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/, '($1) $2-$3')
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/, '($1) $2')
+  form.value.telefone = v
+}
+
+// BUG-EST-10: máscara CEP — 00000-000
+const mascararCep = () => {
+  let v = form.value.cep.replace(/\D/g, '').slice(0, 8)
+  if (v.length > 5) v = v.replace(/(\d{5})(\d{0,3})/, '$1-$2')
+  form.value.cep = v
 }
 </script>
 
@@ -659,6 +685,8 @@ const mascararCpfDep = (dep) => {
 
 /* Bits gerais */
 .req         { color: #ef4444; }
+.campo-hint  { font-size: 10px; font-weight: 400; color: #94a3b8; text-transform: none; letter-spacing: 0; }
+.campo-aviso { font-size: 11px; font-weight: 600; color: #d97706; margin-top: 2px; } /* BUG-EST-10 */
 .campo-erro  { font-size: 12px; font-weight: 600; color: #dc2626; }
 .form-erro   {
   background: #fef2f2; border: 1px solid #fca5a5; border-radius: 12px;

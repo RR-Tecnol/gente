@@ -20,39 +20,27 @@ class MenuSeeder extends Seeder
     public function run(): void
     {
         // ── APLICACAO ─────────────────────────────────────────────────────────
-        $sql = "SET IDENTITY_INSERT APLICACAO ON;\n";
         foreach ($this->aplicacoes() as $app) {
-            $id = (int) $app['id'];
-            $nome = str_replace("'", "''", $app['nome']);
-            $icon = str_replace("'", "''", $app['icon']);
-            $url = $app['url'] === null ? 'NULL' : "N'" . str_replace("'", "''", $app['url']) . "'";
-            $pai = $app['pai'] === null ? 'NULL' : (int) $app['pai'];
-            $ord = (int) $app['ordem'];
-
-            $sql .= "
-                IF NOT EXISTS (SELECT 1 FROM APLICACAO WHERE APLICACAO_ID = {$id})
-                    INSERT INTO APLICACAO (APLICACAO_ID, APLICACAO_NOME, APLICACAO_ICONE, APLICACAO_URL, APLICACAO_PAI_ID, APLICACAO_ORDEM, APLICACAO_ATIVA, APLICACAO_GESTAO)
-                    VALUES ({$id}, N'{$nome}', N'{$icon}', {$url}, {$pai}, {$ord}, 1, 1)
-                ELSE
-                    UPDATE APLICACAO SET APLICACAO_NOME = N'{$nome}', APLICACAO_ICONE = N'{$icon}',
-                        APLICACAO_URL = {$url}, APLICACAO_PAI_ID = {$pai}, APLICACAO_ORDEM = {$ord},
-                        APLICACAO_ATIVA = 1, APLICACAO_GESTAO = 1
-                    WHERE APLICACAO_ID = {$id};
-            ";
+            DB::table('APLICACAO')->updateOrInsert(
+                ['APLICACAO_ID' => $app['id']],
+                [
+                    'APLICACAO_NOME' => $app['nome'],
+                    'APLICACAO_ICONE' => $app['icon'],
+                    'APLICACAO_URL' => $app['url'],
+                    'APLICACAO_PAI_ID' => $app['pai'],
+                    'APLICACAO_ORDEM' => $app['ordem'],
+                    'APLICACAO_ATIVA' => 1,
+                    'APLICACAO_GESTAO' => 1,
+                ]
+            );
         }
-        $sql .= "SET IDENTITY_INSERT APLICACAO OFF;";
-        DB::unprepared($sql);
 
         // ── ACESSO ────────────────────────────────────────────────────────────
-        $acessoSql = "";
         foreach ($this->acessos() as [$appId, $perfilId]) {
-            $acessoSql .= "
-                IF NOT EXISTS (SELECT 1 FROM ACESSO WHERE APLICACAO_ID = {$appId} AND PERFIL_ID = {$perfilId})
-                    INSERT INTO ACESSO (APLICACAO_ID, PERFIL_ID, ACESSO_ATIVO) VALUES ({$appId}, {$perfilId}, 1);
-            ";
-        }
-        if ($acessoSql) {
-            DB::unprepared($acessoSql);
+            DB::table('ACESSO')->updateOrInsert(
+                ['APLICACAO_ID' => $appId, 'PERFIL_ID' => $perfilId],
+                ['ACESSO_ATIVO' => 1]
+            );
         }
     }
 

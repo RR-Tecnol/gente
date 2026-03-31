@@ -60,14 +60,15 @@ Route::post('/hora-extra', function (Request $request) {
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
             ->where('f.FUNCIONARIO_ID', $funcId)
-            ->select('f.*', 'p.PESSOA_NOME', 'c.CARGO_SALARIO')
+            ->select('f.*', 'p.PESSOA_NOME', 'c.CARGO_SALARIO', 'c.CARGO_CARGA_HORARIA')
             ->first();
         if (!$func)
             return response()->json(['erro' => 'Servidor não encontrado.'], 404);
 
-        // Calcula valor base da hora (salário ÷ 220h mensais)
+        // BUG-HE-01: usa CARGO_CARGA_HORARIA do cadastro (Sprint 3a) em vez de 220 fixo
         $salario = (float) ($request->valor_hora_base ?? ($func->CARGO_SALARIO ?? 0));
-        $valorHora = $salario > 0 ? $salario / 220 : 0;
+        $chMensal = (int) ($func->CARGO_CARGA_HORARIA ?? 220);  // fallback 220h
+        $valorHora = ($salario > 0 && $chMensal > 0) ? $salario / $chMensal : 0;
         $percentual = $request->percentual ?? 50.0;
         $totalHoras = (float) ($request->total_horas ?? 0);
         $valorCalc = round($valorHora * (1 + $percentual / 100) * $totalHoras, 2);
@@ -134,9 +135,9 @@ Route::get('/hora-extra/relatorio-secretaria', function (Request $request) {
                 DB::raw('COUNT(DISTINCT he.FUNCIONARIO_ID) as qtd_servidores'),
                 DB::raw('SUM(he.TOTAL_HORAS) as total_horas'),
                 DB::raw('SUM(he.VALOR_CALCULADO) as total_valor'),
-                DB::raw('SUM(CASE WHEN he.TIPO_HORA_EXTRA = "50_PORCENTO" THEN he.TOTAL_HORAS ELSE 0 END) as horas_50'),
-                DB::raw('SUM(CASE WHEN he.TIPO_HORA_EXTRA = "100_PORCENTO" THEN he.TOTAL_HORAS ELSE 0 END) as horas_100'),
-                DB::raw('SUM(CASE WHEN he.TIPO_HORA_EXTRA = "FERIADO" THEN he.TOTAL_HORAS ELSE 0 END) as horas_feriado')
+                DB::raw("SUM(CASE WHEN he.TIPO_HORA_EXTRA = '50_PORCENTO' THEN he.TOTAL_HORAS ELSE 0 END) as horas_50"),
+                DB::raw("SUM(CASE WHEN he.TIPO_HORA_EXTRA = '100_PORCENTO' THEN he.TOTAL_HORAS ELSE 0 END) as horas_100"),
+                DB::raw("SUM(CASE WHEN he.TIPO_HORA_EXTRA = 'FERIADO' THEN he.TOTAL_HORAS ELSE 0 END) as horas_feriado")
             )->get();
         return response()->json(['competencia' => $competencia, 'dados' => $dados]);
     } catch (\Throwable $e) {

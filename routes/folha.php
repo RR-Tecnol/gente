@@ -209,3 +209,140 @@ Route::post('/folhas/calcular', function (Request $request) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SPRINT 3 — MOTOR DE FOLHA
+// ══════════════════════════════════════════════════════════════════════════════
+
+// POST /api/v3/folhas/calcular-proventos — Dispara o MotorFolhaService completo
+Route::post('/folhas/calcular-proventos', function (Request $request) {
+    try {
+        $folhaId = $request->folha_id;
+        if (!$folhaId) {
+            return response()->json(['erro' => 'folha_id é obrigatório.'], 422);
+        }
+        $motor = new \App\Services\MotorFolhaService();
+        $result = $motor->calcularFolha((int) $folhaId);
+        return response()->json($result, $result['ok'] ? 200 : 400);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+// GET /api/v3/folhas/{competencia}/piso-salarial — Relatório complemento SM
+Route::get('/folhas/{competencia}/piso-salarial', function (string $comp) {
+    try {
+        $dados = DB::table('DETALHE_FOLHA as df')
+            ->join('FOLHA as f', 'f.FOLHA_ID', '=', 'df.FOLHA_ID')
+            ->join('FUNCIONARIO as fu', 'fu.FUNCIONARIO_ID', '=', 'df.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'fu.PESSOA_ID')
+            ->where('f.FOLHA_COMPETENCIA', $comp)
+            ->where('df.DETALHE_COMPLEMENTO_SM', '>', 0)
+            ->select([
+                'p.PESSOA_NOME as nome',
+                'fu.FUNCIONARIO_MATRICULA as matricula',
+                'df.DETALHE_VINCULO_TIPO as vinculo',
+                'df.DETALHE_FOLHA_PROVENTOS as proventos',
+                'df.DETALHE_COMPLEMENTO_SM as complemento_sm',
+                'df.DETALHE_FOLHA_LIQUIDO as liquido',
+            ])
+            ->orderBy('p.PESSOA_NOME')
+            ->get();
+
+        return response()->json([
+            'competencia' => $comp,
+            'dados' => $dados,
+            'total_servidores' => $dados->count(),
+            'total_complemento' => round($dados->sum('complemento_sm'), 2),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+// GET /api/v3/folhas/{id}/lancamentos — Lista lançamentos variáveis (C3)
+Route::get('/folhas/{id}/lancamentos', function (int $id, Request $request) {
+    try {
+        $query = DB::table('LANCAMENTO_FOLHA as lf')
+            ->join('RUBRICA as r', 'r.RUBRICA_ID', '=', 'lf.RUBRICA_ID')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'lf.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->where('lf.FOLHA_ID', $id);
+
+        if ($request->funcionario_id)
+            $query->where('lf.FUNCIONARIO_ID', $request->funcionario_id);
+
+        $lancamentos = $query->select([
+            'lf.LANCAMENTO_ID as id',
+            'lf.FUNCIONARIO_ID as funcionario_id',
+            'p.PESSOA_NOME as nome',
+            'r.RUBRICA_CODIGO as rubrica_codigo',
+            'r.RUBRICA_DESCRICAO as rubrica',
+            'lf.LANCAMENTO_TIPO as tipo',
+            'lf.LANCAMENTO_QTDE as qtde',
+            'lf.LANCAMENTO_VALOR_UNIT as valor_unit',
+            'lf.LANCAMENTO_VALOR_TOTAL as valor_total',
+            'lf.LANCAMENTO_ORIGEM as origem',
+            'lf.LANCAMENTO_OBS as obs',
+        ])->orderBy('p.PESSOA_NOME')->get();
+
+        return response()->json(['lancamentos' => $lancamentos]);
+    } catch (\Throwable $e) {
+        return response()->json(['lancamentos' => [], 'erro' => $e->getMessage()], 500);
+    }
+});
+
+// POST /api/v3/folhas/{id}/lancamentos — Novo lançamento variável (C3)
+Route::post('/folhas/{id}/lancamentos', function (int $id, Request $request) {
+    try {
+        $rubrica = DB::table('RUBRICA')->where('RUBRICA_ID', $request->rubrica_id)->first();
+        if (!$rubrica) {
+            return response()->json(['erro' => 'Rubrica não encontrada.'], 404);
+        }
+        $qtde = (float) ($request->qtde ?? 1);
+        $vUnit = (float) ($request->valor_unit ?? 0);
+        $total = round($qtde * $vUnit, 2);
+
+        $lancId = DB::table('LANCAMENTO_FOLHA')->insertGetId([
+            'FUNCIONARIO_ID' => $request->funcionario_id,
+            'FOLHA_ID' => $id,
+            'RUBRICA_ID' => $request->rubrica_id,
+            'LANCAMENTO_TIPO' => $request->tipo ?? 'P',
+            'LANCAMENTO_QTDE' => $qtde,
+            'LANCAMENTO_VALOR_UNIT' => $vUnit,
+            'LANCAMENTO_VALOR_TOTAL' => $total,
+            'LANCAMENTO_INCIDE_PREV' => $request->incide_prev ?? true,
+            'LANCAMENTO_INCIDE_IRRF' => $request->incide_irrf ?? true,
+            'LANCAMENTO_ORIGEM' => $request->origem ?? 'manual',
+            'LANCAMENTO_OBS' => $request->obs,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['ok' => true, 'id' => $lancId, 'valor_total' => $total]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+// DELETE /api/v3/folhas/{id}/lancamentos/{lancId} — Remover lançamento
+Route::delete('/folhas/{id}/lancamentos/{lancId}', function (int $id, int $lancId) {
+    try {
+        // Verificar se folha está aberta
+        $lancamento = DB::table('LANCAMENTO_FOLHA')
+            ->where('LANCAMENTO_ID', $lancId)
+            ->where('FOLHA_ID', $id)
+            ->first();
+        if (!$lancamento) {
+            return response()->json(['erro' => 'Lançamento não encontrado.'], 404);
+        }
+        $folha = DB::table('FOLHA')->where('FOLHA_ID', $id)->first();
+        if ($folha && in_array($folha->FOLHA_STATUS ?? '', ['Fechada', 'F'])) {
+            return response()->json(['erro' => 'Folha fechada — lançamentos não podem ser removidos.'], 403);
+        }
+        DB::table('LANCAMENTO_FOLHA')->where('LANCAMENTO_ID', $lancId)->delete();
+        return response()->json(['ok' => true]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});

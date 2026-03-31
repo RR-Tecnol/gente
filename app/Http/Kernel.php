@@ -22,6 +22,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        \App\Http\Middleware\SecurityHeaders::class,
     ];
 
     /**
@@ -69,5 +70,6 @@ class Kernel extends HttpKernel
         'modulo.ativo' => \App\Http\Middleware\CheckModuloAtivo::class,
         'perfil' => \App\Http\Middleware\CheckPerfil::class,
         'audit' => \App\Http\Middleware\AuditLog::class,   // SEC-04
+        'upload.safe' => \App\Http\Middleware\ValidateFileUpload::class,
     ];
 }

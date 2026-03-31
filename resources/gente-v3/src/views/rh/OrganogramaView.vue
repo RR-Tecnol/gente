@@ -78,97 +78,115 @@
           <h3>Estrutura da Instituição</h3>
           <span class="fsh-count">{{ totalSetores }} setores</span>
         </div>
-        <div class="tree-container">
-          <div class="tree-level">
-            <div class="tree-root-card" style="pointer-events:none">
-              <div class="root-ico">🏥</div>
-              <div class="root-info"><span class="root-nome">{{ nomeHospital }}</span><span class="root-sub">Instituição de Saúde</span></div>
+        <!-- TASK-ORG-02 somente-leitura: accordion vertical -->
+        <div class="acc-container">
+          <div class="acc-root" style="pointer-events:none">
+            <span class="root-ico">🏥</span>
+            <div class="root-info">
+              <span class="root-nome">{{ nomeHospital }}</span>
+              <span class="root-sub">{{ totalFuncionarios }} servidores</span>
             </div>
           </div>
-          <div class="tree-connector root-conn"></div>
-          <div class="tree-level dir-level">
-            <div v-for="dir in estrutura" :key="dir.id" class="dir-branch">
-              <div class="dir-card readonly-dir" :class="{ 'meu-dir': meuSetorDir?.id === dir.id }" :style="{ '--dc': dir.cor }" @click="toggleDir(dir.id)">
-                <span class="dir-ico">{{ dir.ico }}</span>
-                <div><span class="dir-nome">{{ dir.nome }}</span><span class="dir-count">{{ dir.setores.length }} setor{{ dir.setores.length !== 1 ? 'es' : '' }}</span></div>
-                <span class="dir-caret">{{ colapsados.has(dir.id) ? '▶' : '▼' }}</span>
+          <div v-for="dir in estrutura" :key="dir.id" class="acc-section">
+            <div class="acc-hdr" :class="{ 'meu-dir-acc': meuSetorDir?.id === dir.id }" :style="{ '--dc': dir.cor }" @click="toggleDir(dir.id)">
+              <span class="acc-hdr-ico">{{ dir.ico }}</span>
+              <div class="acc-hdr-info">
+                <span class="acc-hdr-nome">{{ dir.nome }}</span>
+                <span class="acc-hdr-count">{{ dir.setores.length }} setor{{ dir.setores.length !== 1 ? 'es' : '' }}</span>
               </div>
-              <div v-if="!colapsados.has(dir.id)" class="setores-grid">
-                <div v-for="s in filteredSetores(dir)" :key="s.id"
-                  class="setor-card readonly-setor"
-                  :class="{ 'meu-setor-hl': meuSetor?.id === s.id }"
-                  :style="{ '--sc': dir.cor }"
-                  @click="selecionarSetor(s, dir)">
-                  <div class="sc-header">
-                    <span class="sc-ico">{{ s.ico }}</span>
-                    <span class="sc-nome">{{ s.nome }}</span>
-                    <span v-if="meuSetor?.id === s.id" class="meu-label">★ Meu setor</span>
+              <span class="acc-caret">{{ colapsados.has(dir.id) ? '›' : '˅' }}</span>
+            </div>
+            <transition name="acc-body">
+              <div v-if="!colapsados.has(dir.id)" class="acc-body">
+                <div class="acc-setores-grid">
+                  <div v-for="s in filteredSetores(dir)" :key="s.id"
+                    class="acc-setor-card"
+                    :class="{ 'meu-setor-hl': meuSetor?.id === s.id }"
+                    :style="{ '--sc': dir.cor }"
+                    @click="selecionarSetor(s, dir)"
+                    :title="s.responsavel">
+                    <div class="asc-compact">
+                      <span class="asc-ico">{{ s.ico }}</span>
+                      <span class="asc-nome">{{ s.nome }}</span>
+                      <span class="asc-cnt">👥 {{ s.funcionarios.length }}</span>
+                      <span v-if="meuSetor?.id === s.id" class="meu-label">★</span>
+                    </div>
+                    <div class="asc-hover">
+                      <span class="asc-resp">{{ s.responsavel || '—' }}</span>
+                      <div class="asc-bar-wrap"><div class="asc-bar" :style="{ width: ((s.funcionarios.length/(maxFuncPorSetor||1))*100)+'%', background: dir.cor }"></div></div>
+                    </div>
                   </div>
-                  <div class="sc-meta"><span class="sc-count">👥 {{ s.funcionarios.length }}</span><span class="sc-resp">{{ s.responsavel }}</span></div>
-                  <div class="sc-bar-wrap"><div class="sc-bar" :style="{ width: ((s.funcionarios.length / (maxFuncPorSetor || 1)) * 100) + '%', background: dir.cor }"></div></div>
                 </div>
               </div>
-            </div>
+            </transition>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ══ PERSPECTIVA GESTOR (modo árvore) ════════════════════════ -->
+    <!-- ══ PERSPECTIVA GESTOR (modo árvore) — TASK-ORG-02 ACCORDION VERTICAL ══ -->
     <div v-if="perspectiva === 'gestor' && modo === 'arvore'" class="tree-wrap" :class="{ loaded }">
-      <div class="tree-container">
-        <div class="tree-level">
-          <div class="tree-root-card">
-            <div class="root-ico">🏥</div>
-            <div class="root-info">
-              <span class="root-nome">{{ nomeHospital }}</span>
-              <span class="root-sub">Instituição de Saúde</span>
-            </div>
-            <div class="root-actions">
-              <button class="btn-edit-hosp" @click.stop="abrirModalEditarHospital" title="Editar nome">Editar</button>
-              <button class="btn-nova-dir" @click.stop="abrirModalNovaDiretoria" title="Nova Diretoria">+ Nova Diretoria</button>
-            </div>
+      <div class="acc-container">
+        <!-- Cabeçalho da instituição -->
+        <div class="acc-root">
+          <span class="root-ico">🏥</span>
+          <div class="root-info">
+            <span class="root-nome">{{ nomeHospital }}</span>
+            <span class="root-sub">{{ totalFuncionarios }} servidores · {{ totalSetores }} setores</span>
+          </div>
+          <div class="root-actions">
+            <button class="btn-edit-hosp" @click.stop="abrirModalEditarHospital" title="Editar nome">Editar</button>
+            <button class="btn-nova-dir" @click.stop="abrirModalNovaDiretoria" title="Nova Diretoria">+ Nova Diretoria</button>
           </div>
         </div>
-        <div class="tree-connector root-conn"></div>
-        <div class="tree-level dir-level">
-          <div v-for="dir in estrutura" :key="dir.id ?? 'sem-dir'" class="dir-branch">
-            <div class="dir-card" :class="{ selected: selecionado === dir.id, collapsed: colapsados.has(dir.id) }" :style="{ '--dc': dir.cor }" @click="toggleDir(dir.id)">
-              <span class="dir-ico">{{ dir.ico }}</span>
-              <div>
-                <span class="dir-nome">{{ dir.nome }}</span>
-                <span class="dir-count">{{ dir.setores.length }} setor{{ dir.setores.length !== 1 ? 'es' : '' }}</span>
-              </div>
-              <!-- Botões CRUD para diretorias reais (id > 0) -->
-              <div v-if="dir.id && dir.id !== 0" class="dir-actions" @click.stop>
-                <button class="sca-btn sca-edit" @click="abrirModalEditarDiretoria(dir)" title="Editar Diretoria">Editar</button>
-                <button class="sca-btn sca-del" @click="confirmarExcluirDiretoria(dir)" title="Excluir Diretoria">Excluir</button>
-              </div>
-              <span class="dir-caret">{{ colapsados.has(dir.id) ? '▶' : '▼' }}</span>
+
+        <!-- TASK-ORG-02: accordion vertical — uma diretoria por linha -->
+        <div v-for="dir in estrutura" :key="dir.id ?? 'sem-dir'" class="acc-section">
+          <!-- Header da diretoria -->
+          <div class="acc-hdr" :style="{ '--dc': dir.cor }" @click="toggleDir(dir.id)">
+            <span class="acc-hdr-ico">{{ dir.ico }}</span>
+            <div class="acc-hdr-info">
+              <span class="acc-hdr-nome">{{ dir.nome }}</span>
+              <span class="acc-hdr-count">{{ dir.setores.length }} setor{{ dir.setores.length !== 1 ? 'es' : '' }} · {{ totalFuncDir(dir) }} servidor{{ totalFuncDir(dir) !== 1 ? 'es' : '' }}</span>
             </div>
-            <div v-if="!colapsados.has(dir.id)" class="setores-grid">
-              <div v-for="s in filteredSetores(dir)" :key="s.id" class="setor-card" :style="{ '--sc': dir.cor }" @click="selecionarSetor(s, dir)">
-                <div class="sc-header">
-                  <span class="sc-ico">{{ s.ico }}</span>
-                  <span class="sc-nome">{{ s.nome }}</span>
-                  <div class="sc-actions" @click.stop>
-                    <button class="sca-btn sca-edit" @click="abrirModalEditar(s)" title="Editar">Editar</button>
-                    <button class="sca-btn sca-del" @click="confirmarExcluir(s)" title="Excluir">Excluir</button>
+            <div class="acc-hdr-actions" v-if="dir.id && dir.id !== 0" @click.stop>
+              <button class="sca-btn sca-edit" @click="abrirModalEditarDiretoria(dir)">Editar</button>
+              <button class="sca-btn sca-del" @click="confirmarExcluirDiretoria(dir)">Excluir</button>
+            </div>
+            <span class="acc-caret">{{ colapsados.has(dir.id) ? '›' : '˅' }}</span>
+          </div>
+
+          <!-- TASK-ORG-03: grid de setores compact + hover detail -->
+          <transition name="acc-body">
+            <div v-if="!colapsados.has(dir.id)" class="acc-body">
+              <div class="acc-setores-grid">
+                <div v-for="s in filteredSetores(dir)" :key="s.id"
+                  class="acc-setor-card"
+                  :style="{ '--sc': dir.cor }"
+                  @click="selecionarSetor(s, dir)"
+                  :title="s.responsavel">
+                  <!-- repouso: só ícone + nome + contador -->
+                  <div class="asc-compact">
+                    <span class="asc-ico">{{ s.ico }}</span>
+                    <span class="asc-nome">{{ s.nome }}</span>
+                    <span class="asc-cnt">👥 {{ s.funcionarios.length }}</span>
+                  </div>
+                  <!-- hover: detalhe com responsável, barra e ações -->
+                  <div class="asc-hover">
+                    <span class="asc-resp">{{ s.responsavel || '—' }}</span>
+                    <div class="asc-bar-wrap"><div class="asc-bar" :style="{ width: ((s.funcionarios.length/(maxFuncPorSetor||1))*100)+'%', background: dir.cor }"></div></div>
+                    <div class="asc-actions" @click.stop>
+                      <button class="sca-btn sca-edit" @click="abrirModalEditar(s)">Editar</button>
+                      <button class="sca-btn sca-del" @click="confirmarExcluir(s)">Excluir</button>
+                    </div>
                   </div>
                 </div>
-                <div class="sc-meta">
-                  <span class="sc-count">👥 {{ s.funcionarios.length }}</span>
-                  <span class="sc-resp">{{ s.responsavel }}</span>
+                <div class="acc-setor-card acc-add" @click.stop="abrirModalNovoNaDir(dir)">
+                  <span>＋ Adicionar Setor</span>
                 </div>
-                <div class="sc-bar-wrap">
-                  <div class="sc-bar" :style="{ width: ((s.funcionarios.length / (maxFuncPorSetor || 1)) * 100) + '%', background: dir.cor }"></div>
-                </div>
-              </div>
-              <div class="setor-card setor-add" @click.stop="abrirModalNovoNaDir(dir)">
-                <span>+ Adicionar Setor</span>
               </div>
             </div>
-          </div>
+          </transition>
         </div>
       </div>
     </div>
@@ -505,9 +523,12 @@ onMounted(async () => {
   } catch {
     estrutura.value = mockEstrutura
   } finally {
+    // TASK-ORG-01: iniciar todas as diretorias colapsadas por padrão
+    estrutura.value.forEach(dir => colapsados.add(dir.id))
     setTimeout(() => { loaded.value = true }, 80)
   }
 })
+
 
 // ── Computed ──────────────────────────────────────────────────
 const toggleDir       = (id) => { colapsados.has(id) ? colapsados.delete(id) : colapsados.add(id) }
@@ -910,4 +931,56 @@ const excluirDiretoria = async () => {
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(16px); }
 
 @media (max-width: 700px) { .dir-level { flex-direction: column; } .mf-row { grid-template-columns: 1fr; } }
+
+/* ???????? TASK-ORG-02/03 � ACCORDION ORGANOGRAMA ???????? */
+.acc-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 40px; }
+
+.acc-root { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 18px; padding: 18px 22px; box-shadow: 0 2px 12px rgba(99,102,241,.08); border: 1.5px solid #e0e7fd; margin-bottom: 4px; }
+.acc-root .root-ico { font-size: 28px; }
+.acc-root .root-nome { font-size: 16px; font-weight: 800; color: #1e293b; display: block; }
+.acc-root .root-sub  { font-size: 12px; color: #64748b; }
+
+.acc-section { border-radius: 16px; overflow: hidden; box-shadow: 0 1px 8px rgba(0,0,0,.06); }
+
+.acc-hdr { display: flex; align-items: center; gap: 14px; padding: 14px 20px; background: #fff; cursor: pointer; border-left: 4px solid var(--dc, #6366f1); border-bottom: 1.5px solid #f1f5f9; transition: background .15s; user-select: none; }
+.acc-hdr:hover       { background: #f8faff; }
+.meu-dir-acc         { border-left-width: 6px; background: #f5f3ff; }
+.acc-hdr-ico         { font-size: 22px; flex-shrink: 0; }
+.acc-hdr-info        { flex: 1; min-width: 0; }
+.acc-hdr-nome        { display: block; font-size: 14px; font-weight: 700; color: #1e293b; }
+.acc-hdr-count       { font-size: 11px; color: #64748b; }
+.acc-hdr-actions     { display: flex; gap: 6px; }
+.acc-caret           { font-size: 20px; color: #94a3b8; font-weight: 700; flex-shrink: 0; transition: transform .2s; }
+
+.acc-body { background: #f8faff; padding: 16px 20px 20px; }
+
+/* TASK-ORG-03: grid de setores compactos */
+.acc-setores-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 700px) { .acc-setores-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 430px) { .acc-setores-grid { grid-template-columns: 1fr; } }
+
+.acc-setor-card { position: relative; border-radius: 12px; background: #fff; border: 1.5px solid var(--sc, #6366f1)22; box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; overflow: hidden; transition: box-shadow .15s, transform .15s; }
+.acc-setor-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); transform: translateY(-2px); }
+.acc-setor-card.meu-setor-hl { border-color: var(--sc); background: color-mix(in srgb, var(--sc) 6%, white); }
+.acc-setor-card.acc-add { display: flex; align-items: center; justify-content: center; min-height: 60px; border-style: dashed; color: #94a3b8; font-size: 13px; font-weight: 600; }
+.acc-setor-card.acc-add:hover { color: #6366f1; border-color: #6366f1; background: #f5f3ff; }
+
+/* Repouso � compact */
+.asc-compact { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; }
+.asc-ico  { font-size: 18px; flex-shrink: 0; }
+.asc-nome { font-size: 12px; font-weight: 700; color: #1e293b; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asc-cnt  { font-size: 11px; color: #64748b; white-space: nowrap; }
+.meu-label { color: var(--sc, #6366f1); font-size: 13px; }
+
+/* Hover � detalhe extra */
+.asc-hover { padding: 0 14px 10px; display: none; }
+.acc-setor-card:hover .asc-hover { display: block; }
+.asc-resp { font-size: 11px; color: #64748b; display: block; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asc-bar-wrap { height: 3px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.asc-bar { height: 100%; border-radius: 4px; transition: width .3s; }
+.asc-actions { display: flex; gap: 6px; }
+
+/* Transi��o do corpo do accordion */
+.acc-body-enter-active, .acc-body-leave-active { transition: all .2s ease; overflow: hidden; }
+.acc-body-enter-from, .acc-body-leave-to { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 </style>

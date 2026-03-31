@@ -47,7 +47,13 @@ Route::get('/funcionarios', function (Request $request) {
         return $f;
     });
 
-    return response()->json($resultados);
+    // BUG-EST-07: incluir contagem global de ativos (independente de paginação/filtro)
+    $totalAtivos = DB::table('FUNCIONARIO')->whereNull('FUNCIONARIO_DATA_FIM')->count();
+
+    $response = $resultados->toArray();
+    $response['total_ativos'] = $totalAtivos;
+
+    return response()->json($response);
 });
 
 // GET /api/v3/funcionarios/{id} — Perfil completo de um funcionário

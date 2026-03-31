@@ -88,7 +88,7 @@ Route::post('/atestados', function (Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
-});
+})->middleware('upload.safe');
 
 // PATCH /atestados/{id}/validar — RH valida ou rejeita
 Route::patch('/atestados/{id}/validar', function (Request $request, $id) {

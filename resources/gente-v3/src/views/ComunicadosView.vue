@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="com-page">
 
     <!-- HERO -->
@@ -138,7 +138,7 @@
                   <span class="mb-setor">{{ comunicadoAberto.autorSetor }} · {{ formatDateLong(comunicadoAberto.data) }}</span>
                 </div>
               </div>
-              <div class="mb-content" v-html="comunicadoAberto.conteudo"></div>
+              <div class="mb-content" v-html="sanitize(comunicadoAberto.conteudo)"></div>
             </div>
           </div>
         </div>
@@ -209,6 +209,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import api from '@/plugins/axios'
 import { useAuthStore } from '@/store/auth'
+import { sanitize } from '@/plugins/sanitize'
 
 const authStore = useAuthStore()
 const isAdmin   = computed(() => authStore.user?.USUARIO_ADMIN ?? false)

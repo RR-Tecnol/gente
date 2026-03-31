@@ -242,6 +242,7 @@ Route::post('/exoneracao/registrar', function (Request $request) use ($getSalari
             'FUNCIONARIO_STATUS_RESCISORIO' => 'PENDENTE',
             'updated_at' => now(),
         ]);
+        \Illuminate\Support\Facades\Log::channel('security')->info('exoneracao_registrada', ['usuario' => $user?->USUARIO_ID, 'funcionario' => $funcId, 'rescisao_id' => $rescisaoId]);
 
         return response()->json([
             'ok' => true,
@@ -443,6 +444,52 @@ Route::get('/exoneracao/{id}', function ($id) {
         if (!$rc)
             return response()->json(['erro' => 'Rescisão não encontrada.'], 404);
         return response()->json(['rescisao' => $rc]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+// ── GAP-RES: Preview via RescisaoService ───────────────────────────────────
+Route::get('/rescisao/preview/{funcionario_id}', function (int $funcId) {
+    try {
+        $dataEx  = request('data_exoneracao', now()->format('Y-m-d'));
+        $motivo  = request('motivo', 'EXONERACAO');
+        $service = new \App\Services\RescisaoService();
+        return response()->json($service->calcular($funcId, $dataEx, $motivo));
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 422);
+    }
+});
+
+// ── GAP-RES: Salvar cálculo rescisório ────────────────────────────────────
+Route::post('/rescisao/salvar', function () {
+    try {
+        $user   = \Illuminate\Support\Facades\Auth::user();
+        $data   = request()->validate([
+            'funcionario_id'  => 'required|integer',
+            'data_exoneracao' => 'required|date',
+            'motivo_saida'    => 'required|string',
+        ]);
+        $service    = new \App\Services\RescisaoService();
+        $calc       = $service->calcular($data['funcionario_id'], $data['data_exoneracao'], $data['motivo_saida']);
+        $rescisaoId = $service->salvar($calc, $user->USUARIO_ID);
+        return response()->json(['ok' => true, 'rescisao_id' => $rescisaoId, 'calculo' => $calc]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 422);
+    }
+});
+
+// ── GAP-RES: Listar rescisões calculadas ──────────────────────────────────
+Route::get('/rescisao', function () {
+    try {
+        $rescisoes = \Illuminate\Support\Facades\DB::table('RESCISAO_CALCULO as r')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'r.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->select('r.*', 'p.PESSOA_NOME as nome', 'f.FUNCIONARIO_MATRICULA as matricula')
+            ->orderByDesc('r.DATA_EXONERACAO')
+            ->limit(100)
+            ->get();
+        return response()->json(['rescisoes' => $rescisoes]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }

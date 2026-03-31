@@ -80,6 +80,91 @@
               <div class="field" v-if="funcionario.atribuicao"><span class="field-label">Atribuição</span><span class="field-value">{{ funcionario.atribuicao }}</span></div>
             </div>
           </div>
+
+          <!-- Progressão Funcional (TASK-15 Sprint 3a) -->
+          <div class="info-card anim-card" :style="{ '--ci': 2 }">
+            <div class="card-hdr"><span class="card-hdr-icon" style="background:#f5f3ff;color:#7c3aed">📈</span><h2 class="card-hdr-title">Progressão Funcional</h2></div>
+            <div v-if="progressao" class="fields-grid">
+              <div class="field" v-if="progressao.carreira"><span class="field-label">Carreira</span><span class="field-value">{{ progressao.carreira }}</span></div>
+              <div class="field" v-if="progressao.classe"><span class="field-label">Classe</span><span class="field-value"><span class="badge-prog">{{ progressao.classe }}</span></span></div>
+              <div class="field" v-if="progressao.referencia"><span class="field-label">Referência</span><span class="field-value"><code style="font-family:monospace">{{ progressao.referencia }}</code></span></div>
+              <div class="field" v-if="progressao.salario_base"><span class="field-label">Vencimento Base</span><span class="field-value" style="color:#059669">{{ formatMoney(progressao.salario_base) }}</span></div>
+              <div class="field" v-if="progressao.ultima_progressao"><span class="field-label">Última Progressão</span><span class="field-value">{{ formatDate(progressao.ultima_progressao) }}</span></div>
+              <div class="field">
+                <span class="field-label">Status</span>
+                <span v-if="progressao.meses_restantes <= 0" class="field-value" style="color:#16a34a;font-weight:900">✅ Elegível agora</span>
+                <span v-else class="field-value" style="color:#ea580c">⏳ {{ progressao.meses_restantes }}m restantes</span>
+              </div>
+            </div>
+            <p v-else class="no-data">Dados de progressão não disponíveis.</p>
+            <a href="/progressao-admin" style="display:block;margin-top:10px;font-size:12px;font-weight:700;color:#6366f1;text-decoration:none">📊 Ver todos os elegíveis →</a>
+          </div>
+
+          <!-- Adicionais e Vantagens (Sprint 3 — Parte 10) -->
+          <div class="info-card anim-card" :style="{ '--ci': 3 }">
+            <div class="card-hdr">
+              <span class="card-hdr-icon" style="background:#fff7ed;color:#ea580c">💰</span>
+              <h2 class="card-hdr-title">Adicionais e Vantagens</h2>
+              <button class="btn-sm btn-orange" @click="showFormAdicional = !showFormAdicional" style="margin-left:auto">
+                {{ showFormAdicional ? '✕ Cancelar' : '+ Novo' }}
+              </button>
+            </div>
+
+            <!-- Formulário novo adicional -->
+            <div v-if="showFormAdicional" class="adicional-form">
+              <div class="form-row-3">
+                <label>Rubrica (C2)</label>
+                <select v-model="novoAdicional.rubrica_id" class="form-sel">
+                  <option v-for="r in rubricasC2" :key="r.RUBRICA_ID" :value="r.RUBRICA_ID">
+                    {{ r.RUBRICA_CODIGO }} — {{ r.RUBRICA_DESCRICAO }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-row-3">
+                <label>Tipo</label>
+                <select v-model="novoAdicional.tipo" class="form-sel">
+                  <option value="fixo">Fixo (R$)</option>
+                  <option value="percentual">Percentual do vencimento</option>
+                  <option value="percentual_sm">Percentual do SM</option>
+                </select>
+              </div>
+              <div class="form-row-3">
+                <label>Valor / %</label>
+                <input v-model.number="novoAdicional.valor" type="number" step="0.01" class="form-inp" placeholder="Ex: 500.00 ou 20"/>
+              </div>
+              <div class="form-row-3">
+                <label>Vigência início</label>
+                <input v-model="novoAdicional.vigencia_inicio" type="date" class="form-inp"/>
+              </div>
+              <div class="form-row-3">
+                <label>Ato administrativo</label>
+                <input v-model="novoAdicional.ato_adm" type="text" class="form-inp" placeholder="Decreto nº..."/>
+              </div>
+              <div class="form-row-3" style="grid-column:1/-1">
+                <button class="btn-primary-sm" @click="salvarAdicional" :disabled="salvandoAdicional">
+                  {{ salvandoAdicional ? 'Salvando...' : '💾 Salvar adicional' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Lista de adicionais -->
+            <div v-if="adicionais.length === 0 && !loadingAdicionais" class="no-data">Nenhum adicional cadastrado.</div>
+            <div v-if="loadingAdicionais" class="no-data">Carregando...</div>
+            <div v-else class="adicional-list">
+              <div v-for="ad in adicionais" :key="ad.id" class="adicional-item">
+                <div class="adic-info">
+                  <span class="adic-rubrica">{{ ad.rubrica_descricao }}</span>
+                  <span class="adic-val">
+                    {{ ad.tipo === 'fixo' ? `R$ ${formatMoney(ad.valor)}` : `${ad.valor}%` }}
+                    <small v-if="ad.tipo === 'percentual_sm'">(SM)</small>
+                  </span>
+                  <span class="adic-meta">Desde {{ formatDate(ad.vigencia_inicio) }}</span>
+                </div>
+                <button class="btn-sm btn-red-ghost" @click="inativarAdicional(ad.id)" title="Inativar">✗</button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- COL DIREITA -->
@@ -456,6 +541,25 @@
       </div>
     </transition>
 
+    <!-- MODAL: Confirmação genérica (BUG-EST-04) -->
+    <transition name="modal">
+      <div v-if="modalConfirm.visible" class="modal-overlay" @click.self="modalConfirm.visible = false">
+        <div class="modal-card" style="max-width:400px">
+          <div class="modal-hdr">
+            <h3>{{ modalConfirm.titulo }}</h3>
+            <button class="modal-close" @click="modalConfirm.visible = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:14px;color:#475569;margin:0 0 16px">{{ modalConfirm.msg }}</p>
+            <div class="modal-actions">
+              <button class="modal-cancel" @click="modalConfirm.visible = false">Cancelar</button>
+              <button class="modal-submit" style="background:#ef4444" @click="modalConfirm.onConfirm(); modalConfirm.visible = false">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- TOAST -->
     <transition name="toast">
       <div v-if="toast.visible" class="toast" :class="toast.tipo">{{ toast.msg }}</div>
@@ -471,6 +575,7 @@ import api from '@/plugins/axios'
 const route = useRoute()
 const funcionario = ref(null)
 const holeritesFuncionario = ref([])
+const progressao = ref(null)   // Sprint 3a TASK-15
 const loading = ref(true)
 const erro = ref('')
 const loaded = ref(false)
@@ -482,6 +587,12 @@ const documentos = ref([])
 const historico = reactive({ lotacoes: [], ferias: [], afastamentos: [] })
 const escalas = ref([])
 const toast = ref({ visible: false, msg: '', tipo: 'ok' })
+
+// ── Confirmação genérica (BUG-EST-04) ─────────────────────────────
+const modalConfirm = ref({ visible: false, titulo: '', msg: '', onConfirm: () => {} })
+const openConfirm = (titulo, msg, fn) => {
+  modalConfirm.value = { visible: true, titulo, msg, onConfirm: fn }
+}
 
 // ── Dependentes ──────────────────────────────────────────────────
 const dependentes = ref([])
@@ -509,13 +620,14 @@ const salvarDependente = async () => {
   } finally { salvandoDep.value = false }
 }
 
-const deletarDependente = async (depId) => {
-  if (!confirm('Excluir este dependente?')) return
-  try {
-    await api.delete(`/api/v3/funcionarios/${route.params.id}/dependentes/${depId}`)
-    dependentes.value = dependentes.value.filter(d => d.id !== depId)
-    showToast('Dependente removido.')
-  } catch (e) { showToast('Erro ao excluir.', 'err') }
+const deletarDependente = (depId) => {
+  openConfirm('Excluir Dependente', 'Esta ação não pode ser desfeita. Deseja continuar?', async () => {
+    try {
+      await api.delete(`/api/v3/funcionarios/${route.params.id}/dependentes/${depId}`)
+      dependentes.value = dependentes.value.filter(d => d.id !== depId)
+      showToast('Dependente removido.')
+    } catch (e) { showToast('Erro ao excluir.', 'err') }
+  })
 }
 
 const mascararCpfDep = () => {
@@ -564,17 +676,70 @@ const uploadDoc = async () => {
   } finally { uploadando.value = false }
 }
 
-const deletarDoc = async (docId) => {
-  if (!confirm('Excluir este documento permanentemente?')) return
+const deletarDoc = (docId) => {
+  openConfirm('Excluir Documento', 'Excluir permanentemente este documento? Esta ação não pode ser desfeita.', async () => {
+    try {
+      await api.delete(`/api/v3/funcionarios/${route.params.id}/documentos/${docId}`)
+      documentos.value = documentos.value.filter(d => d.id !== docId)
+      showToast('Documento excluído.')
+    } catch (e) { showToast('Erro ao excluir.', 'err') }
+  })
+}
+
+// ── Sprint 3 — Adicionais e Vantagens (Parte 10) ──────────────────
+const adicionais         = ref([])
+const rubricasC2         = ref([])
+const loadingAdicionais  = ref(false)
+const showFormAdicional  = ref(false)
+const salvandoAdicional  = ref(false)
+const novoAdicional      = ref({
+  rubrica_id: null, tipo: 'fixo', valor: 0,
+  vigencia_inicio: new Date().toISOString().slice(0, 10),
+  ato_adm: ''
+})
+
+const fetchAdicionais = async () => {
+  loadingAdicionais.value = true
   try {
-    await api.delete(`/api/v3/funcionarios/${route.params.id}/documentos/${docId}`)
-    documentos.value = documentos.value.filter(d => d.id !== docId)
-    showToast('Documento excluído.')
-  } catch (e) { showToast('Erro ao excluir.', 'err') }
+    const { data } = await api.get(`/api/v3/funcionarios/${route.params.id}/adicionais`)
+    adicionais.value = data.adicionais ?? []
+    if (rubricasC2.value.length === 0) {
+      const r = await api.get('/api/v3/rubricas?camada=2')
+      rubricasC2.value = r.data.rubricas ?? []
+    }
+  } catch { adicionais.value = [] }
+  finally { loadingAdicionais.value = false }
+}
+
+const salvarAdicional = async () => {
+  if (!novoAdicional.value.rubrica_id) {
+    showToast('Selecione a rubrica.', 'err'); return
+  }
+  salvandoAdicional.value = true
+  try {
+    await api.post(`/api/v3/funcionarios/${route.params.id}/adicionais`, novoAdicional.value)
+    showFormAdicional.value = false
+    novoAdicional.value = { rubrica_id: null, tipo: 'fixo', valor: 0, vigencia_inicio: new Date().toISOString().slice(0, 10), ato_adm: '' }
+    showToast('✅ Adicional salvo!')
+    await fetchAdicionais()
+  } catch (e) {
+    showToast('Erro: ' + (e.response?.data?.erro || e.message), 'err')
+  } finally { salvandoAdicional.value = false }
+}
+
+const inativarAdicional = (adId) => {
+  openConfirm('Inativar Adicional', 'O adicional será desativado e não constará na próxima folha. Confirmar?', async () => {
+    try {
+      await api.delete(`/api/v3/funcionarios/${route.params.id}/adicionais/${adId}`)
+      showToast('Adicional inativado.')
+      await fetchAdicionais()
+    } catch (e) { showToast('Erro ao inativar.', 'err') }
+  })
 }
 
 onMounted(async () => {
   await fetchPerfil()
+  await fetchAdicionais()
   setTimeout(() => { loaded.value = true }, 80)
 })
 
@@ -585,6 +750,7 @@ const fetchPerfil = async () => {
     const { data } = await api.get(`/api/v3/funcionarios/${route.params.id}`)
     funcionario.value = data.funcionario
     holeritesFuncionario.value = data.holerites || []
+    progressao.value = data.progressao || null   // Sprint 3a TASK-15
   } catch (err) {
     erro.value = err.response?.data?.message || 'Funcionário não encontrado.'
   } finally {
@@ -743,6 +909,7 @@ const maskPis = (v) => {
 .hm-liquido { font-size: 14px; font-weight: 800; color: #15803d; }
 .hm-pdf { padding: 4px 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 11px; font-weight: 700; border-radius: 8px; text-decoration: none; transition: all 0.15s; }
 .hm-pdf:hover { background: #1d4ed8; color: #fff; }
+.badge-prog { background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
 .actions-list { display: flex; flex-direction: column; gap: 8px; }
 .action-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; font-size: 14px; font-weight: 600; transition: all 0.18s; border: 1px solid transparent; cursor: pointer; background: none; width: 100%; text-align: left; }
 .action-item .action-arrow { margin-left: auto; opacity: 0; transition: all 0.18s; }

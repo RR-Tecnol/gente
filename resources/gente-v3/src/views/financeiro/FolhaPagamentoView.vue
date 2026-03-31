@@ -128,6 +128,12 @@
                     <button class="act-btn act-blue" title="Ver detalhes" @click="abrirDetalhes(f)">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
                     </button>
+                    <button class="act-btn act-orange" title="Lançamentos C3" @click="abrirLancamentos(f)">
+                      📝
+                    </button>
+                    <button class="act-btn act-purple" title="Calcular Proventos (Motor)" @click="calcularProventos(f)">
+                      ⚙️
+                    </button>
                     <button class="act-btn act-green" title="Gerar CNAB 240" @click="$router.push('/remessa-cnab')">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15l-4.5-4.5M12 15l4.5-4.5M12 15V3M3 21h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
@@ -226,6 +232,107 @@
     </div>
   </transition>
 
+  <!-- MODAL LANÇAMENTOS (Sprint 3 — Parte 11) -->
+  <transition name="modal">
+    <div v-if="modalLanc" class="modal-overlay" @click.self="modalLanc = false">
+      <div class="modal-card modal-wide">
+        <div class="modal-hdr">
+          <h3>📝 Lançamentos — {{ formatCompetencia(folhaLanc?.FOLHA_COMPETENCIA) }}</h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-sm-orange" @click="showFormLanc = !showFormLanc">{{ showFormLanc ? '✕' : '+ Novo' }}</button>
+            <button class="modal-close" @click="modalLanc = false">✕</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <!-- Form novo lançamento -->
+          <div v-if="showFormLanc" class="lanc-form">
+            <div class="lanc-form-grid">
+              <div class="form-group">
+                <label>Rubrica C3</label>
+                <select v-model="novoLanc.rubrica_id" class="cfg-input">
+                  <option v-for="r in rubricasC3" :key="r.RUBRICA_ID" :value="r.RUBRICA_ID">
+                    {{ r.RUBRICA_CODIGO }} — {{ r.RUBRICA_DESCRICAO }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Funcionário ID</label>
+                <input v-model.number="novoLanc.funcionario_id" type="number" class="cfg-input" placeholder="ID do funcionário"/>
+              </div>
+              <div class="form-group">
+                <label>Tipo</label>
+                <select v-model="novoLanc.tipo" class="cfg-input">
+                  <option value="P">P — Provento</option>
+                  <option value="D">D — Desconto</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Qtde</label>
+                <input v-model.number="novoLanc.qtde" type="number" step="0.01" min="0" class="cfg-input"/>
+              </div>
+              <div class="form-group">
+                <label>Valor Unit (R$)</label>
+                <input v-model.number="novoLanc.valor_unit" type="number" step="0.01" min="0" class="cfg-input"/>
+              </div>
+              <div class="form-group">
+                <label>Total = {{ formatMoney((novoLanc.qtde || 0) * (novoLanc.valor_unit || 0)) }}</label>
+                <button class="modal-submit" @click="salvarLanc" :disabled="salvandoLanc" style="margin-top:4px">
+                  {{ salvandoLanc ? '...' : '💾 Salvar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista lançamentos -->
+          <div v-if="loadingLanc" class="det-loading"><div class="spinner"></div><p>Carregando...</p></div>
+          <div v-else class="det-table-wrap">
+            <table class="det-table">
+              <thead><tr><th>Funcionário</th><th>Rubrica</th><th>Tipo</th><th>Qtde</th><th>Unit</th><th>Total</th><th></th></tr></thead>
+              <tbody>
+                <tr v-for="l in lancamentos" :key="l.id">
+                  <td>{{ l.nome ?? `ID ${l.funcionario_id}` }}</td>
+                  <td><span class="rubrica-chip">{{ l.rubrica_codigo }}</span> {{ l.rubrica }}</td>
+                  <td><span :class="l.tipo === 'P' ? 'tipo-p' : 'tipo-d'">{{ l.tipo === 'P' ? '▲ Prov.' : '▼ Desc.' }}</span></td>
+                  <td>{{ l.qtde }}</td>
+                  <td class="money">{{ formatMoney(l.valor_unit) }}</td>
+                  <td class="money" :class="l.tipo === 'P' ? 'green' : 'red'">{{ formatMoney(l.valor_total) }}</td>
+                  <td>
+                    <button class="act-btn act-red" title="Excluir" @click="excluirLanc(l.id)">✗</button>
+                  </td>
+                </tr>
+                <tr v-if="lancamentos.length === 0">
+                  <td colspan="7" class="empty-td">📭 Nenhum lançamento variável cadastrado</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Painel Piso Salarial -->
+          <div v-if="pisoData" class="piso-panel">
+            <div class="piso-hdr">📊 Controle de Piso Salarial</div>
+            <div class="piso-kpis">
+              <div class="piso-kpi"><span>Servidores no piso</span><strong>{{ pisoData.total_servidores }}</strong></div>
+              <div class="piso-kpi orange"><span>Complemento total SM</span><strong>{{ formatMoney(pisoData.total_complemento) }}</strong></div>
+            </div>
+            <div class="piso-table-wrap" v-if="pisoData.dados?.length">
+              <table class="det-table">
+                <thead><tr><th>Servidor</th><th>Vínculo</th><th>Bruto</th><th>Complemento SM</th></tr></thead>
+                <tbody>
+                  <tr v-for="p in pisoData.dados" :key="p.matricula">
+                    <td>{{ p.nome }}</td>
+                    <td>{{ p.vinculo }}</td>
+                    <td class="money">{{ formatMoney(p.proventos) }}</td>
+                    <td class="money orange">{{ formatMoney(p.complemento_sm) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </transition>
+
 </template>
 
 <script setup>
@@ -301,14 +408,30 @@ const folhasGrafico = computed(() => {
 
 const formatCompetencia = (c) => {
   if (!c) return '—'
-  const s = String(c).padStart(6, '0')
-  const m = { '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez' }
-  return `${m[s.substring(0,2)] || s.slice(0,2)} / ${s.substring(2)}`
+  const s = String(c).replace(/\D/g, '')
+  const m = { '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
+              '07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez' }
+  // Formato YYYYMM (ex: 202503) — ano nos primeiros 4 dígitos
+  if (s.length === 6 && parseInt(s.substring(0,4)) > 1900) {
+    const ano = s.substring(0, 4)
+    const mes = s.substring(4, 6)
+    return `${m[mes] || mes} / ${ano}`
+  }
+  // Formato MMYYYY (ex: 032026) — legado
+  if (s.length === 6) {
+    const mes = s.substring(0, 2)
+    const ano = s.substring(2)
+    return `${m[mes] || mes} / ${ano}`
+  }
+  return s
 }
 const formatCompetenciaShort = (c) => {
   if (!c) return '—'
-  const s = String(c).padStart(6, '0')
-  const m = { '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez' }
+  const s = String(c).replace(/\D/g, '')
+  const m = { '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
+              '07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez' }
+  if (s.length === 6 && parseInt(s.substring(0,4)) > 1900)
+    return m[s.substring(4,6)] || s.substring(4,6)
   return m[s.substring(0,2)] || s.slice(0,2)
 }
 const formatMoney = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v ?? 0)
@@ -352,6 +475,73 @@ const abrirDetalhes = async (folha) => {
     detalhes.value = []
   } finally {
     loadingDet.value = false
+  }
+}
+
+// ── Sprint 3 — Lançamentos C3 e Motor (Parte 11) ──────────────────
+const modalLanc       = ref(false)
+const folhaLanc       = ref(null)
+const lancamentos     = ref([])
+const loadingLanc     = ref(false)
+const showFormLanc    = ref(false)
+const salvandoLanc    = ref(false)
+const rubricasC3      = ref([])
+const pisoData        = ref(null)
+const novoLanc        = ref({ funcionario_id: null, rubrica_id: null, tipo: 'P', qtde: 1, valor_unit: 0 })
+
+const abrirLancamentos = async (folha) => {
+  folhaLanc.value = folha
+  modalLanc.value = true
+  showFormLanc.value = false
+  pisoData.value = null
+  loadingLanc.value = true
+  try {
+    const [rLanc, rRub] = await Promise.all([
+      api.get(`/api/v3/folhas/${folha.FOLHA_ID}/lancamentos`),
+      rubricasC3.value.length ? Promise.resolve({ data: { rubricas: rubricasC3.value } }) : api.get('/api/v3/rubricas?camada=3')
+    ])
+    lancamentos.value = rLanc.data.lancamentos ?? []
+    rubricasC3.value  = rRub.data.rubricas ?? []
+    // Carregar piso salarial
+    try {
+      const { data } = await api.get(`/api/v3/folhas/${folha.FOLHA_COMPETENCIA}/piso-salarial`)
+      pisoData.value = data
+    } catch { pisoData.value = null }
+  } catch { lancamentos.value = [] }
+  finally { loadingLanc.value = false }
+}
+
+const salvarLanc = async () => {
+  if (!novoLanc.value.rubrica_id || !novoLanc.value.funcionario_id) return
+  salvandoLanc.value = true
+  try {
+    await api.post(`/api/v3/folhas/${folhaLanc.value.FOLHA_ID}/lancamentos`, novoLanc.value)
+    showFormLanc.value = false
+    novoLanc.value = { funcionario_id: null, rubrica_id: null, tipo: 'P', qtde: 1, valor_unit: 0 }
+    const { data } = await api.get(`/api/v3/folhas/${folhaLanc.value.FOLHA_ID}/lancamentos`)
+    lancamentos.value = data.lancamentos ?? []
+  } catch (e) { alert('Erro: ' + (e.response?.data?.erro || e.message)) }
+  finally { salvandoLanc.value = false }
+}
+
+const excluirLanc = async (lancId) => {
+  if (!confirm('Excluir lançamento?')) return
+  try {
+    await api.delete(`/api/v3/folhas/${folhaLanc.value.FOLHA_ID}/lancamentos/${lancId}`)
+    lancamentos.value = lancamentos.value.filter(l => l.id !== lancId)
+  } catch (e) { alert('Erro: ' + (e.response?.data?.erro || e.message)) }
+}
+
+const calcularProventos = async (folha) => {
+  if (!confirm(`Rodar o Motor de Folha para ${formatCompetencia(folha.FOLHA_COMPETENCIA)}?`)) return
+  try {
+    const { data } = await api.post('/api/v3/folhas/calcular-proventos', { folha_id: folha.FOLHA_ID })
+    alert(`✅ Motor concluído!\n${data.servidores} servidores\nProventos: ${formatMoney(data.total_proventos)}\nLíquido: ${formatMoney(data.total_liquido)}`)
+    // Recarrega lista
+    const resp = await api.get('/api/v3/folhas')
+    folhas.value = Array.isArray(resp.data) ? resp.data : (resp.data.folhas ?? [])
+  } catch (e) {
+    alert('Erro motor: ' + (e.response?.data?.erro || e.message))
   }
 }
 </script>
@@ -423,7 +613,6 @@ const abrirDetalhes = async (folha) => {
 .search-input { border: none; font-size: 13px; color: #1e293b; outline: none; background: transparent; font-family: inherit; width: 140px; }
 
 /* EVOLUÇÃO */
-.evolucao-card {}
 .bars-wrap { display: flex; gap: 14px; align-items: flex-end; height: 140px; padding-top: 24px; }
 .bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
 .bar-track { width: 100%; flex: 1; background: #f1f5f9; border-radius: 8px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; cursor: pointer; }
@@ -487,4 +676,23 @@ const abrirDetalhes = async (folha) => {
 .modal-enter-active, .modal-leave-active { transition: opacity 0.3s; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .btn-spin { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+/* Sprint 3 — Lançamentos */
+.act-btn.act-orange:hover { background: #fff7ed; border-color: #fed7aa; color: #ea580c; }
+.act-btn.act-purple:hover { background: #f5f3ff; border-color: #c4b5fd; color: #7c3aed; }
+.act-btn.act-red:hover    { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+.btn-sm-orange { padding: 5px 11px; border-radius: 8px; border: 1px solid #fed7aa; background: #fff7ed; color: #ea580c; font-size: 12px; font-weight: 700; cursor: pointer; }
+.lanc-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+.lanc-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; align-items: flex-end; }
+.rubrica-chip { display: inline-block; background: #eff6ff; color: #1d4ed8; border-radius: 6px; padding: 2px 7px; font-size: 11px; font-weight: 700; margin-right: 4px; }
+.tipo-p { color: #15803d; font-weight: 700; font-size: 11px; }
+.tipo-d { color: #dc2626; font-weight: 700; font-size: 11px; }
+.money.orange { color: #ea580c; }
+.piso-panel { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 14px; padding: 14px; margin-top: 12px; }
+.piso-hdr { font-size: 13px; font-weight: 800; color: #92400e; margin-bottom: 10px; }
+.piso-kpis { display: flex; gap: 10px; margin-bottom: 10px; }
+.piso-kpi { background: #fff; border: 1px solid #fde68a; border-radius: 10px; padding: 8px 14px; }
+.piso-kpi span { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #92400e; display: block; }
+.piso-kpi strong { font-size: 15px; font-weight: 900; color: #1e293b; }
+.piso-kpi.orange strong { color: #ea580c; }
+.piso-table-wrap { overflow-y: auto; max-height: 200px; border-radius: 8px; border: 1px solid #fde68a; }
 </style>

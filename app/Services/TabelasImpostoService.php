@@ -3,11 +3,13 @@
 namespace App\Services;
 
 /**
- * Tabelas de Imposto vigentes 2024.
+ * Tabelas de Imposto vigentes 2025.
  *
  * INSS RPPS  → alíquota única de 14% (Regime Próprio — Servidor Estatutário)
  * INSS RGPS  → alíquotas progressivas (Regime Geral — Cargo em Comissão)
- * IRRF       → tabela progressiva mensal 2024 (dedução por dependente: R$ 189,59)
+ * IRRF       → tabela progressiva mensal 2025 (MP 1.206/2024 + Lei 14.848/2024)
+ *              Isenção: até R$ 2.824,00 (deduzida a dedução simplificada)
+ *              Dedução por dependente: R$ 226,86/mês
  */
 class TabelasImpostoService
 {
@@ -23,17 +25,18 @@ class TabelasImpostoService
     // ── INSS RPPS 2024 ────────────────────────────────────────────────────────
     private const INSS_RPPS_ALIQUOTA = 0.14;   // 14% — Lei 9.717/98, portaria local
 
-    // ── IRRF 2024 (mensal — Lei 14.663/2023) ─────────────────────────────────
+    // ── IRRF 2025 (mensal — MP 1.206/2024 + Lei 14.848/2024) ─────────────────
+    // BUG-S2 corrigido: isenção até R$ 2.824,00 (era R$ 2.259,20 em 2024)
     private const IRRF_TABELA = [
         // [limite superior, alíquota, parcela a deduzir]
-        [2259.20, 0.00, 0.00],
-        [2826.65, 0.075, 169.44],
-        [3751.05, 0.15, 381.44],
-        [4664.68, 0.225, 662.77],
-        [INF, 0.275, 896.00],
+        [2824.00, 0.00, 0.00],     // isento (inclui dedução simplificada R$ 564,80)
+        [3751.05, 0.075, 211.80],
+        [4664.68, 0.15, 493.05],
+        [7083.49, 0.225, 843.16],
+        [INF, 0.275, 1197.58],
     ];
 
-    private const DEDUCAO_DEPENDENTE = 189.59;  // por dependente, 2024
+    private const DEDUCAO_DEPENDENTE = 226.86;  // por dependente, 2025
 
     // =========================================================================
     // INSS

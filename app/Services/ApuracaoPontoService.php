@@ -48,24 +48,47 @@ class ApuracaoPontoService
         // Agrupa registros por dia
         $porDia = $registros->groupBy(fn($r) => Carbon::parse($r->REGISTRO_DATA_HORA)->toDateString());
 
+        // Carregar config individual do funcionário (se existir)
+        $pontoConfig = \Illuminate\Support\Facades\DB::table('PONTO_CONFIG_FUNCIONARIO')
+            ->where('FUNCIONARIO_ID', $funcionarioId)
+            ->first();
+        $regimeConfig   = $pontoConfig->REGIME ?? '4_batidas';
+        $intervaloConfig = isset($pontoConfig->INTERVALO_ALMOCO) ? (int) $pontoConfig->INTERVALO_ALMOCO : null;
+
         foreach ($porDia as $dia => $batidas) {
-            $entrada = $batidas->firstWhere('REGISTRO_TIPO', 'ENTRADA');
-            $saida = $batidas->firstWhere('REGISTRO_TIPO', 'SAIDA');
+            // Regime 4 batidas: usar entrada1 e saida2 (ignora saida1/entrada2 do almoço)
+            // Regime 2 batidas: usar entrada1 e saida1 diretamente
+            if ($regimeConfig === '4_batidas') {
+                $entradas = $batidas->where('REGISTRO_TIPO', 'ENTRADA')->values();
+                $saidas   = $batidas->where('REGISTRO_TIPO', 'SAIDA')->values();
+                $entrada  = $entradas->first();
+                $saida    = $saidas->last(); // ultima saida do dia
+            } else {
+                // 2 batidas — comportamento atual (preservado)
+                $entrada = $batidas->firstWhere('REGISTRO_TIPO', 'ENTRADA');
+                $saida   = $batidas->firstWhere('REGISTRO_TIPO', 'SAIDA');
+            }
 
             if (!$entrada || !$saida)
                 continue;
 
-            $trabalhado = Carbon::parse($entrada->REGISTRO_DATA_HORA)
-                ->diffInMinutes(Carbon::parse($saida->REGISTRO_DATA_HORA)) / 60;
+            $brutoMinutos = Carbon::parse($entrada->REGISTRO_DATA_HORA)
+                ->diffInMinutes(Carbon::parse($saida->REGISTRO_DATA_HORA));
 
             $esperado = 0.0;
+            $intervaloMinutos = $intervaloConfig ?? 60; // BUG-PONTO-01: desconto padrão de almoço
             if (isset($itensEscala[$dia]) && $itensEscala[$dia]->turno) {
                 $turno = $itensEscala[$dia]->turno;
                 if ($turno->TURNO_ENTRADA && $turno->TURNO_SAIDA) {
-                    $esperado = Carbon::parse($turno->TURNO_ENTRADA)
-                        ->diffInMinutes(Carbon::parse($turno->TURNO_SAIDA)) / 60;
+                    $esperadoMinutos = Carbon::parse($turno->TURNO_ENTRADA)
+                        ->diffInMinutes(Carbon::parse($turno->TURNO_SAIDA));
+                    $intervaloMinutos = $intervaloConfig ?? (int) ($turno->TURNO_INTERVALO_MINUTOS ?? 60);
+                    $esperado = ($esperadoMinutos - $intervaloMinutos) / 60;
                 }
             }
+
+            // Desconta intervalo de almoço somente se bateu mais que a jornada mínima
+            $trabalhado = max(0, ($brutoMinutos - $intervaloMinutos)) / 60;
 
             $horasTrab += $trabalhado;
             $diff = $trabalhado - $esperado;
@@ -75,13 +98,15 @@ class ApuracaoPontoService
                 $horasFalta += abs($diff);
         }
 
-        // Dias com turno na escala mas sem nenhum registro = falta
+        // Dias com turno na escala mas sem nenhum registro = falta (desconta intervalo)
         foreach ($itensEscala as $dia => $item) {
             if (!isset($porDia[$dia]) && $item->turno) {
                 $turno = $item->turno;
                 if ($turno->TURNO_ENTRADA && $turno->TURNO_SAIDA) {
-                    $horasFalta += Carbon::parse($turno->TURNO_ENTRADA)
-                        ->diffInMinutes(Carbon::parse($turno->TURNO_SAIDA)) / 60;
+                    $bruto = Carbon::parse($turno->TURNO_ENTRADA)
+                        ->diffInMinutes(Carbon::parse($turno->TURNO_SAIDA));
+                    $intervalo = $intervaloConfig ?? (int) ($turno->TURNO_INTERVALO_MINUTOS ?? 60); // BUG-PONTO-01
+                    $horasFalta += max(0, ($bruto - $intervalo)) / 60;
                 }
             }
         }

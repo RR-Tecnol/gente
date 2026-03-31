@@ -30,9 +30,24 @@
         </div>
       </div>
 
+      <!-- Busca na sidebar -->
+      <div class="sidebar-search">
+        <svg class="sidebar-search-ico" viewBox="0 0 24 24" fill="none" width="14" height="14">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+          <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input
+          v-model="sidebarBusca"
+          class="sidebar-search-input"
+          placeholder="Buscar módulo..."
+          @keydown.escape="sidebarBusca = ''"
+        />
+        <button v-if="sidebarBusca" class="sidebar-search-clear" @click="sidebarBusca = ''">✕</button>
+      </div>
+
       <!-- Navegação -->
       <nav class="sidebar-nav">
-        <div class="nav-section-label">Menu Principal</div>
+        <div v-if="!sidebarBusca" class="nav-section-label">Menu Principal</div>
 
         <template v-for="item in navItemsFiltrados" :key="item.label">
           <!-- Separador de seção -->
@@ -246,92 +261,305 @@ const userInitials = computed(() => {
 // Mapa de roles para cada item do menu:
 // roles vazio [] = visível para todos os usuários autenticados
 // ['admin'] = só admin, ['admin','rh'] = admin e rh, etc.
+const sidebarBusca = ref('')
+
 const ALL_NAV_ITEMS = [
-  // ── Visão Geral ──────────────────────────────────────────────
+
+  // ═══════════════════════════════════════════════════════════════
+  // VISÃO GERAL — todos os perfis
+  // ═══════════════════════════════════════════════════════════════
   { type: 'section', label: 'Visão Geral' },
-  { type: 'item', to: '/dashboard',            label: 'Dashboard',              icon: 'dashboard',       roles: [] },
+  { type: 'item', to: '/dashboard',
+    label: 'Dashboard', icon: 'dashboard', roles: [] },
 
-  // ── Minha Área (funcionário) ───────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // MINHA ÁREA — o que o funcionário vê sobre si mesmo
+  // ═══════════════════════════════════════════════════════════════
   { type: 'section', label: 'Minha Área' },
-  { type: 'item', to: '/meu-perfil',           label: 'Meu Perfil',             icon: 'user',            roles: [] },
-  { type: 'item', to: '/ponto',                label: 'Ponto Eletrônico',       icon: 'clock',           roles: [] },
-  { type: 'item', to: '/meus-holerites',       label: 'Meus Holerites',         icon: 'money',           roles: [] },
-  { type: 'item', to: '/ferias-licencas',      label: 'Férias e Licenças',      icon: 'beach',           roles: [] },
-  { type: 'item', to: '/banco-horas',          label: 'Banco de Horas',         icon: 'hourglass',       roles: [] },
-  { type: 'item', to: '/declaracoes-requerimentos', label: 'Declarações',       icon: 'doc',             roles: [] },
+  { type: 'item', to: '/meu-perfil',
+    label: 'Meu Perfil', icon: 'user', roles: [] },
+  { type: 'item', to: '/ponto',
+    label: 'Ponto Eletrônico', icon: 'clock', roles: [] },
+  { type: 'item', to: '/meus-holerites',
+    label: 'Meus Holerites', icon: 'money', roles: [] },
+  { type: 'item', to: '/ferias-licencas',
+    label: 'Férias e Licenças', icon: 'beach', roles: [] },
+  { type: 'item', to: '/banco-horas',
+    label: 'Banco de Horas', icon: 'hourglass', roles: [] },
+  { type: 'item', to: '/declaracoes-requerimentos',
+    label: 'Declarações', icon: 'doc', roles: [] },
+  { type: 'item', to: '/progressao-funcional',
+    label: 'Minha Progressão', icon: 'trending', roles: [] },
 
-  // ── Cadastros (RH) ───────────────────────────────────────────
-  { type: 'section', label: 'Cadastros',                                                                  roles: ['admin', 'rh'] },
-  { type: 'item', to: '/funcionarios',         label: 'Funcionários',           icon: 'users',           roles: ['admin', 'rh'] },
-  { type: 'item', to: '/autocadastro-gestao',  label: 'Autocadastro',            icon: 'user-plus',       roles: ['admin', 'rh'] },
-  { type: 'item', to: '/organograma',          label: 'Organograma',            icon: 'organogram',      roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/cargos-salarios',      label: 'Cargos e Salários',      icon: 'briefcase',       roles: ['admin', 'rh'] },
+  // ═══════════════════════════════════════════════════════════════
+  // MINHA EQUIPE — gestor de setor
+  // ═══════════════════════════════════════════════════════════════
+  { type: 'section', label: 'Minha Equipe',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/portal-gestor',
+    label: 'Portal do Gestor', icon: 'tie-person',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/organograma',
+    label: 'Organograma', icon: 'organogram',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/escala-trabalho',
+    label: 'Escala de Trabalho', icon: 'calendar',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/escala-matriz-v3',
+    label: 'Escalas Hospitalares', icon: 'calendar-week',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/substituicoes',
+    label: 'Substituições', icon: 'swap',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/escala-sobreaviso',
+    label: 'Sobreaviso', icon: 'phone',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/hora-extra',
+    label: 'Hora Extra', icon: 'clock',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/plantoes-extras',
+    label: 'Plantões Extras', icon: 'plus',
+    roles: ['admin', 'rh', 'gestor'] },
 
-  // ── Contratos (RH) ───────────────────────────────────────────
-  { type: 'section', label: 'Contratos',                                                                  roles: ['admin', 'rh'] },
-  { type: 'item', to: '/contratos-vinculos',   label: 'Contratos e Vínculos',   icon: 'contract',        roles: ['admin', 'rh'] },
-  { type: 'item', to: '/progressao-funcional', label: 'Progressão Funcional',   icon: 'trending',        roles: ['admin', 'rh'] },
-  { type: 'item', to: '/progressao-admin',     label: 'Gerir Progressões',      icon: 'badge',           roles: ['admin', 'rh'] },
-  { type: 'item', to: '/gestao-declaracoes',   label: 'Gestão de Declarações',  icon: 'clipboard',       roles: ['admin', 'rh'] },
-  { type: 'item', to: '/exoneracao',           label: 'Exoneração / Rescisão',  icon: 'exit',            roles: ['admin', 'rh'] },
+  // ═══════════════════════════════════════════════════════════════
+  // RECURSOS HUMANOS — cadastros e gestão de pessoal
+  // ═══════════════════════════════════════════════════════════════
+  { type: 'section', label: 'Recursos Humanos',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/funcionarios',
+    label: 'Funcionários', icon: 'users',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/autocadastro-gestao',
+    label: 'Autocadastro', icon: 'user-plus',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/cargos-salarios',
+    label: 'Cargos e Salários', icon: 'briefcase',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/contratos-vinculos',
+    label: 'Contratos e Vínculos', icon: 'contract',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/progressao-admin',
+    label: 'Gerir Progressões', icon: 'badge',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/exoneracao',
+    label: 'Exoneração / Rescisão', icon: 'exit',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/pss',
+    label: 'PSS / Concurso', icon: 'school',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/estagiarios',
+    label: 'Estagiários', icon: 'student',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/terceirizados',
+    label: 'Terceirizados', icon: 'briefcase',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/acumulacao-cargos',
+    label: 'Acumulação de Cargos', icon: 'layers',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/diarias',
+    label: 'Diárias', icon: 'map-pin',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/avaliacao-gestor',
+    label: 'Avaliações da Equipe', icon: 'star',
+    roles: ['admin', 'rh', 'gestor'] },
+  { type: 'item', to: '/beneficios',
+    label: 'Gestão de Benefícios', icon: 'zap',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/treinamentos-admin',
+    label: 'Gestão de Treinamentos', icon: 'school',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/medicina-admin',
+    label: 'Gestão SESMT (Med.', icon: 'stethoscope',
+    roles: ['admin', 'rh', 'sesmt'] },
+  { type: 'item', to: '/seguranca-admin',
+    label: 'Gestão SESMT (Seg.', icon: 'shield',
+    roles: ['admin', 'rh', 'sesmt'] },
 
-  // ── Portal Gestor ────────────────────────────────────────────
-  { type: 'section', label: 'Gestão',                                                                     roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/portal-gestor',        label: 'Portal do Gestor',       icon: 'tie-person',      roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/escala-trabalho',      label: 'Escala de Trabalho',     icon: 'calendar',        roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/escala-matriz-v3',     label: 'Escalas Hospitalares',   icon: 'calendar-week',   roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/substituicoes',        label: 'Substituições',          icon: 'swap',            roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/escala-sobreaviso',    label: 'Sobreaviso',             icon: 'phone',           roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/plantoes-extras',      label: 'Plantões Extras',        icon: 'plus',            roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/hora-extra',           label: 'Hora Extra',             icon: 'clock',           roles: ['admin', 'rh', 'gestor'] },
+  // ── Frequência ──────────────────────────────────────────────────
+  { type: 'section', label: 'Frequência',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/faltas-atrasos',
+    label: 'Faltas e Atrasos', icon: 'warning',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/abono-faltas',
+    label: 'Abono de Faltas', icon: 'check',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/atestados-medicos',
+    label: 'Atestados Médicos', icon: 'hospital',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/frequencia',
+    label: 'Controle de Frequência', icon: 'clipboard-check',
+    roles: ['admin', 'rh', 'gestor'] },
 
-  // ── Frequência e Ponto ───────────────────────────────────────
-  { type: 'section', label: 'Frequência',                                                                 roles: ['admin', 'rh'] },
-  { type: 'item', to: '/faltas-atrasos',       label: 'Faltas e Atrasos',       icon: 'warning',         roles: ['admin', 'rh'] },
-  { type: 'item', to: '/abono-faltas',         label: 'Abono de Faltas',        icon: 'check',           roles: ['admin', 'rh'] },
-  { type: 'item', to: '/atestados-medicos',    label: 'Atestados Médicos',      icon: 'hospital',        roles: ['admin', 'rh'] },
+  // ── Saúde Ocupacional ───────────────────────────────────────────
+  { type: 'section', label: 'Saúde Ocupacional',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/medicina-trabalho',
+    label: 'Medicina do Trabalho', icon: 'stethoscope',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/seguranca-trabalho',
+    label: 'Segurança do Trabalho', icon: 'shield',
+    roles: ['admin', 'rh'] },
 
-  // ── Saúde Ocupacional ────────────────────────────────────────
-  { type: 'section', label: 'Saúde Ocupacional',                                                          roles: ['admin', 'rh'] },
-  { type: 'item', to: '/medicina-trabalho',    label: 'Medicina do Trabalho',   icon: 'stethoscope',     roles: ['admin', 'rh'] },
-  { type: 'item', to: '/seguranca-trabalho',   label: 'Segurança do Trabalho',  icon: 'shield',          roles: ['admin', 'rh'] },
+  // ═══════════════════════════════════════════════════════════════
+  // FINANCEIRO E FOLHA
+  // ═══════════════════════════════════════════════════════════════
+  { type: 'section', label: 'Financeiro e Folha',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/folha-pagamento',
+    label: 'Folha de Pagamento', icon: 'credit-card',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/consignacao',
+    label: 'Consignações', icon: 'account-balance',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/consignatarias',
+    label: 'Consignatárias', icon: 'building-bank',
+    roles: ['admin'] },
+  { type: 'item', to: '/verba-indenizatoria',
+    label: 'Verbas Indenizatórias', icon: 'money',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/beneficios',
+    label: 'Benefícios', icon: 'gift',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/rpps',
+    label: 'RPPS / IPAM', icon: 'bank',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/remessa-cnab',
+    label: 'Remessa CNAB', icon: 'bank',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/gestao-declaracoes',
+    label: 'Gestão de Declarações', icon: 'clipboard',
+    roles: ['admin', 'rh'] },
 
-  // ── Financeiro (RH) ──────────────────────────────────────────
-  { type: 'section', label: 'Financeiro',                                                                 roles: ['admin', 'rh'] },
-  { type: 'item', to: '/folha-pagamento',      label: 'Folha de Pagamento',     icon: 'credit-card',     roles: ['admin', 'rh'] },
-  { type: 'item', to: '/remessa-cnab',         label: 'Remessa CNAB',           icon: 'bank',            roles: ['admin', 'rh'] },
-  { type: 'item', to: '/beneficios',           label: 'Benefícios',             icon: 'gift',            roles: ['admin', 'rh'] },
-  { type: 'item', to: '/verba-indenizatoria',  label: 'Verbas Indenizatórias',   icon: 'money',           roles: ['admin', 'rh'] },
-  { type: 'item', to: '/consignacao',          label: 'Consignações',            icon: 'account-balance', roles: ['admin', 'rh'] },
-  { type: 'item', to: '/esocial',              label: 'eSocial',                 icon: 'cloud-upload',    roles: ['admin', 'rh'] },
+  // ═══════════════════════════════════════════════════════════════
+  // SAÚDE
+  { type: 'section', label: 'Saúde', roles: ['admin'] },
+  { type: 'item', to: '/oss',
+    label: 'Monitor OSS', icon: 'activity',
+    roles: ['admin'] },
 
-  // ── ERP / Fiscal (admin) ─────────────────────────────────────
-  { type: 'section', label: 'ERP / Fiscal',                                                               roles: ['admin'] },
-  { type: 'item', to: '/orcamento',           label: 'Orçamento (PPA/LOA)',    icon: 'budget',          roles: ['admin'] },
-  { type: 'item', to: '/execucao-despesa',    label: 'Execução da Despesa',    icon: 'pay',             roles: ['admin'] },
-  { type: 'item', to: '/contabilidade',       label: 'Contabilidade (PCASP)',  icon: 'book',            roles: ['admin'] },
-  { type: 'item', to: '/tesouraria',          label: 'Tesouraria',             icon: 'bank',            roles: ['admin'] },
-  { type: 'item', to: '/receita-municipal',   label: 'Receita Municipal',      icon: 'credit-card',     roles: ['admin'] },
-  { type: 'item', to: '/controle-externo',    label: 'Controle Externo',       icon: 'chart',           roles: ['admin'] },
+  // ═══════════════════════════════════════════════════════════════
+  // ADMINISTRATIVO
+  { type: 'section', label: 'Administrativo', roles: ['admin'] },
+  { type: 'item', to: '/compras',
+    label: 'Compras e Licitações', icon: 'shopping-cart',
+    roles: ['admin'] },
+  { type: 'item', to: '/almoxarifado',
+    label: 'Almoxarifado', icon: 'package',
+    roles: ['admin'] },
+  { type: 'item', to: '/patrimonio',
+    label: 'Patrimônio', icon: 'building',
+    roles: ['admin'] },
+  { type: 'item', to: '/contratos-admin',
+    label: 'Contratos', icon: 'file-text',
+    roles: ['admin'] },
+  { type: 'item', to: '/frotas',
+    label: 'Frotas', icon: 'car',
+    roles: ['admin'] },
 
-  // ── Desenvolvimento (RH) ─────────────────────────────────────
-  { type: 'section', label: 'Desenvolvimento',                                                            roles: ['admin', 'rh'] },
-  { type: 'item', to: '/avaliacao-desempenho', label: 'Avaliação de Desempenho', icon: 'star',           roles: ['admin', 'rh'] },
-  { type: 'item', to: '/treinamentos',         label: 'Treinamentos',           icon: 'school',          roles: ['admin', 'rh'] },
-  { type: 'item', to: '/pesquisa-satisfacao',  label: 'Pesquisa de Satisfação', icon: 'poll',            roles: ['admin', 'rh'] },
-  { type: 'item', to: '/pesquisa-admin',       label: 'Gerenciar Pesquisas',    icon: 'edit',            roles: ['admin', 'rh'] },
+  // ═══════════════════════════════════════════════════════════════
+  // COMPLIANCE — obrigações legais
+  // ═══════════════════════════════════════════════════════════════
+  { type: 'section', label: 'Compliance',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/esocial',
+    label: 'eSocial', icon: 'cloud-upload',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/sagres-tce',
+    label: 'SAGRES / TCE-MA', icon: 'chart',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/transparencia',
+    label: 'Transparência Pública', icon: 'eye',
+    roles: ['admin', 'rh'] },
 
-  // ── Comunicação ──────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // DESENVOLVIMENTO — pessoas e capacitação
+  // ═══════════════════════════════════════════════════════════════
+  { type: 'section', label: 'Desenvolvimento',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/avaliacao-desempenho',
+    label: 'Avaliação de Desempenho', icon: 'star',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/treinamentos',
+    label: 'Treinamentos', icon: 'school',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/pesquisa-satisfacao',
+    label: 'Pesquisa de Satisfação', icon: 'poll',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/pesquisa-admin',
+    label: 'Gerenciar Pesquisas', icon: 'edit',
+    roles: ['admin', 'rh'] },
+
+  // ═══════════════════════════════════════════════════════════════
+  // COMUNICAÇÃO — todos os perfis
+  // ═══════════════════════════════════════════════════════════════
   { type: 'section', label: 'Comunicação' },
-  { type: 'item', to: '/agenda',               label: 'Agenda',                 icon: 'agenda',          roles: [] },
-  { type: 'item', to: '/comunicados',          label: 'Comunicados',            icon: 'megaphone',       roles: [] },
-  { type: 'item', to: '/ouvidoria',            label: 'Ouvidoria',              icon: 'comment',         roles: [] },
-  { type: 'item', to: '/ouvidoria-admin',      label: 'Painel Ouvidoria',       icon: 'shield',          roles: ['admin', 'rh'] },
+  { type: 'item', to: '/agenda',
+    label: 'Agenda', icon: 'agenda', roles: [] },
+  { type: 'item', to: '/comunicados',
+    label: 'Comunicados', icon: 'megaphone', roles: [] },
+  { type: 'item', to: '/ouvidoria',
+    label: 'Ouvidoria', icon: 'comment', roles: [] },
+  { type: 'item', to: '/ouvidoria-admin',
+    label: 'Painel Ouvidoria', icon: 'shield',
+    roles: ['admin', 'rh'] },
+  { type: 'item', to: '/relatorios',
+    label: 'Relatórios', icon: 'chart',
+    roles: ['admin', 'rh'] },
 
-  // ── Sistema (Admin/RH) ───────────────────────────────────────
-  { type: 'section', label: 'Sistema',                                                                    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/relatorios',           label: 'Relatórios',             icon: 'chart',           roles: ['admin', 'rh'] },
-  { type: 'item', to: '/configuracoes',        label: 'Configurações',          icon: 'settings',        roles: ['admin'] },
+  // ═══════════════════════════════════════════════════════════════
+  // CONFIGURAÇÕES DO SISTEMA — admin apenas
+  // ═══════════════════════════════════════════════════════════════
+  { type: 'section', label: 'Configurações',
+    roles: ['admin'] },
+  { type: 'item', to: '/configuracoes',
+    label: 'Configurações Gerais', icon: 'settings',
+    roles: ['admin'] },
+  { type: 'item', to: '/configuracao-sistema',
+    label: 'Motor de Folha', icon: 'cpu',
+    roles: ['admin'] },
+  { type: 'item', to: '/parametros-financeiros',
+    label: 'Parâmetros Financeiros', icon: 'sliders',
+    roles: ['admin'] },
+  { type: 'item', to: '/vinculos',
+    label: 'Vínculos', icon: 'link',
+    roles: ['admin'] },
+  { type: 'item', to: '/turnos',
+    label: 'Turnos', icon: 'clock',
+    roles: ['admin'] },
+  { type: 'item', to: '/feriados',
+    label: 'Feriados', icon: 'calendar',
+    roles: ['admin'] },
+  { type: 'item', to: '/tabelas-auxiliares',
+    label: 'Tabelas Auxiliares', icon: 'table',
+    roles: ['admin'] },
+  { type: 'item', to: '/eventos-folha',
+    label: 'Eventos de Folha', icon: 'list',
+    roles: ['admin'] },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ERP / FISCAL — pós-contrato, admin apenas
+  // ═══════════════════════════════════════════════════════════════
+  { type: 'section', label: 'ERP / Fiscal',
+    roles: ['admin'] },
+  { type: 'item', to: '/orcamento',
+    label: 'Orçamento (PPA/LOA)', icon: 'budget',
+    roles: ['admin'] },
+  { type: 'item', to: '/execucao-despesa',
+    label: 'Execução da Despesa', icon: 'pay',
+    roles: ['admin'] },
+  { type: 'item', to: '/contabilidade',
+    label: 'Contabilidade (PCASP)', icon: 'book',
+    roles: ['admin'] },
+  { type: 'item', to: '/tesouraria',
+    label: 'Tesouraria', icon: 'bank',
+    roles: ['admin'] },
+  { type: 'item', to: '/receita-municipal',
+    label: 'Receita Municipal', icon: 'credit-card',
+    roles: ['admin'] },
+  { type: 'item', to: '/controle-externo',
+    label: 'Controle Externo', icon: 'chart',
+    roles: ['admin'] },
 ]
 
 // Hierarquia de roles (índice menor = mais privilegiado)
@@ -339,12 +567,31 @@ const ROLE_HIERARCHY = ['admin', 'rh', 'gestor', 'funcionario']
 
 function userRoleLevel(perfil) {
   if (!perfil) return 3 // funcionario por padrão
-  const p = perfil.toLowerCase().trim()
-  // Aceita variações reais do banco: ADMINISTRADOR, ADMIN, RH, RECURSOS HUMANOS, GESTOR, etc.
-  if (['admin', 'administrador', 'administrator'].includes(p)) return 0
-  if (['rh', 'recursoshumanos', 'recursos humanos', 'rh - recursos humanos'].includes(p)) return 1
-  if (['gestor', 'gestor de setor', 'gestão'].includes(p)) return 2
-  return 3 // funcionario / outros
+  const p = perfil.toLowerCase().trim().replace(/[^a-záéíóúàâêôãõç\s]/g, '')
+
+  // admin — 15 perfis reais do banco
+  const adminPerfis = [
+    'admin', 'administrador', 'administrator', 'desenvolvedor',
+    'manutencao', 'manutenção', 'equipe sisgep',
+  ]
+  if (adminPerfis.some(x => p.includes(x))) return 0
+
+  // rh — operacional, folha, unidade, aps, rede, direitos, recrutador
+  const rhPerfis = [
+    'rh', 'recursos humanos', 'rh folha', 'rh unidade', 'rh aps',
+    'rh rede', 'operacional', 'direitos e deveres', 'recrutador',
+    'recursoshumanos',
+  ]
+  if (rhPerfis.some(x => p.includes(x))) return 1
+
+  // gestor — coordenador, diretor, gestor de unidade
+  const gestorPerfis = [
+    'gestor', 'gestão', 'gestao', 'coordenador', 'diretor',
+    'gestor de setor', 'diretor gestor', 'coordenador de setor',
+  ]
+  if (gestorPerfis.some(x => p.includes(x))) return 2
+
+  return 3 // funcionario / externo / outros
 }
 
 function itemVisivel(item, perfil) {
@@ -379,47 +626,93 @@ const navItemsFiltrados = computed(() => {
       result.push(item)
     }
   }
+
+  // Filtro de busca textual
+  if (sidebarBusca.value.trim()) {
+    const termo = sidebarBusca.value.toLowerCase().trim()
+    const filtrado = []
+    let secaoAtual = null
+    for (const item of result) {
+      if (item.type === 'section') {
+        secaoAtual = item
+      } else if (item.label?.toLowerCase().includes(termo)) {
+        if (secaoAtual) { filtrado.push(secaoAtual); secaoAtual = null }
+        filtrado.push(item)
+      }
+    }
+    return filtrado
+  }
+
   return result
 })
 
 
 const routeMap = {
-  '/dashboard':              { label: 'Dashboard',              icon: 'dashboard' },
-  '/funcionarios':           { label: 'Funcionários',           icon: 'users' },
-  '/autocadastro-gestao':    { label: 'Autocadastro',            icon: 'user-plus' },
-  '/organograma':            { label: 'Organograma',            icon: 'organogram' },
-  '/cargos-salarios':        { label: 'Cargos e Salários',       icon: 'briefcase' },
-  '/contratos-vinculos':     { label: 'Contratos e Vínculos',    icon: 'contract' },
-  '/progressao-funcional':   { label: 'Progressão Funcional',   icon: 'trending' },
-  '/avaliacao-desempenho':   { label: 'Avaliação de Desempenho', icon: 'star' },
-  '/treinamentos':           { label: 'Treinamentos',           icon: 'school' },
-  '/medicina-trabalho':      { label: 'Medicina do Trabalho',   icon: 'stethoscope' },
-  '/seguranca-trabalho':     { label: 'Segurança do Trabalho',  icon: 'shield' },
-  '/ponto':                  { label: 'Ponto Eletrônico',       icon: 'clock' },
-  '/banco-horas':            { label: 'Banco de Horas',         icon: 'hourglass' },
-  '/meus-holerites':         { label: 'Meus Holerites',         icon: 'money' },
-  '/abono-faltas':           { label: 'Abono de Faltas',        icon: 'check' },
-  '/atestados-medicos':      { label: 'Atestados Médicos',      icon: 'hospital' },
-  '/faltas-atrasos':         { label: 'Faltas e Atrasos',       icon: 'warning' },
-  '/ferias-licencas':        { label: 'Férias e Licenças',       icon: 'beach' },
-  '/remessa-cnab':           { label: 'Remessa CNAB 240',       icon: 'bank' },
-  '/escala-matriz-v3':       { label: 'Escalas Hospitalares',   icon: 'calendar-week' },
-  '/substituicoes':          { label: 'Substituições de Plantão', icon: 'swap' },
-  '/escala-sobreaviso':      { label: 'Sobreaviso',             icon: 'phone' },
-  '/plantoes-extras':        { label: 'Plantões Extras',         icon: 'plus' },
-  '/exoneracao':             { label: 'Exoneração / Rescisão',   icon: 'exit' },
-  '/hora-extra':             { label: 'Hora Extra',              icon: 'clock' },
-  '/folha-pagamento':        { label: 'Folha de Pagamento',     icon: 'credit-card' },
-  '/agenda':                 { label: 'Agenda',                 icon: 'agenda' },
-  '/relatorios':             { label: 'Relatórios',             icon: 'chart' },
-  '/portal-gestor':          { label: 'Portal do Gestor',       icon: 'tie-person' },
-  '/comunicados':            { label: 'Comunicados',            icon: 'megaphone' },
-  '/pesquisa-satisfacao':    { label: 'Pesquisa de Satisfação', icon: 'poll' },
-  '/ouvidoria':              { label: 'Ouvidoria',              icon: 'comment' },
-  '/notificacoes':           { label: 'Notificações',           icon: 'bell' },
-  '/configuracoes':          { label: 'Configurações',          icon: 'settings' },
-  '/declaracoes-requerimentos': { label: 'Declarações e Requerimentos', icon: 'clipboard' },
-  '/gestao-declaracoes':     { label: 'Gestão de Declarações',  icon: 'clipboard' },
+  '/dashboard':                  { label: 'Dashboard',                  icon: 'dashboard' },
+  '/funcionarios':               { label: 'Funcionários',               icon: 'users' },
+  '/autocadastro-gestao':        { label: 'Autocadastro',               icon: 'user-plus' },
+  '/organograma':                { label: 'Organograma',                icon: 'organogram' },
+  '/cargos-salarios':            { label: 'Cargos e Salários',          icon: 'briefcase' },
+  '/contratos-vinculos':         { label: 'Contratos e Vínculos',       icon: 'contract' },
+  '/progressao-funcional':       { label: 'Minha Progressão',           icon: 'trending' },
+  '/progressao-admin':           { label: 'Gerir Progressões',          icon: 'badge' },
+  '/avaliacao-desempenho':       { label: 'Avaliação de Desempenho',    icon: 'star' },
+  '/treinamentos':               { label: 'Treinamentos',               icon: 'school' },
+  '/medicina-trabalho':          { label: 'Medicina do Trabalho',       icon: 'stethoscope' },
+  '/seguranca-trabalho':         { label: 'Segurança do Trabalho',      icon: 'shield' },
+  '/avaliacao-gestor':           { label: 'Avaliações da Equipe',       icon: 'star' },
+  '/beneficios':                 { label: 'Gestão de Benefícios',       icon: 'zap' },
+  '/treinamentos-admin':         { label: 'Gestão de Treinamentos',     icon: 'school' },
+  '/medicina-admin':             { label: 'Gestão SESMT',               icon: 'stethoscope' },
+  '/seguranca-admin':            { label: 'Segurança SESMT',            icon: 'shield' },
+  '/ponto':                      { label: 'Ponto Eletrônico',           icon: 'clock' },
+  '/banco-horas':                { label: 'Banco de Horas',             icon: 'hourglass' },
+  '/meus-holerites':             { label: 'Meus Holerites',             icon: 'money' },
+  '/abono-faltas':               { label: 'Abono de Faltas',            icon: 'check' },
+  '/atestados-medicos':          { label: 'Atestados Médicos',          icon: 'hospital' },
+  '/faltas-atrasos':             { label: 'Faltas e Atrasos',           icon: 'warning' },
+  '/ferias-licencas':            { label: 'Férias e Licenças',          icon: 'beach' },
+  '/frequencia':                 { label: 'Controle de Frequência',     icon: 'clipboard-check' },
+  '/remessa-cnab':               { label: 'Remessa CNAB 240',           icon: 'bank' },
+  '/escala-trabalho':            { label: 'Escala de Trabalho',         icon: 'calendar' },
+  '/escala-matriz-v3':           { label: 'Escalas Hospitalares',       icon: 'calendar-week' },
+  '/substituicoes':              { label: 'Substituições de Plantão',   icon: 'swap' },
+  '/escala-sobreaviso':          { label: 'Sobreaviso',                 icon: 'phone' },
+  '/plantoes-extras':            { label: 'Plantões Extras',            icon: 'plus' },
+  '/exoneracao':                 { label: 'Exoneração / Rescisão',      icon: 'exit' },
+  '/hora-extra':                 { label: 'Hora Extra',                 icon: 'clock' },
+  '/folha-pagamento':            { label: 'Folha de Pagamento',         icon: 'credit-card' },
+  '/agenda':                     { label: 'Agenda',                     icon: 'agenda' },
+  '/relatorios':                 { label: 'Relatórios',                 icon: 'chart' },
+  '/portal-gestor':              { label: 'Portal do Gestor',           icon: 'tie-person' },
+  '/comunicados':                { label: 'Comunicados',                icon: 'megaphone' },
+  '/pesquisa-satisfacao':        { label: 'Pesquisa de Satisfação',     icon: 'poll' },
+  '/pesquisa-admin':             { label: 'Gerenciar Pesquisas',        icon: 'edit' },
+  '/ouvidoria':                  { label: 'Ouvidoria',                  icon: 'comment' },
+  '/ouvidoria-admin':            { label: 'Painel Ouvidoria',           icon: 'shield' },
+  '/notificacoes':               { label: 'Notificações',               icon: 'bell' },
+  '/configuracoes':              { label: 'Configurações Gerais',       icon: 'settings' },
+  '/meu-perfil':                 { label: 'Meu Perfil',                 icon: 'user' },
+  '/declaracoes-requerimentos':  { label: 'Declarações e Requerimentos', icon: 'doc' },
+  '/gestao-declaracoes':         { label: 'Gestão de Declarações',      icon: 'clipboard' },
+  // Módulos antes ausentes da sidebar
+  '/rpps':                       { label: 'RPPS / IPAM',                icon: 'bank' },
+  '/diarias':                    { label: 'Diárias',                    icon: 'map-pin' },
+  '/acumulacao-cargos':          { label: 'Acumulação de Cargos',       icon: 'layers' },
+  '/transparencia':              { label: 'Transparência Pública',      icon: 'eye' },
+  '/pss':                        { label: 'PSS / Concurso',             icon: 'school' },
+  '/estagiarios':                { label: 'Estagiários',                icon: 'student' },
+  '/terceirizados':              { label: 'Terceirizados',              icon: 'briefcase' },
+  '/sagres-tce':                 { label: 'SAGRES / TCE-MA',            icon: 'chart' },
+  // Configurações antes ausentes
+  '/configuracao-sistema':       { label: 'Motor de Folha',             icon: 'cpu' },
+  '/parametros-financeiros':     { label: 'Parâmetros Financeiros',     icon: 'sliders' },
+  '/vinculos':                   { label: 'Vínculos',                   icon: 'link' },
+  '/turnos':                     { label: 'Turnos',                     icon: 'clock' },
+  '/feriados':                   { label: 'Feriados',                   icon: 'calendar' },
+  '/tabelas-auxiliares':         { label: 'Tabelas Auxiliares',         icon: 'table' },
+  '/eventos-folha':              { label: 'Eventos de Folha',           icon: 'list' },
+  '/oss':                        { label: 'Monitor OSS',                icon: 'activity' },
 }
 const currentRoute = computed(() => routeMap[route.path] || { label: 'Módulo', icon: 'mdi-circle' })
 
@@ -829,4 +1122,43 @@ const handleLogout = async () => {
   /* Avatar no topbar some em telas muito pequenas */
   .topbar-avatar { display: none; }
 }
+
+/* ── Busca na sidebar ───────────────────────────────────────────── */
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+.sidebar-search:focus-within {
+  border-color: rgba(99, 102, 241, 0.6);
+  background: rgba(255, 255, 255, 0.1);
+}
+.sidebar-search-ico { color: rgba(255,255,255,0.4); flex-shrink: 0; }
+.sidebar-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  font-family: inherit;
+}
+.sidebar-search-input::placeholder { color: rgba(255,255,255,0.35); }
+.sidebar-search-clear {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.sidebar-search-clear:hover { color: rgba(255,255,255,0.8); }
 </style>

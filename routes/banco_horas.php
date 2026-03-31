@@ -162,3 +162,75 @@ Route::get('/banco-horas/relatorio', function (Request $request) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+// BUG-EST-15: GET /banco-horas/equipe — visão consolidada da equipe para gestor
+Route::get('/banco-horas/equipe', function (Request $request) {
+    try {
+        $user = Auth::user();
+        $comp = $request->competencia ?? now()->format('Y-m');
+
+        $func = DB::table('FUNCIONARIO as f')
+            ->join('LOTACAO as l', function ($j) {
+                $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM');
+            })
+            ->where('f.USUARIO_ID', $user->USUARIO_ID)
+            ->select('f.FUNCIONARIO_ID', 'l.SETOR_ID')
+            ->first();
+
+        if (!$func) {
+            return response()->json(['membros' => [], 'aviso' => 'Setor não encontrado.']);
+        }
+
+        $membros = DB::table('FUNCIONARIO as f')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->join('LOTACAO as l', function ($j) {
+                $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM');
+            })
+            ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
+            ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
+            ->where('l.SETOR_ID', $func->SETOR_ID)
+            ->whereNull('f.FUNCIONARIO_DATA_FIM')
+            ->select('f.FUNCIONARIO_ID', 'p.PESSOA_NOME as nome', 'c.CARGO_NOME as cargo', 's.SETOR_NOME as setor', 'f.FUNCIONARIO_MATRICULA as matricula')
+            ->get();
+
+        $funcIds = $membros->pluck('FUNCIONARIO_ID');
+
+        $saldos = DB::table('BANCO_HORAS')
+            ->whereIn('FUNCIONARIO_ID', $funcIds)
+            ->groupBy('FUNCIONARIO_ID')
+            ->selectRaw('FUNCIONARIO_ID, SUM(COALESCE(HORAS_CREDITADAS,0)) as total_cred, SUM(COALESCE(HORAS_DEBITADAS,0)) as total_deb')
+            ->get()->keyBy('FUNCIONARIO_ID');
+
+        $compAtual = DB::table('BANCO_HORAS')
+            ->whereIn('FUNCIONARIO_ID', $funcIds)
+            ->where('COMPETENCIA', $comp)
+            ->groupBy('FUNCIONARIO_ID')
+            ->selectRaw('FUNCIONARIO_ID, SUM(COALESCE(HORAS_CREDITADAS,0)) as cred_mes, SUM(COALESCE(HORAS_DEBITADAS,0)) as deb_mes')
+            ->get()->keyBy('FUNCIONARIO_ID');
+
+        $resultado = $membros->map(function ($m) use ($saldos, $compAtual) {
+            $s = $saldos->get($m->FUNCIONARIO_ID);
+            $mc = $compAtual->get($m->FUNCIONARIO_ID);
+            return [
+                'funcionario_id' => $m->FUNCIONARIO_ID,
+                'nome' => $m->nome,
+                'cargo' => $m->cargo ?? '—',
+                'matricula' => $m->matricula,
+                'setor' => $m->setor,
+                'saldo_acumulado' => round(($s->total_cred ?? 0) - ($s->total_deb ?? 0), 2),
+                'cred_mes' => round($mc->cred_mes ?? 0, 2),
+                'deb_mes' => round($mc->deb_mes ?? 0, 2),
+                'saldo_mes' => round(($mc->cred_mes ?? 0) - ($mc->deb_mes ?? 0), 2),
+            ];
+        });
+
+        return response()->json([
+            'competencia' => $comp,
+            'setor' => $membros->first()?->setor,
+            'membros' => $resultado,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+

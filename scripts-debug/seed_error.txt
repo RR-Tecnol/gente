@@ -1,0 +1,3 @@
+??? FuncionariosPMSLzSeeder: 18 funcionários inseridos.
+Database seeding completed successfully.
+
