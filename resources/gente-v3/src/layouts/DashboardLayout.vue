@@ -140,7 +140,7 @@
           <button class="action-btn" title="Configurações" @click="$router.push('/configuracoes')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M10.3 21H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v5M12 12a3 3 0 100-6 3 3 0 000 6zM19.7 17l-1.4-1.4M21 19a2 2 0 11-4 0 2 2 0 014 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
-          <div class="topbar-avatar" :title="userName">{{ userInitials }}</div>
+          <div class="topbar-avatar" :title="userName" @click="$router.push('/meu-perfil')" style="cursor:pointer">{{ userInitials }}</div>
         </div>
       </header>
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // PORTAL DO GESTOR + PONTO CONFIG + HOLERITES + COMUNICADOS INTERNOS
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
@@ -15,15 +15,17 @@ Route::get('/gestor', function (\Illuminate\Http\Request $request) {
         // --- EQUIPE ---
         $equipe = [];
         try {
-            $query = \App\Models\Funcionario::query();
+            $query = \App\Models\Funcionario::query()
+                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'FUNCIONARIO.PESSOA_ID')
+                ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'FUNCIONARIO.CARGO_ID');
             if ($setor)
                 $query->where('FUNCIONARIO_SETOR', $setor);
             if ($unidade)
                 $query->where('FUNCIONARIO_UNIDADE', $unidade);
             $equipe = $query->take(25)->get()->map(fn($f) => [
                 'id' => $f->FUNCIONARIO_ID,
-                'nome' => trim(($f->FUNCIONARIO_NOME ?? '') . ' ' . ($f->FUNCIONARIO_SOBRENOME ?? '')),
-                'cargo' => $f->CARGO_NOME ?? $f->FUNCIONARIO_CARGO ?? '',
+                'nome' => $f->PESSOA_NOME ?? '—',
+                'cargo' => $f->CARGO_NOME ?? '—',
                 'turno' => $f->FUNCIONARIO_TURNO ?? null,
                 'presente' => false, // serÃ¡ cruzado via ponto
                 'ferias' => false,

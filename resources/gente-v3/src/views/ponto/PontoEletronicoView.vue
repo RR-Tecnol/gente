@@ -287,7 +287,7 @@ const baterPonto = async () => {
   const tipo = sequenciaTipos.value[proximaBatidaIdx.value] ?? 'saida'
   const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   try {
-    await api.post('/api/v3/ponto/registro', { data: hoje.toISOString().slice(0, 10), hora: hora + ':00', tipo })
+    await api.post('/api/v3/ponto/registro', { data: `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`, hora: hora + ':00', tipo })
     ultimaBatida.value = hora
     baterMsg.value = `✅ Batida registrada às ${hora}!`; baterMsgClass.value = 'ok'
     const idx = registros.value.findIndex(r => r.dia === hoje.getDate())

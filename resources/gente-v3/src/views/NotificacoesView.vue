@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="notif-page">
 
     <!-- HERO ─────────────────────────────────────────────────── -->

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="ben-page">
     <div class="hero" :class="{ loaded }">
       <div class="hero-shapes"><div class="hs hs1"></div><div class="hs hs2"></div></div>

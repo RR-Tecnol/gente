@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ORGANOGRAMA CRUD DE SETORES
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
@@ -40,6 +40,7 @@ Route::get('/organograma', function (\Illuminate\Http\Request $request) {
         $unidadesNomes = [];
         try {
             $unidades = \Illuminate\Support\Facades\DB::table('UNIDADE')
+                ->where('UNIDADE_ATIVA', 1)
                 ->orderBy('UNIDADE_NOME')
                 ->get(['UNIDADE_ID', 'UNIDADE_NOME', 'UNIDADE_SIGLA']);
             foreach ($unidades as $u) {
@@ -62,13 +63,31 @@ Route::get('/organograma', function (\Illuminate\Http\Request $request) {
         // Agrupar setores por UNIDADE_ID
         $grupos = $setores->groupBy('UNIDADE_ID');
         $unidadesList = [];
-        foreach ($grupos as $unidadeId => $setoresGrupo) {
-            $nomeUnidade = $unidadesNomes[$unidadeId]['nome']
-                ?? ($unidadeId ? 'Unidade ' . $unidadeId : 'Sem Diretoria');
+        foreach ($unidadesNomes as $unidadeId => $unidadeInfo) {
+            $setoresGrupo = $grupos->get($unidadeId, collect([]));
             $unidadesList[] = [
                 'id' => $unidadeId,
-                'nome' => $nomeUnidade,
-                'sigla' => $unidadesNomes[$unidadeId]['sigla'] ?? '',
+                'nome' => $unidadeInfo['nome'],
+                'sigla' => $unidadeInfo['sigla'] ?? '',
+                'setores' => $setoresGrupo->map(fn($s) => [
+                    'id' => $s->SETOR_ID,
+                    'nome' => $s->SETOR_NOME ?? '',
+                    'sigla' => $s->SETOR_SIGLA ?? null,
+                    'unidade_id' => $s->UNIDADE_ID,
+                    'responsavel' => $responsaveis[$s->SETOR_ID] ?? '',
+                    'total_funcionarios' => $contagens[$s->SETOR_ID] ?? 0,
+                    'funcionarios' => $funcionarios[$s->SETOR_ID] ?? [],
+                ])->values()->toArray(),
+            ];
+        }
+        
+        // Unidades que não estão no cadastro (orphan sectors)
+        $orphanGrupos = $grupos->except(array_keys($unidadesNomes));
+        foreach ($orphanGrupos as $unidadeId => $setoresGrupo) {
+             $unidadesList[] = [
+                'id' => $unidadeId,
+                'nome' => $unidadeId ? 'Unidade ' . $unidadeId : 'Sem Diretoria',
+                'sigla' => '',
                 'setores' => $setoresGrupo->map(fn($s) => [
                     'id' => $s->SETOR_ID,
                     'nome' => $s->SETOR_NOME ?? '',

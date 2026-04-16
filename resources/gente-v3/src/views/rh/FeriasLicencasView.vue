@@ -7,8 +7,8 @@
       <div class="hero-inner">
         <div>
           <span class="hero-eyebrow">??? Recursos Humanos</span>
-          <h1 class="hero-title">Férias e Afastamentos</h1>
-          <p class="hero-sub">Gerencie férias, licenças e afastamentos administrativos</p>
+          <h1 class="hero-title">Frias e Afastamentos</h1>
+          <p class="hero-sub">Gerencie frias, licenas e afastamentos administrativos</p>
         </div>
         <div class="hero-saldo-wrap">
           <div class="saldo-ring">
@@ -25,11 +25,11 @@
             </div>
           </div>
           <div class="saldo-info">
-            <span class="saldo-title">Férias Disponíveis</span>
+            <span class="saldo-title">Frias Disponveis</span>
             <div class="saldo-stats">
               <div><span class="ss-label">Adquiridos</span><span class="ss-val green">30d</span></div>
               <div><span class="ss-label">Gozados</span><span class="ss-val red">{{ 30 - saldo }}d</span></div>
-              <div><span class="ss-label">Próx. venc.</span><span class="ss-val yellow">{{ vencimento }}</span></div>
+              <div><span class="ss-label">Prx. venc.</span><span class="ss-val yellow">{{ vencimento }}</span></div>
             </div>
           </div>
         </div>
@@ -39,20 +39,20 @@
     <!-- TABS PRINCIPAIS -->
     <div class="tabs" :class="{ loaded }">
       <button class="tab-btn" :class="{ active: modulo === 'ferias' }" @click="modulo = 'ferias'">
-        ??? Férias
+        ??? Frias
         <span v-if="solicitacoes.length" class="tab-count">{{ solicitacoes.length }}</span>
       </button>
       <button class="tab-btn" :class="{ active: modulo === 'afastamentos' }" @click="modulo = 'afastamentos'">
-        ?? Afastamentos / Licenças
+        ?? Afastamentos / Licenas
         <span v-if="afastamentos.length" class="tab-count afast">{{ afastamentos.length }}</span>
       </button>
     </div>
 
     <!-- ----------------------------------------------------------
-         MÓDULO: FÉRIAS
+         MDULO: FRIAS
     ---------------------------------------------------------- -->
     <template v-if="modulo === 'ferias'">
-      <!-- Sub-abas de férias -->
+      <!-- Sub-abas de frias -->
       <div class="sub-tabs" :class="{ loaded }">
         <button v-for="t in tabsFerias" :key="t.id" class="stab-btn" :class="{ active: tabFerias === t.id }" @click="tabFerias = t.id">
           {{ t.ico }} {{ t.nome }}
@@ -60,13 +60,13 @@
         </button>
       </div>
 
-      <!-- TAB: AGENDAR FÉRIAS -->
+      <!-- TAB: AGENDAR FRIAS -->
       <div v-if="tabFerias === 'solicitar'" class="tab-content" :class="{ loaded }">
         <div class="form-panel">
-          <h2 class="panel-title">{{ editandoId ? 'Editar Agendamento' : 'Agendar Férias' }}</h2>
+          <h2 class="panel-title">{{ editandoId ? 'Editar Agendamento' : 'Agendar Frias' }}</h2>
           <div class="form-two-col">
             <div class="form-group">
-              <label>Data de Início <span class="req">*</span></label>
+              <label>Data de Incio <span class="req">*</span></label>
               <input v-model="form.FERIAS_DATA_INICIO" type="date" class="cfg-input" :min="hoje" />
             </div>
             <div class="form-group">
@@ -78,16 +78,16 @@
           <div v-if="duracaoDias > 0" class="duracao-preview">
             <strong>{{ duracaoDias }} dias</strong>
             <span class="dur-corridos">(corridos, incluindo fins de semana)</span>
-            <span v-if="duracaoDias > saldo" class="dur-warn">?? Excede o saldo disponível</span>
+            <span v-if="duracaoDias > saldo" class="dur-warn">?? Excede o saldo disponvel</span>
           </div>
 
-          <!-- BUG-EST-14: alerta de sobreposição de férias no setor -->
+          <!-- BUG-EST-14: alerta de sobreposio de frias no setor -->
           <div v-if="sobreposicao.membros?.length" class="overlap-warn">
             <span class="overlap-ico">??</span>
             <div class="overlap-info">
-              <strong>{{ sobreposicao.membros.length }} servidor(es) do seu setor também estarão de férias neste período</strong>
-              <span v-if="sobreposicao.pct >= 30" class="overlap-pct pct-danger"> — {{ sobreposicao.pct }}% do setor ausente</span>
-              <span v-else class="overlap-pct"> — {{ sobreposicao.pct }}% do setor</span>
+              <strong>{{ sobreposicao.membros.length }} servidor(es) do seu setor tambm estaro de frias neste perodo</strong>
+              <span v-if="sobreposicao.pct >= 30" class="overlap-pct pct-danger">  {{ sobreposicao.pct }}% do setor ausente</span>
+              <span v-else class="overlap-pct">  {{ sobreposicao.pct }}% do setor</span>
               <ul class="overlap-list">
                 <li v-for="m in sobreposicao.membros" :key="m.nome">
                   {{ m.nome }} ({{ formatDate(m.inicio) }} ? {{ formatDate(m.fim) }})
@@ -97,10 +97,10 @@
           </div>
 
           <details class="period-details">
-            <summary class="period-summary">Período Aquisitivo (opcional)</summary>
+            <summary class="period-summary">Perodo Aquisitivo (opcional)</summary>
             <div class="form-two-col" style="margin-top:12px">
               <div class="form-group">
-                <label>Ano de Início</label>
+                <label>Ano de Incio</label>
                 <input v-model="form.FERIAS_AQUISITIVO_INICIO" type="number" class="cfg-input" placeholder="2024" min="2000" max="2099" />
               </div>
               <div class="form-group">
@@ -110,7 +110,7 @@
             </div>
           </details>
 
-          <!-- Upload de documentos (Férias) -->
+          <!-- Upload de documentos (Frias) -->
           <div class="form-group">
             <label>Documento Anexo <span class="opt-label">(opcional)</span></label>
             <div class="upload-zone" :class="{ 'uz-has-file': arquivoFerias }" @click="$refs.inputFerias.click()" @dragover.prevent @drop.prevent="onDropFerias">
@@ -131,20 +131,20 @@
           <div v-if="okForm"   class="form-ok">{{ okForm }}</div>
 
           <div class="form-actions">
-            <button v-if="editandoId" class="cancel-link" @click="cancelarEdicao">Cancelar edição</button>
+            <button v-if="editandoId" class="cancel-link" @click="cancelarEdicao">Cancelar edio</button>
             <button class="submit-btn" :disabled="!formValido || enviando" @click="solicitar">
               <div v-if="enviando" class="btn-spinner"></div>
-              <template v-else>? {{ editandoId ? 'Salvar Alterações' : 'Confirmar Agendamento' }}</template>
+              <template v-else>? {{ editandoId ? 'Salvar Alteraes' : 'Confirmar Agendamento' }}</template>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- TAB: HISTÓRICO FÉRIAS -->
+      <!-- TAB: HISTRICO FRIAS -->
       <div v-if="tabFerias === 'historico'" class="tab-content" :class="{ loaded }">
         <div v-if="loading" class="state-box"><div class="spinner"></div><p>Carregando...</p></div>
         <div v-else-if="solicitacoes.length === 0" class="state-box">
-          <p>Nenhum período de férias registrado</p>
+          <p>Nenhum perodo de frias registrado</p>
           <button class="submit-btn" style="margin-top:8px;padding:10px 20px;font-size:13px" @click="tabFerias='solicitar'">Agendar agora</button>
         </div>
         <div v-else class="timeline">
@@ -152,15 +152,15 @@
             <div class="tl-dot" :class="dotClass(s)"></div>
             <div class="tl-card">
               <div class="tl-hdr">
-                <div class="tl-tipo">??? Férias</div>
+                <div class="tl-tipo">??? Frias</div>
                 <span class="tl-status" :class="dotClass(s)">{{ statusLabel(s) }}</span>
               </div>
               <div class="tl-periodo">
                 {{ formatDate(s.FERIAS_DATA_INICIO ?? s.inicio) }} ? {{ formatDate(s.FERIAS_DATA_FIM ?? s.fim) }}
-                &nbsp;·&nbsp;<strong>{{ diasPeriodo(s) }} dias</strong>
+                &nbsp;&nbsp;<strong>{{ diasPeriodo(s) }} dias</strong>
               </div>
               <div v-if="s.FERIAS_AQUISITIVO_INICIO" class="tl-aquisitivo">
-                Período aquisitivo: {{ s.FERIAS_AQUISITIVO_INICIO }}/{{ s.FERIAS_AQUISITIVO_FIM }}
+                Perodo aquisitivo: {{ s.FERIAS_AQUISITIVO_INICIO }}/{{ s.FERIAS_AQUISITIVO_FIM }}
               </div>
               <div class="tl-actions">
                 <button class="tl-btn tl-edit" @click="editarFerias(s)">?? Editar</button>
@@ -171,10 +171,10 @@
         </div>
       </div>
 
-      <!-- TAB: CALENDÁRIO -->
+      <!-- TAB: CALENDRIO -->
       <div v-if="tabFerias === 'calendario'" class="tab-content" :class="{ loaded }">
         <div class="cal-legend">
-          <span class="cal-leg-item"><span class="cal-leg-dot" style="background:#34d399"></span>Férias</span>
+          <span class="cal-leg-item"><span class="cal-leg-dot" style="background:#34d399"></span>Frias</span>
           <span class="cal-leg-item"><span class="cal-leg-dot" style="background:#f59e0b"></span>Hoje</span>
         </div>
         <div class="cal-grid">
@@ -190,36 +190,36 @@
         </div>
       </div>
 
-      <!-- TAB: PERÍODOS AQUISITIVOS -->
+      <!-- TAB: PERODOS AQUISITIVOS -->
       <div v-if="tabFerias === 'periodos'" class="tab-content" :class="{ loaded }">
-        <div v-if="loadingSaldo" class="state-box"><div class="spinner"></div><p>Calculando períodos...</p></div>
+        <div v-if="loadingSaldo" class="state-box"><div class="spinner"></div><p>Calculando perodos...</p></div>
         <template v-else-if="periodosAquis.length">
           <!-- Resumo -->
           <div class="pa-resumo">
             <div class="pa-res-item">
               <span class="pa-res-ico">??</span>
               <div>
-                <span class="pa-res-label">Saldo Total Disponível</span>
+                <span class="pa-res-label">Saldo Total Disponvel</span>
                 <span class="pa-res-val">{{ saldoTotal }} dias</span>
               </div>
             </div>
             <div class="pa-res-item">
               <span class="pa-res-ico">??</span>
               <div>
-                <span class="pa-res-label">Períodos com Saldo</span>
+                <span class="pa-res-label">Perodos com Saldo</span>
                 <span class="pa-res-val">{{ periodosAquis.filter(p => p.saldo_dias > 0).length }}</span>
               </div>
             </div>
             <div class="pa-res-item">
               <span class="pa-res-ico">??</span>
               <div>
-                <span class="pa-res-label">Períodos Vencidos</span>
+                <span class="pa-res-label">Perodos Vencidos</span>
                 <span class="pa-res-val" style="color:#ef4444">{{ periodosAquis.filter(p => p.vencido && p.saldo_dias > 0).length }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Cards por período -->
+          <!-- Cards por perodo -->
           <div class="pa-list">
             <div
               v-for="(p, i) in periodosAquis"
@@ -232,7 +232,7 @@
                   <span class="pa-periodo">{{ p.periodo }}</span>
                   <span v-if="p.vencido && p.saldo_dias > 0" class="pa-badge pa-badge-venc">?? Vencido</span>
                   <span v-else-if="p.saldo_dias === 0" class="pa-badge pa-badge-ok">? Gozado</span>
-                  <span v-else class="pa-badge pa-badge-disp">?? Disponível</span>
+                  <span v-else class="pa-badge pa-badge-disp">?? Disponvel</span>
                 </div>
                 <span class="pa-saldo-num">{{ p.saldo_dias }}<small>dias</small></span>
               </div>
@@ -252,14 +252,14 @@
           </div>
         </template>
         <div v-else class="state-box">
-          <p>Nenhum período aquisitivo concluído ainda</p>
-          <small style="color:#94a3b8">São necessários 12 meses de serviço para o primeiro período</small>
+          <p>Nenhum perodo aquisitivo concludo ainda</p>
+          <small style="color:#94a3b8">So necessrios 12 meses de servio para o primeiro perodo</small>
         </div>
       </div>
     </template>
 
     <!-- ----------------------------------------------------------
-         MÓDULO: AFASTAMENTOS / LICENÇAS
+         MDULO: AFASTAMENTOS / LICENAS
     ---------------------------------------------------------- -->
     <template v-if="modulo === 'afastamentos'">
       <div class="tabs" :class="{ loaded }">
@@ -271,7 +271,7 @@
       <!-- TAB: SOLICITAR AFASTAMENTO -->
       <div v-if="tabAfast === 'solicitar'" class="tab-content" :class="{ loaded }">
         <div class="form-panel">
-          <h2 class="panel-title">Solicitar Afastamento / Licença</h2>
+          <h2 class="panel-title">Solicitar Afastamento / Licena</h2>
 
           <div class="form-group">
             <label>Tipo de Afastamento <span class="req">*</span></label>
@@ -295,7 +295,7 @@
 
           <div class="form-two-col">
             <div class="form-group">
-              <label>Data de Início <span class="req">*</span></label>
+              <label>Data de Incio <span class="req">*</span></label>
               <input v-model="formAfast.inicio" type="date" class="cfg-input" />
             </div>
             <div class="form-group">
@@ -305,15 +305,15 @@
           </div>
 
           <div class="form-group">
-            <label>Justificativa / Observações</label>
-            <textarea v-model="formAfast.obs" class="cfg-input cfg-ta" rows="3" placeholder="Descreva os motivos ou informações adicionais..."></textarea>
+            <label>Justificativa / Observaes</label>
+            <textarea v-model="formAfast.obs" class="cfg-input cfg-ta" rows="3" placeholder="Descreva os motivos ou informaes adicionais..."></textarea>
           </div>
 
           <!-- Upload de documentos (Afastamento) -->
           <div class="form-group">
             <label>
-              Documento Comprobatório
-              <span v-if="tipoSelecionado" class="opt-label"> — {{ docExigido }}</span>
+              Documento Comprobatrio
+              <span v-if="tipoSelecionado" class="opt-label">  {{ docExigido }}</span>
             </label>
             <div class="upload-zone" :class="{ 'uz-has-file': arquivoAfast, 'uz-afast': true }" @click="$refs.inputAfast.click()" @dragover.prevent @drop.prevent="onDropAfast">
               <input ref="inputAfast" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display:none" @change="onArquivoAfast" />
@@ -335,13 +335,13 @@
           <div class="form-actions">
             <button class="submit-btn afast-btn" :disabled="!formAfastValido || enviandoAfast" @click="solicitarAfast">
               <div v-if="enviandoAfast" class="btn-spinner"></div>
-              <template v-else>?? Enviar Solicitação</template>
+              <template v-else>?? Enviar Solicitao</template>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- TAB: HISTÓRICO AFASTAMENTOS -->
+      <!-- TAB: HISTRICO AFASTAMENTOS -->
       <div v-if="tabAfast === 'historico'" class="tab-content" :class="{ loaded }">
         <div v-if="loadingAfast" class="state-box"><div class="spinner spinner-afast"></div><p>Carregando...</p></div>
         <div v-else-if="afastamentos.length === 0" class="state-box">
@@ -358,7 +358,7 @@
               </div>
               <div class="tl-periodo">
                 {{ formatDate(a.inicio) }}
-                <template v-if="a.fim"> ? {{ formatDate(a.fim) }} &nbsp;·&nbsp; <strong>{{ diasAfastamento(a) }} dias</strong></template>
+                <template v-if="a.fim"> ? {{ formatDate(a.fim) }} &nbsp;&nbsp; <strong>{{ diasAfastamento(a) }} dias</strong></template>
               </div>
               <div class="tl-chip-folha" v-if="tipoAfastFolha(a.tipo)">
                 <span class="mini-chip">{{ tipoAfastFolha(a.tipo) }}</span>
@@ -383,23 +383,23 @@ const loading  = ref(true)
 const modulo   = ref('ferias')
 const hoje     = new Date().toISOString().slice(0, 10)
 
-// -- FÉRIAS ----------------------------------------------------
+// -- FRIAS ----------------------------------------------------
 const tabFerias     = ref('solicitar')
 const enviando      = ref(false)
 const saldo         = ref(0)
-const vencimento    = ref('—')
+const vencimento    = ref('')
 const solicitacoes  = ref([])
 const editandoId    = ref(null)
 const erroForm      = ref('')
 const okForm        = ref('')
-// Períodos aquisitivos reais
+// Perodos aquisitivos reais
 const periodosAquis = ref([])
 const saldoTotal    = ref(0)
 const loadingSaldo  = ref(false)
 const arquivoFerias  = ref(null)
 const onArquivoFerias = (e) => { arquivoFerias.value = e.target.files[0] ?? null }
 const onDropFerias    = (e) => { arquivoFerias.value = e.dataTransfer.files[0] ?? null }
-// BUG-EST-14: sobreposição de férias
+// BUG-EST-14: sobreposio de frias
 const sobreposicao = ref({ membros: [], pct: 0 })
 let sobreposicaoTimer = null
 
@@ -409,7 +409,7 @@ const form = reactive({
   FERIAS_AQUISITIVO_INICIO: '', FERIAS_AQUISITIVO_FIM: '',
 })
 
-// BUG-EST-14: verificar sobreposição ao mudar datas
+// BUG-EST-14: verificar sobreposio ao mudar datas
 watch(() => [form.FERIAS_DATA_INICIO, form.FERIAS_DATA_FIM], ([ini, fim]) => {
   clearTimeout(sobreposicaoTimer)
   if (!ini || !fim) { sobreposicao.value = { membros: [], pct: 0 }; return }
@@ -423,9 +423,9 @@ watch(() => [form.FERIAS_DATA_INICIO, form.FERIAS_DATA_FIM], ([ini, fim]) => {
 
 const tabsFerias = computed(() => [
   { id: 'solicitar',  ico: '??', nome: editandoId.value ? 'Editar' : 'Agendar' },
-  { id: 'historico',  ico: '??', nome: 'Histórico', count: solicitacoes.value.length || null },
-  { id: 'calendario', ico: '??',  nome: 'Calendário' },
-  { id: 'periodos',   ico: '??', nome: 'Períodos Aquisitivos' },
+  { id: 'historico',  ico: '??', nome: 'Histrico', count: solicitacoes.value.length || null },
+  { id: 'calendario', ico: '??',  nome: 'Calendrio' },
+  { id: 'periodos',   ico: '??', nome: 'Perodos Aquisitivos' },
 ])
 
 const duracaoDias = computed(() => {
@@ -452,7 +452,7 @@ const fetchFerias = async () => {
     const { data } = await api.get('/api/v3/ferias')
     solicitacoes.value = data.ferias ?? data.solicitacoes ?? []
     saldo.value        = data.saldo  ?? 0
-    vencimento.value   = data.vencimento ?? '—'
+    vencimento.value   = data.vencimento ?? ''
   } catch { solicitacoes.value = [] }
   finally { loading.value = false }
 }
@@ -460,7 +460,7 @@ const fetchFerias = async () => {
 const fetchSaldoFerias = async () => {
   loadingSaldo.value = true
   try {
-    // Tenta identificar o funcionario_id do usuário logado
+    // Tenta identificar o funcionario_id do usurio logado
     const user = JSON.parse(localStorage.getItem('gente_user') || '{}')
     const funcId = user?.FUNCIONARIO_ID ?? user?.funcionario_id
     if (!funcId) return
@@ -485,12 +485,12 @@ const solicitar = async () => {
   try {
     if (editandoId.value) {
       await api.put(`/api/v3/ferias/${editandoId.value}`, payload)
-      okForm.value = 'Férias atualizadas!'
+      okForm.value = 'Frias atualizadas!'
       const idx = solicitacoes.value.findIndex(s => (s.FERIAS_ID ?? s.id) === editandoId.value)
       if (idx >= 0) solicitacoes.value[idx] = { ...solicitacoes.value[idx], ...payload }
     } else {
       const { data } = await api.post('/api/v3/ferias', payload)
-      okForm.value = 'Férias agendadas com sucesso!'
+      okForm.value = 'Frias agendadas com sucesso!'
       solicitacoes.value.unshift({ FERIAS_ID: data.ferias_id, ...payload })
       // Upload do anexo se houver
       if (arquivoFerias.value && data.ferias_id) {
@@ -522,14 +522,14 @@ const resetForm = () => {
 }
 const cancelarFerias = async (s) => {
   const id = s.FERIAS_ID ?? s.id
-  if (!confirm('Cancelar este período de férias?')) return
+  if (!confirm('Cancelar este perodo de frias?')) return
   try {
     if (id && !String(id).startsWith('mock')) await api.delete(`/api/v3/ferias/${id}`)
     solicitacoes.value = solicitacoes.value.filter(f => (f.FERIAS_ID ?? f.id) !== id)
   } catch (e) { alert(e.response?.data?.erro || 'Erro ao cancelar.') }
 }
 
-// -- AFASTAMENTOS / LICENÇAS -----------------------------------
+// -- AFASTAMENTOS / LICENAS -----------------------------------
 const tabAfast       = ref('solicitar')
 const enviandoAfast  = ref(false)
 const loadingAfast   = ref(true)
@@ -542,51 +542,51 @@ const formAfast = reactive({ tipo: '', tipo_nome: '', inicio: '', fim: '', obs: 
 const tiposAfastamento = [
   {
     val: 'licenca_premio',
-    ico: '??', nome: 'Licença Prêmio',
+    ico: '??', nome: 'Licena Prmio',
     cor: '#f59e0b',
-    folha: 'Sem impacto na remuneração',
-    impacto: 'Direito adquirido após 5 anos de efetivo exercício. Pode ser convertida em pecúnia conforme legislação municipal.',
+    folha: 'Sem impacto na remunerao',
+    impacto: 'Direito adquirido aps 5 anos de efetivo exerccio. Pode ser convertida em pecnia conforme legislao municipal.',
   },
   {
     val: 'fins_particulares',
     ico: '??', nome: 'Afastamento para Fins Particulares',
     cor: '#6366f1',
-    folha: 'Desconto proporcional ou sem remuneração',
-    impacto: 'Afastamento sem vínculo de saúde ou interesse público. Impacta na folha com desconto integral dos dias afastados.',
+    folha: 'Desconto proporcional ou sem remunerao',
+    impacto: 'Afastamento sem vnculo de sade ou interesse pblico. Impacta na folha com desconto integral dos dias afastados.',
   },
   {
     val: 'licenca_maternidade',
-    ico: '??', nome: 'Licença Maternidade',
+    ico: '??', nome: 'Licena Maternidade',
     cor: '#ec4899',
-    folha: 'Remuneração mantida (reembolso previdenciário)',
-    impacto: 'Duração de 120 a 180 dias conforme política municipal. INSS/RPPS reembolsa a entidade.',
+    folha: 'Remunerao mantida (reembolso previdencirio)',
+    impacto: 'Durao de 120 a 180 dias conforme poltica municipal. INSS/RPPS reembolsa a entidade.',
   },
   {
     val: 'licenca_paternidade',
-    ico: '?????', nome: 'Licença Paternidade',
+    ico: '?????', nome: 'Licena Paternidade',
     cor: '#3b82f6',
-    folha: 'Remuneração mantida (sem desconto)',
-    impacto: 'Mínimo de 5 dias, podendo ser estendida por programas como Empresa Cidadã. Sem impacto negativo na folha.',
+    folha: 'Remunerao mantida (sem desconto)',
+    impacto: 'Mnimo de 5 dias, podendo ser estendida por programas como Empresa Cidad. Sem impacto negativo na folha.',
   },
   {
     val: 'licenca_capacitacao',
-    ico: '??', nome: 'Licença p/ Capacitação / Estudo',
+    ico: '??', nome: 'Licena p/ Capacitao / Estudo',
     cor: '#10b981',
-    folha: 'Variável (conforme convenção ou lei)',
-    impacto: 'Afastamento para cursos de pós-graduação ou aprimoramento profissional de interesse da administração.',
+    folha: 'Varivel (conforme conveno ou lei)',
+    impacto: 'Afastamento para cursos de ps-graduao ou aprimoramento profissional de interesse da administrao.',
   },
   {
     val: 'licenca_judicial',
-    ico: '??', nome: 'Afastamento por Decisão Judicial',
+    ico: '??', nome: 'Afastamento por Deciso Judicial',
     cor: '#94a3b8',
-    folha: 'Conforme determinação judicial',
-    impacto: 'Gerado por mandado judicial. O tratamento na folha depende da natureza da decisão.',
+    folha: 'Conforme determinao judicial',
+    impacto: 'Gerado por mandado judicial. O tratamento na folha depende da natureza da deciso.',
   },
 ]
 
 const tabsAfast = [
   { id: 'solicitar', ico: '??', nome: 'Solicitar' },
-  { id: 'historico', ico: '??', nome: 'Histórico' },
+  { id: 'historico', ico: '??', nome: 'Histrico' },
 ]
 
 const tipoSelecionado = computed(() => tiposAfastamento.find(t => t.val === formAfast.tipo) ?? null)
@@ -598,20 +598,20 @@ const onArquivoAfast = (e) => { arquivoAfast.value = e.target.files[0] ?? null }
 const onDropAfast    = (e) => { arquivoAfast.value = e.dataTransfer.files[0] ?? null }
 
 const docExigidoMap = {
-  licenca_premio:       'Requerimento assinado + comprovante de tempo de serviço',
-  fins_particulares:    'Requerimento com justificativa (formulário RH)',
-  licenca_maternidade:  'Certidão de nascimento ou declaração hospitalar',
-  licenca_paternidade:  'Certidão de nascimento',
-  licenca_capacitacao:  'Comprovante de matrícula / aceite do curso',
-  licenca_judicial:     'Cópia do mandado judicial',
+  licenca_premio:       'Requerimento assinado + comprovante de tempo de servio',
+  fins_particulares:    'Requerimento com justificativa (formulrio RH)',
+  licenca_maternidade:  'Certido de nascimento ou declarao hospitalar',
+  licenca_paternidade:  'Certido de nascimento',
+  licenca_capacitacao:  'Comprovante de matrcula / aceite do curso',
+  licenca_judicial:     'Cpia do mandado judicial',
 }
-const docExigido = computed(() => docExigidoMap[formAfast.tipo] ?? 'Documento comprobatório (opcional)')
+const docExigido = computed(() => docExigidoMap[formAfast.tipo] ?? 'Documento comprobatrio (opcional)')
 
 const fetchAfastamentos = async () => {
   loadingAfast.value = true
   try {
     const { data } = await api.get('/api/v3/afastamentos')
-    // Filtra apenas os tipos administrativos (exclui atestados médicos)
+    // Filtra apenas os tipos administrativos (exclui atestados mdicos)
     const tiposAdmin = tiposAfastamento.map(t => t.val)
     afastamentos.value = (data.afastamentos ?? []).filter(a => {
       const tipo = (a.AFASTAMENTO_TIPO ?? a.tipo ?? '').toLowerCase().replace(/\s+/g, '_')
@@ -631,12 +631,12 @@ const solicitarAfast = async () => {
       fim:    formAfast.fim || null,
       obs:    formAfast.obs || null,
     })
-    okAfast.value = `? Solicitação registrada! Protocolo: ${data.protocolo ?? data.id ?? '—'}`
+    okAfast.value = `? Solicitao registrada! Protocolo: ${data.protocolo ?? data.id ?? ''}`
     afastamentos.value.unshift({
       id: data.id, tipo: formAfast.tipo, tipo_nome: tipoSelecionado.value?.nome,
       inicio: formAfast.inicio, fim: formAfast.fim, obs: formAfast.obs, status: 'Pendente',
     })
-    // Upload do documento comprobatório se houver
+    // Upload do documento comprobatrio se houver
     if (arquivoAfast.value && data.id) {
       const fd = new FormData()
       fd.append('arquivo', arquivoAfast.value)
@@ -646,11 +646,11 @@ const solicitarAfast = async () => {
     }
     Object.assign(formAfast, { tipo: '', tipo_nome: '', inicio: '', fim: '', obs: '' })
     setTimeout(() => { tabAfast.value = 'historico'; okAfast.value = '' }, 1500)
-  } catch (e) { erroAfast.value = e.response?.data?.erro || 'Erro ao registrar a solicitação.' }
+  } catch (e) { erroAfast.value = e.response?.data?.erro || 'Erro ao registrar a solicitao.' }
   finally { enviandoAfast.value = false }
 }
 
-// -- Calendário Férias -----------------------------------------
+// -- Calendrio Frias -----------------------------------------
 const mesesCalendario = computed(() => {
   const meses = [], agora = new Date(), hojeStr = hoje
   for (let m = 0; m < 6; m++) {
@@ -675,7 +675,7 @@ const mesesCalendario = computed(() => {
 
 // -- Helpers ---------------------------------------------------
 const formatDate = (d) => {
-  if (!d) return '—'
+  if (!d) return ''
   try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' }) }
   catch { return d }
 }
@@ -794,7 +794,7 @@ const tipoAfastFolha = (val) => tiposAfastamento.find(t => t.val === val)?.folha
 .btn-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* HISTÓRICO / TIMELINE */
+/* HISTRICO / TIMELINE */
 .state-box { display: flex; flex-direction: column; align-items: center; padding: 60px; color: #94a3b8; gap: 12px; }
 .state-box p { font-size: 14px; margin: 0; }
 .spinner { width: 38px; height: 38px; border: 3px solid #e2e8f0; border-top-color: #10b981; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -839,7 +839,7 @@ const tipoAfastFolha = (val) => tiposAfastamento.find(t => t.val === val)?.folha
 .uz-remove { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 3px 8px; font-size: 11px; color: #dc2626; cursor: pointer; font-weight: 700; flex-shrink: 0; }
 .uz-remove:hover { background: #fee2e2; }
 
-/* CALENDÁRIO */
+/* CALENDRIO */
 .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
 .cal-leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #475569; }
 .cal-leg-dot { width: 10px; height: 10px; border-radius: 3px; }
@@ -854,7 +854,7 @@ const tipoAfastFolha = (val) => tiposAfastamento.find(t => t.val === val)?.folha
 
 @media (max-width: 700px) { .form-two-col { grid-template-columns: 1fr; } }
 
-/* PERÍODOS AQUISITIVOS */
+/* PERODOS AQUISITIVOS */
 .pa-resumo { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
 .pa-res-item { flex: 1; min-width: 150px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 12px; }
 .pa-res-ico { font-size: 24px; }

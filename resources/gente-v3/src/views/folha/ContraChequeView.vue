@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="holerites-page">
 
     <!-- ═══ HERO BANNER — RESUMO ANUAL ══════════════════════════════ -->
@@ -213,7 +213,8 @@ const formatCompetencia = (comp) => {
 const baixarHolerite = (funcionarioId, competencia, holerite) => {
   // Usa o ID do cálculo para a rota nova
   const calculoId = holerite?.calculo_id ?? holerite?.id ?? funcionarioId
-  window.open(`/api/v3/meus-holerites/${calculoId}/pdf`, '_blank')
+  const comp = competencia?.replace('-', '/') ?? competencia
+  window.open(`/api/v3/contra-cheque/${funcionarioId}/${comp}/pdf`, '_blank')
 }
 </script>
 

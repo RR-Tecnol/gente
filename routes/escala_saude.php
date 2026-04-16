@@ -202,3 +202,23 @@ Route::get('/escala-saude/cobertura/{setor_id}/{data}', function (int $setorId, 
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+Route::post('/escalas', function (\Illuminate\Http\Request $request) {
+    $id = DB::table('ESCALA')->insertGetId([
+        'SETOR_ID'           => $request->setor_id,
+        'ESCALA_COMPETENCIA' => $request->competencia,
+        'ESCALA_SITUACAO'    => 'rascunho',
+        'created_at'         => now(),
+        'updated_at'         => now(),
+    ]);
+    return response()->json(['ok' => true, 'ESCALA_ID' => $id], 201);
+});
+
+Route::get('/setores', function () {
+    $setores = DB::table('SETOR')
+        ->where('SETOR_ATIVO', 1)
+        ->orderBy('SETOR_NOME')
+        ->select('SETOR_ID as id', 'SETOR_NOME as nome')
+        ->get();
+    return response()->json(['setores' => $setores]);
+});

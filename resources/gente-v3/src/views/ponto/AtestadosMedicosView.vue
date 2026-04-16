@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="at-page">
     <div class="hero" :class="{ loaded }">
       <div class="hero-shapes"><div class="hs hs1"></div></div>

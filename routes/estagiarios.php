@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-Route::middleware(['auth'])->prefix('api/v3')->group(function () {
+
 
     // Listagem de contratos
     Route::get('/estagiarios', function (Request $req) {
@@ -106,4 +106,4 @@ Route::middleware(['auth'])->prefix('api/v3')->group(function () {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
     });
-});
+

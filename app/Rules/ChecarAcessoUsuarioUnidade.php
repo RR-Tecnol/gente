@@ -30,7 +30,6 @@ class ChecarAcessoUsuarioUnidade implements Rule
         $usuario = $usuarioLogado->whereHas('usuarioUnidades.unidade', function ($query) use ($value) {
             $query->where('UNIDADE_ID', $value);
         })->first();
-        dd($usuario);
         return $usuario;
     }
 

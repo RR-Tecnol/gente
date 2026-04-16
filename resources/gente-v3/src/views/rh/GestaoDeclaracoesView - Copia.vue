@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="gd-page">
     <!-- HERO -->
     <div class="hero" :class="{ loaded }">

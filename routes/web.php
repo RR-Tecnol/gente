@@ -4,6 +4,78 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+// Controllers legados — importados automaticamente (fix_controllers_use.php)
+use App\Http\Controllers\AfastamentoController;
+use App\Http\Controllers\AnexoAfastamentoController;
+use App\Http\Controllers\AnexoFeriasController;
+use App\Http\Controllers\AplicacaoController;
+use App\Http\Controllers\AtribuicaoConfigController;
+use App\Http\Controllers\AtribuicaoController;
+use App\Http\Controllers\AtribuicaoLotacaoController;
+use App\Http\Controllers\AtribuicaoLotacaoEventoController;
+use App\Http\Controllers\BairroController;
+use App\Http\Controllers\BancoController;
+use App\Http\Controllers\CargoController;
+use App\Http\Controllers\CepController;
+use App\Http\Controllers\CidadeController;
+use App\Http\Controllers\ComentarioController;
+use App\Http\Controllers\ConselhoController;
+use App\Http\Controllers\ContatoController;
+use App\Http\Controllers\DependenteController;
+use App\Http\Controllers\DetalheEscalaAutorizaController;
+use App\Http\Controllers\DetalheEscalaController;
+use App\Http\Controllers\DetalheEscalaItemController;
+use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\DossieController;
+use App\Http\Controllers\EscalaController;
+use App\Http\Controllers\EventoController;
+use App\Http\Controllers\EventoVinculoController;
+use App\Http\Controllers\FaltaAtrasoController;
+use App\Http\Controllers\FeriadoController;
+use App\Http\Controllers\FeriasAfastamentoController;
+use App\Http\Controllers\FeriasController;
+use App\Http\Controllers\FimLotacaoController;
+use App\Http\Controllers\FolhaController;
+use App\Http\Controllers\FuncaoController;
+use App\Http\Controllers\FuncionarioController;
+use App\Http\Controllers\HistoricoEscalaController;
+use App\Http\Controllers\HistoricoEventoController;
+use App\Http\Controllers\HistoricoParametroController;
+use App\Http\Controllers\LotacaoController;
+use App\Http\Controllers\LotacaoEventoController;
+use App\Http\Controllers\OcupacaoController;
+use App\Http\Controllers\ParametroFinanceiroController;
+use App\Http\Controllers\PerfilController;
+use App\Http\Controllers\PessoaBancoController;
+use App\Http\Controllers\PessoaConselhoController;
+use App\Http\Controllers\PessoaController;
+use App\Http\Controllers\PessoaOcupacaoController;
+use App\Http\Controllers\PessoaProfissaoController;
+use App\Http\Controllers\PreCadastroController;
+use App\Http\Controllers\ProgramaController;
+use App\Http\Controllers\RelatorioController;
+use App\Http\Controllers\ScriptController;
+use App\Http\Controllers\SetorAtribuicaoController;
+use App\Http\Controllers\SetorController;
+use App\Http\Controllers\SubstituicaoEscalaController;
+use App\Http\Controllers\TabelaGenericaController;
+use App\Http\Controllers\TabelaImpostoController;
+use App\Http\Controllers\TermoController;
+use App\Http\Controllers\TermoUsuarioController;
+use App\Http\Controllers\TipoAlertaController;
+use App\Http\Controllers\TipoDocumentoController;
+use App\Http\Controllers\TributacaoController;
+use App\Http\Controllers\TurnoController;
+use App\Http\Controllers\UnidadeController;
+use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\UsuarioPerfilController;
+use App\Http\Controllers\UsuarioSetorController;
+use App\Http\Controllers\UsuarioUnidadeController;
+use App\Http\Controllers\UfController;
+use App\Http\Controllers\VigenciaImpostoController;
+use App\Http\Controllers\VinculoController;
+
+
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Os controllers legados do Vue 2 foram removidos em Mar/2026.
 // Todas as funcionalidades estÃ£o agora no gente-v3 (Vue 3 SPA)
@@ -844,6 +916,17 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     require __DIR__ . '/rais.php'; // GAP-RAS — RAIS MTE
     require __DIR__ . '/siconfi.php'; // GAP-SIC — SICONFI STN/LRF
     require __DIR__ . '/ponto_terceirizado.php'; // GAP-PONT — Ponto Terceirizados
+    require __DIR__ . '/progressao_funcional.php'; // Progressão Funcional
+    require __DIR__ . '/afastamentos_v3.php';       // Afastamentos/Licenças
+    require __DIR__ . '/escala_trabalho.php';       // Escala de Trabalho
+    require __DIR__ . '/autocadastro_admin.php';    // Autocadastro Gestão
+    require __DIR__ . '/avaliacao_desempenho.php'; // Avaliação de Desempenho
+    require __DIR__ . '/orcamento.php';          // ERP-1 — Orçamento Público
+    require __DIR__ . '/execucao_despesa.php';   // ERP-2 — Execução da Despesa
+    require __DIR__ . '/contabilidade.php';      // ERP-3 — Contabilidade PCASP
+    require __DIR__ . '/tesouraria.php';         // ERP-4 — Tesouraria
+    require __DIR__ . '/receita_municipal.php';  // ERP-5 — Receita Municipal
+    require __DIR__ . '/controle_externo.php';   // ERP-6 — Controle Externo SAGRES/SICONFI
 
     // GAP-OSS — Monitor OSS (admin-only, mock PoC)
     Route::middleware('perfil:ADMIN')->group(function () {
@@ -4354,7 +4437,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
             $rows = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO')
                 ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->whereBetween(\Illuminate\Support\Facades\DB::raw("DATE(REGISTRO_DATA_HORA)"), [$inicio, $fim])
+                ->whereBetween(\Illuminate\Support\Facades\DB::raw("CAST(REGISTRO_DATA_HORA AS DATE)"), [$inicio, $fim])
                 ->orderBy('REGISTRO_DATA_HORA')
                 ->get();
 
@@ -4752,187 +4835,6 @@ HTML;
             return response()->json(['erro' => $e->getMessage()], 500);
         }
     });
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // AVALIAÃ‡ÃƒO DE DESEMPENHO  /api/v3/avaliacoes
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    // GET  â€” histÃ³rico de avaliaÃ§Ãµes (do servidor logado OU de um funcionÃ¡rio especÃ­fico quando gestor avalia)
-    Route::get('/avaliacoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $usuario = session('usuario');
-            // Gestor pode consultar avaliaÃ§Ãµes de um servidor especÃ­fico passando ?funcionario_id=X
-            $funcId = $request->query('funcionario_id')
-                ?? $usuario['FUNCIONARIO_ID']
-                ?? $usuario['id']
-                ?? null;
-
-            if (!$funcId) {
-                return response()->json(['fallback' => true, 'avaliacoes' => []]);
-            }
-
-            $avaliacoes = \Illuminate\Support\Facades\DB::table('AVALIACAO_DESEMPENHO as AD')
-                ->leftJoin('USUARIO as U', 'U.USUARIO_ID', '=', 'AD.AVALIADOR_ID')
-                ->where('AD.FUNCIONARIO_ID', $funcId)
-                ->orderByDesc('AD.created_at')
-                ->select(
-                    'AD.AVALIACAO_ID',
-                    'AD.AVALIACAO_CICLO as ciclo',
-                    'AD.AVALIACAO_NOTA_FINAL as nota',
-                    'AD.AVALIACAO_STATUS as status',
-                    'U.USUARIO_NOME as avaliador',
-                    'AD.created_at'
-                )
-                ->get();
-
-            // Para cada avaliaÃ§Ã£o, busca os critÃ©rios
-            $result = $avaliacoes->map(function ($av) {
-                $criterios = \Illuminate\Support\Facades\DB::table('AVALIACAO_CRITERIO')
-                    ->where('AVALIACAO_ID', $av->AVALIACAO_ID)
-                    ->select('CRITERIO_NOME as nome', 'CRITERIO_PESO as peso', 'CRITERIO_NOTA as nota', 'CRITERIO_OBS as obs')
-                    ->get();
-                return [
-                    'ciclo' => $av->ciclo,
-                    'nota' => (float) $av->nota,
-                    'status' => $av->status,
-                    'avaliador' => $av->avaliador ?? 'Gestor',
-                    'criterios' => $criterios,
-                ];
-            });
-
-            return response()->json(['fallback' => false, 'avaliacoes' => $result]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'avaliacoes' => [], 'debug' => $e->getMessage()]);
-        }
-    });
-
-    // POST â€” salvar nova avaliaÃ§Ã£o (gestor avalia servidor)
-    Route::post('/avaliacoes', function (\Illuminate\Http\Request $request) {
-        try {
-            $usuario = session('usuario');
-            $avaliadorId = $usuario['USUARIO_ID'] ?? $usuario['id'] ?? null;
-
-            // funcionario_id: gestor passa explicitamente; servidor logado usa o prÃ³prio ID
-            $funcId = $request->input('funcionario_id')
-                ?? $usuario['FUNCIONARIO_ID']
-                ?? $usuario['id']
-                ?? null;
-
-            $ciclo = $request->input('ciclo', date('Y') . '.1');
-            $criterios = $request->input('criterios', []);
-
-            if (!$funcId || empty($criterios)) {
-                return response()->json(['erro' => 'funcionario_id e criterios sÃ£o obrigatÃ³rios.'], 422);
-            }
-
-            // Calcula nota final ponderada
-            $notaFinal = 0;
-            $pesosTotal = 0;
-            foreach ($criterios as $c) {
-                $peso = (int) ($c['peso'] ?? 20);
-                $nota = (int) ($c['nota'] ?? 0);
-                $notaFinal += $nota * $peso;
-                $pesosTotal += $peso;
-            }
-            $notaFinal = $pesosTotal > 0 ? round($notaFinal / $pesosTotal, 1) : 0;
-
-            // Insere cabeÃ§alho da avaliaÃ§Ã£o
-            $avaliacaoId = \Illuminate\Support\Facades\DB::table('AVALIACAO_DESEMPENHO')->insertGetId([
-                'FUNCIONARIO_ID' => $funcId,
-                'AVALIACAO_CICLO' => $ciclo,
-                'AVALIACAO_NOTA_FINAL' => $notaFinal,
-                'AVALIACAO_STATUS' => 'enviada',
-                'AVALIADOR_ID' => $avaliadorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Insere cada critÃ©rio
-            foreach ($criterios as $c) {
-                \Illuminate\Support\Facades\DB::table('AVALIACAO_CRITERIO')->insert([
-                    'AVALIACAO_ID' => $avaliacaoId,
-                    'CRITERIO_NOME' => $c['nome'] ?? 'â€”',
-                    'CRITERIO_PESO' => (int) ($c['peso'] ?? 20),
-                    'CRITERIO_NOTA' => (int) ($c['nota'] ?? 0),
-                    'CRITERIO_OBS' => $c['obs'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            return response()->json([
-                'ok' => true,
-                'avaliacao_id' => $avaliacaoId,
-                'nota_final' => $notaFinal,
-                'ciclo' => $ciclo,
-            ], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
-
-    // â”€â”€ MÃ³dulo de ExoneraÃ§Ã£o e Verbas RescisÃ³rias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/exoneracao.php';
-
-    // â”€â”€ Hora Extra, PlantÃ£o Extra e Folha por Secretaria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/hora_extra.php';
-
-    // â”€â”€ Verbas IndenizatÃ³rias Mensais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/verba_indenizatoria.php';
-
-    // â”€â”€ ConsignaÃ§Ãµes em Folha â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/consignacao.php';
-
-    // â”€â”€ eSocial â€” Painel de Eventos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/esocial.php';
-
-    // â”€â”€ RPPS / IPAM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/rpps.php';
-
-    // â”€â”€ DiÃ¡rias e MissÃµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/diarias.php';
-
-    // â”€â”€ EstagiÃ¡rios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/estagiarios.php';
-
-    // â”€â”€ AcumulaÃ§Ã£o de Cargos (LAT-01 / GAP-09) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/acumulacao.php';
-
-    // â”€â”€ TransparÃªncia PÃºblica (LAT-02 / GAP-10) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/transparencia.php';
-
-    // â”€â”€ PSS / Concursos (LAT-03 / GAP-11) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/pss.php';
-
-    // â”€â”€ Terceirizados (LAT-04 / GAP-12) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/terceirizados.php';
-
-    // â”€â”€ SAGRES / TCE-MA (LAT-05 / GAP-13) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/sagres.php';
-
-    // â”€â”€ Banco de Horas (GAP-05) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/banco_horas.php';
-
-    // â”€â”€ Atestados MÃ©dicos (GAP-06) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/atestados.php';
-
-    // â”€â”€ ERP / Fiscal â€” OrÃ§amento PÃºblico (ERP-1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/orcamento.php';
-
-    // â”€â”€ ERP / Fiscal â€” ExecuÃ§Ã£o da Despesa (ERP-2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/execucao_despesa.php';
-
-    // â”€â”€ ERP / Fiscal â€” Contabilidade PÃºblica PCASP (ERP-3) â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/contabilidade.php';
-
-    // â”€â”€ ERP / Fiscal â€” Tesouraria (ERP-4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/tesouraria.php';
-
-    // â”€â”€ ERP / Fiscal â€” Receita Municipal (ERP-5) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    require __DIR__ . '/receita_municipal.php';
-
-    // â”€â”€ ERP / Fiscal â€” Controle Externo SAGRES/SICONFI (ERP-6) â”€â”€
-    require __DIR__ . '/controle_externo.php';
 
 });
 

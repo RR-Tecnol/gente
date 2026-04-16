@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // PERFIL FUNCIONARIO - GET/PUT /perfil
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
@@ -75,10 +75,7 @@ Route::put('/perfil', function (\Illuminate\Http\Request $request) {
             $campos = ['PESSOA_NOME_SOCIAL', 'PESSOA_ESTADO_CIVIL', 'PESSOA_ESCOLARIDADE'];
             foreach ($campos as $campo) {
                 if ($request->has($campo)) {
-                    try {
-                        $pessoa->$campo = $request->$campo;
-                    } catch (\Throwable $e) {
-                    }
+                    $pessoa->$campo = $request->$campo;
                 }
             }
             $pessoa->save();
@@ -86,11 +83,8 @@ Route::put('/perfil', function (\Illuminate\Http\Request $request) {
 
         // Atualizar email do usuÃ¡rio
         if ($request->has('USUARIO_EMAIL')) {
-            try {
-                $user->USUARIO_EMAIL = $request->USUARIO_EMAIL;
-                $user->save();
-            } catch (\Throwable $e) {
-            }
+            $user->USUARIO_EMAIL = $request->USUARIO_EMAIL;
+            $user->save();
         }
 
         return response()->json(['message' => 'Perfil atualizado com sucesso.']);

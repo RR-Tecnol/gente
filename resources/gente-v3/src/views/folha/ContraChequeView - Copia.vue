@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="holerites-page">
 
     <!-- ═══ HERO BANNER — RESUMO ANUAL ══════════════════════════════ -->

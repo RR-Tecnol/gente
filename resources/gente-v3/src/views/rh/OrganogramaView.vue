@@ -932,7 +932,7 @@ const excluirDiretoria = async () => {
 
 @media (max-width: 700px) { .dir-level { flex-direction: column; } .mf-row { grid-template-columns: 1fr; } }
 
-/* ???????? TASK-ORG-02/03 — ACCORDION ORGANOGRAMA ???????? */
+/* ???????? TASK-ORG-02/03  ACCORDION ORGANOGRAMA ???????? */
 .acc-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 40px; }
 
 .acc-root { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 18px; padding: 18px 22px; box-shadow: 0 2px 12px rgba(99,102,241,.08); border: 1.5px solid #e0e7fd; margin-bottom: 4px; }
@@ -965,14 +965,14 @@ const excluirDiretoria = async () => {
 .acc-setor-card.acc-add { display: flex; align-items: center; justify-content: center; min-height: 60px; border-style: dashed; color: #94a3b8; font-size: 13px; font-weight: 600; }
 .acc-setor-card.acc-add:hover { color: #6366f1; border-color: #6366f1; background: #f5f3ff; }
 
-/* Repouso — compact */
+/* Repouso  compact */
 .asc-compact { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; }
 .asc-ico  { font-size: 18px; flex-shrink: 0; }
 .asc-nome { font-size: 12px; font-weight: 700; color: #1e293b; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .asc-cnt  { font-size: 11px; color: #64748b; white-space: nowrap; }
 .meu-label { color: var(--sc, #6366f1); font-size: 13px; }
 
-/* Hover — detalhe extra */
+/* Hover  detalhe extra */
 .asc-hover { padding: 0 14px 10px; display: none; }
 .acc-setor-card:hover .asc-hover { display: block; }
 .asc-resp { font-size: 11px; color: #64748b; display: block; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -980,7 +980,7 @@ const excluirDiretoria = async () => {
 .asc-bar { height: 100%; border-radius: 4px; transition: width .3s; }
 .asc-actions { display: flex; gap: 6px; }
 
-/* Transição do corpo do accordion */
+/* Transio do corpo do accordion */
 .acc-body-enter-active, .acc-body-leave-active { transition: all .2s ease; overflow: hidden; }
 .acc-body-enter-from, .acc-body-leave-to { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 </style>

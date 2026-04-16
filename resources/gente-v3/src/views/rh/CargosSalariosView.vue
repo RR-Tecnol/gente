@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="cs-page">
 
     <!-- HERO -->

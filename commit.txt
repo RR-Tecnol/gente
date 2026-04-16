@@ -1,0 +1,22 @@
+fix: BUG-SPRINT-01 — 25 correções de qualidade (4 ondas)
+
+- DATE() → CAST(AS DATE) para SQL Server (Ponto + Banco de Horas)
+- dd() removido de ChecarAcessoUsuarioUnidade (DoS fix)
+- require progressao_funcional.php adicionado ao web.php
+- CSP img-src atualizado com api.dicebear.com
+- topbar-avatar com navegação para /meu-perfil
+- CARGO_CBO removido (já não existia)
+- estagiarios.php: middleware wrapper interno removido
+- meu_perfil.php: try/catch internos silenciosos removidos
+- ContraChequeView: URL do PDF corrigida
+- PontoEletronicoView: data local em vez de UTC
+- MatrizEscalaView: IDs MOCK já não existiam
+- PortalGestorView: verFicha já não existia
+- routes/afastamentos_v3.php criado
+- routes/escala_trabalho.php criado
+- POST /escalas + GET /setores em escala_saude.php
+- routes/autocadastro_admin.php criado
+- gestor.php: JOIN com PESSOA/CARGO corrigido
+- organograma_v3.php: query começa em UNIDADE (fix F5)
+- Todos os requires adicionados ao Bloco 1 do web.php
+- Zero migrations pendentes confirmado
