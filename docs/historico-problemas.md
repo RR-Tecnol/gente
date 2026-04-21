@@ -1090,3 +1090,39 @@ API retorna `fallback: true` + erro de coluna não existente. Verificar se a col
 - `routes/web.php` — `'lotacoes.atribuicao'` → `'lotacoes.atribuicaoLotacoes.atribuicao'`
 
 **Status:** ✅ Resolvido
+
+
+---
+
+## [2026-04-21] TESOURARIA-01 — Aliases de rota usando dispatch interno (⚠️ Ponto de atenção para homologação)
+
+**Sprint / Módulo:** Bug Sprint 03 / Tesouraria
+
+**Contexto:** Durante o Bug Sprint 03, as rotas `/tesouraria/contas`, `/tesouraria/fluxo-caixa` e `/tesouraria/movimentacoes` foram criadas como aliases para as rotas reais (`/contas-bancarias`, `/fluxo-caixa`, `/conciliar`) usando dispatch interno do Laravel:
+
+```php
+Route::get('/tesouraria/contas', function () {
+    return app()->make('router')->dispatch(request()->create('/api/v3/contas-bancarias', 'GET'));
+});
+```
+
+**Risco identificado:** A abordagem `router->dispatch(request()->create(...))` pode falhar em produção quando o middleware de autenticação já foi processado no request original. O novo request criado internamente não carrega o estado de autenticação da sessão, podendo retornar 401 ou 403 mesmo para usuários autenticados.
+
+**Como verificar em homologação:** Logar no sistema, acessar o módulo de Tesouraria e verificar se os dados carregam. Se aparecer 401/403 no console do browser, o problema está confirmado.
+
+**Solução definitiva (se o risco se confirmar):** Substituir os aliases por duplicação direta da lógica das rotas originais dentro das novas rotas, sem usar dispatch interno. Exemplo:
+
+```php
+Route::get('/tesouraria/contas', function () {
+    try {
+        $contas = \Illuminate\Support\Facades\DB::table('CONTA_BANCARIA')->get();
+        return response()->json(['contas' => $contas]);
+    } catch (\Throwable $e) {
+        return response()->json(['contas' => [], 'erro' => $e->getMessage()], 500);
+    }
+});
+```
+
+**Arquivos envolvidos:** `routes/tesouraria.php` — linhas 87–96
+
+**Status:** ⚠️ Implementado com ressalva — verificar em homologação

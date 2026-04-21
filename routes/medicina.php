@@ -1,6 +1,19 @@
-﻿<?php
+<?php
 // MEDICINA DO TRABALHO - GET /medicina POST /medicina/agendar
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
+
+if (!\Illuminate\Support\Facades\Schema::hasTable('AGENDAMENTO_EXAME')) {
+    \Illuminate\Support\Facades\Schema::create('AGENDAMENTO_EXAME', function ($table) {
+        $table->increments('AGENDAMENTO_ID');
+        $table->unsignedInteger('FUNCIONARIO_ID')->index();
+        $table->string('AGENDAMENTO_TIPO', 50);
+        $table->date('AGENDAMENTO_DATA')->nullable();
+        $table->string('AGENDAMENTO_OBS', 300)->nullable();
+        $table->string('AGENDAMENTO_STATUS', 20)->default('pendente');
+        $table->date('AGENDAMENTO_DT_SOLICITACAO')->nullable();
+        $table->timestamps();
+    });
+}
 
 Route::get('/medicina', function (\Illuminate\Http\Request $request) {
     try {

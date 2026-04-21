@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Storage;
 // POST /transparencia/exportar — gera CSV/JSON da competência
 Route::post('/transparencia/exportar', function (Request $request) {
     try {
+        $path = storage_path('app/public/transparencia');
+        if (!is_dir($path)) {
+            mkdir($path, 0775, true);
+        }
+
         $comp = $request->competencia ?? now()->format('Y-m');
         // Normaliza: '2025-03' → '202503'
         $compDb = str_replace('-', '', $comp);

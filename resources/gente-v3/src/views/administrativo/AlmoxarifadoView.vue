@@ -303,7 +303,7 @@ const resetErro = () => { errorMsg.value = ''; };
 const carregarItens = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/almoxarifado/itens');
+    const { data } = await api.get('/api/v3/almoxarifado/itens');
     itens.value = data.itens || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -311,7 +311,7 @@ const carregarItens = async () => {
 
 const carregarAlmoxarifados = async () => {
   try {
-    const { data } = await api.get('/almoxarifado/lista'); // Endpoint fallback que vou criar no backend pro select
+    const { data } = await api.get('/api/v3/almoxarifado/lista'); // Endpoint fallback que vou criar no backend pro select
     almoxarifados.value = data.almoxarifados || [{ ALMOX_ID: 1, ALMOX_NOME: 'Almoxarifado Central (Padrão)' }];
   } catch (e) {
     // se rota nao existir, insere default manual p teste
@@ -327,7 +327,7 @@ const preCarregarSelects = () => {
 const carregarMovimentos = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/almoxarifado/movimentacoes');
+    const { data } = await api.get('/api/v3/almoxarifado/movimentacoes');
     movimentacoes.value = data.movimentacoes || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -336,7 +336,7 @@ const carregarMovimentos = async () => {
 const carregarMinimo = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/almoxarifado/abaixo-minimo');
+    const { data } = await api.get('/api/v3/almoxarifado/abaixo-minimo');
     abaixoMin.value = data.itens || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }

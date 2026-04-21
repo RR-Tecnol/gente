@@ -56,6 +56,11 @@
           <span class="ciclo-badge">Ciclo {{ cicloAtual }}</span>
         </div>
 
+        <div style="margin-bottom: 16px;">
+          <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:5px;">ID do Funcionário (Matrícula)</label>
+          <input v-model="formFuncionarioId" type="number" class="crit-obs" placeholder="Ex: 1234" />
+        </div>
+
         <div class="criterios-list">
           <div v-for="c in criterios" :key="c.id" class="criterio-item">
             <div class="crit-hdr">
@@ -136,6 +141,7 @@ const salvoOk   = ref(false)
 const erroSalvo = ref('')
 const cicloAtual = '2026.1'
 const ultimaNota = ref(0)
+const formFuncionarioId = ref('')
 
 const criterios = reactive([
   { id: 1, ico: '🎯', nome: 'Cumprimento de Metas', peso: 25, nota: 8, hovered: 0, obs: '' },
@@ -214,6 +220,7 @@ const salvarAvaliacao = async () => {
   try {
     const { data } = await api.post('/api/v3/avaliacoes', {
       ciclo: cicloAtual,
+      funcionario_id: formFuncionarioId.value,
       criterios: criterios.map(c => ({ nome: c.nome, peso: c.peso, nota: c.nota, obs: c.obs })),
     })
     ultimaNota.value = data.nota_final ?? notaFinal.value

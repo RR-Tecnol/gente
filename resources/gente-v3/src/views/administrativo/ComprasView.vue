@@ -291,7 +291,7 @@ const resetErro = () => { errorMsg.value = ''; };
 const carregarProcessos = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/compras/processos');
+    const { data } = await api.get('/api/v3/compras/processos');
     processos.value = data.processos || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -300,7 +300,7 @@ const carregarProcessos = async () => {
 const carregarContratos = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/compras/contratos');
+    const { data } = await api.get('/api/v3/compras/contratos');
     contratos.value = data.contratos || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -309,7 +309,7 @@ const carregarContratos = async () => {
 const carregarPedidos = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/compras/pedidos');
+    const { data } = await api.get('/api/v3/compras/pedidos');
     pedidos.value = data.pedidos || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -318,7 +318,7 @@ const carregarPedidos = async () => {
 const carregarAlertas = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/compras/contratos/vencendo');
+    const { data } = await api.get('/api/v3/compras/contratos/vencendo');
     alertas.value = data.contratos || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -339,7 +339,7 @@ const fecharModais = () => {
 const salvarProcesso = async () => {
   isSaving.value = true; resetErro();
   try {
-    await api.post('/compras/processos', formProcesso.value);
+    await api.post('/api/v3/compras/processos', formProcesso.value);
     fecharModais();
     carregarProcessos();
   } catch(e) {
@@ -440,3 +440,4 @@ const vincularProcesso = (ped) => {
 .btn-secondary { background: white; color: #475569; border: 1px solid #cbd5e1; }
 .btn-secondary:hover { background: #f1f5f9; }
 </style>
+

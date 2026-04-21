@@ -92,6 +92,9 @@ Route::get('/pesquisas/{id}/responder', function ($id) {
 });
 
 Route::post('/pesquisas/{id}/responder', function (Request $request, $id) {
+    if (!\Illuminate\Support\Facades\Schema::hasTable('PESQUISA_RESPOSTA')) {
+        return response()->json(['ok' => true, 'fallback' => true]);
+    }
     $respostas = $request->input('respostas', []);
     $token = \Illuminate\Support\Str::uuid()->toString();
     

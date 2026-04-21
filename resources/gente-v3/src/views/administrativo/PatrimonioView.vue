@@ -298,7 +298,7 @@ const resetErro = () => { errorMsg.value = ''; };
 const carregarBens = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/patrimonio/bens');
+    const { data } = await api.get('/api/v3/patrimonio/bens');
     bens.value = data.bens || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -307,7 +307,7 @@ const carregarBens = async () => {
 const carregarMovimentos = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/patrimonio/movimentacoes');
+    const { data } = await api.get('/api/v3/patrimonio/movimentacoes');
     movimentacoes.value = data.movimentacoes || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -327,7 +327,7 @@ const carregarInventario = async () => {
 const carregarDepreciacao = async () => {
   isLoading.value = true; resetErro();
   try {
-    const { data } = await api.get('/patrimonio/depreciacao');
+    const { data } = await api.get('/api/v3/patrimonio/depreciacao');
     relatorioDeprec.value = data.por_categoria || [];
   } catch(e) { errorMsg.value = e.response?.data?.erro || e.message; }
   finally { isLoading.value = false; }
@@ -343,7 +343,7 @@ const fecharModais = () => { modalTombo.value = false; };
 const salvarBem = async () => {
   isSaving.value = true; resetErro();
   try {
-    await api.post('/patrimonio/bens', formBem.value);
+    await api.post('/api/v3/patrimonio/bens', formBem.value);
     fecharModais();
     carregarBens();
   } catch(e) {
@@ -470,3 +470,4 @@ const executarDepreciacao = async () => {
 .btn-primary { background: #6366f1; color: white; }
 .btn-secondary { background: white; border: 1px solid #cbd5e1; color: #475569; }
 </style>
+

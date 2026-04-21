@@ -134,8 +134,8 @@
                     <button class="act-btn act-purple" title="Calcular Proventos (Motor)" @click="calcularProventos(f)">
                       ⚙️
                     </button>
-                    <button class="act-btn act-green" title="Gerar CNAB 240" @click="$router.push('/remessa-cnab')">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15l-4.5-4.5M12 15l4.5-4.5M12 15V3M3 21h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <button class="act-btn act-green" title="Confirmar/Fechar Folha" @click="confirmarFolha(f.FOLHA_ID)">
+                      💾
                     </button>
                   </div>
                 </td>
@@ -542,6 +542,18 @@ const calcularProventos = async (folha) => {
     folhas.value = Array.isArray(resp.data) ? resp.data : (resp.data.folhas ?? [])
   } catch (e) {
     alert('Erro motor: ' + (e.response?.data?.erro || e.message))
+  }
+}
+
+const confirmarFolha = async (id) => {
+  if (!confirm('Deseja confirmar e fechar esta folha?')) return
+  try {
+    await api.post(`/api/v3/folhas/${id}/confirmar`)
+    alert('Folha confirmada com sucesso!')
+    const resp = await api.get('/api/v3/folhas')
+    folhas.value = Array.isArray(resp.data) ? resp.data : (resp.data.folhas ?? [])
+  } catch (e) {
+    alert('Erro ao confirmar: ' + (e.response?.data?.erro || e.message))
   }
 }
 </script>

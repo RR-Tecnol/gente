@@ -230,12 +230,11 @@ const showToast = (msg) => { toast.value = { visible: true, msg }; setTimeout(()
 const solicitarPlantao = async () => {
   enviando.value = true
   try {
-    const { data } = await api.post('/api/v3/plantoes-extras', { ...novoP })
-    plantoes.value.push(mapearPlantao({
-      id: data.id ?? Date.now(), PLANTAO_DATA: novoP.data, PLANTAO_SETOR: novoP.setor,
-      PLANTAO_HORA_INI: novoP.horaIni, PLANTAO_HORA_FIM: novoP.horaFim,
-      PLANTAO_DURACAO: 12, PLANTAO_TIPO: novoP.tipo, PLANTAO_STATUS: 'PENDENTE',
-    }))
+    await api.post('/api/v3/plantoes-extras', { ...novoP })
+    const { data: newData } = await api.get('/api/v3/plantoes-extras')
+    if (!newData.fallback && newData.plantoes?.length) {
+      plantoes.value = newData.plantoes.map(mapearPlantao)
+    }
     showToast('✅ Solicitação enviada ao coordenador para aprovação!')
   } catch {
     // failed
@@ -327,3 +326,4 @@ const solicitarPlantao = async () => {
   .hide-mobile { display: none !important; }
 }
 </style>
+

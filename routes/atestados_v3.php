@@ -114,3 +114,14 @@ Route::put('/atestados/{id}/rejeitar', function ($id, \Illuminate\Http\Request $
         return response()->json(['message' => 'Atestado rejeitado.']);
     } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
 });
+
+Route::get('/atestados/{id}/pdf', function ($id) {
+    try {
+        $af = \App\Models\Afastamento::find($id);
+        if (!$af) return response()->json(['erro' => 'Não encontrado'], 404);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.atestado', ['afastamento' => $af]);
+        return $pdf->download('atestado-' . $id . '.pdf');
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});

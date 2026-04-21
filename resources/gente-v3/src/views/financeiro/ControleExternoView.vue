@@ -184,11 +184,16 @@ async function carregarSagres() {
 async function gerarSagres() {
   salvando.value = true
   try {
-    const { data } = await api.post('/api/v3/sagres/gerar', { ano: anoSel.value, mes: mesSel.value })
-    if (data.ok) {
-      msg.value = `✅ ${data.arquivo} gerado! ${data.aviso}`
-      await carregarEnvios()
-    }
+    const response = await api.post('/api/v3/sagres/gerar', { ano: anoSel.value, mes: mesSel.value }, { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `sagres_${anoSel.value}_${mesSel.value.toString().padStart(2, '0')}.xml`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    msg.value = `✅ Arquivo XML gerado e baixado com sucesso!`
+    await carregarEnvios()
   } catch (e) { console.error(e) } finally { salvando.value = false }
 }
 

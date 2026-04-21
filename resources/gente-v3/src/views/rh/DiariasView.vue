@@ -96,11 +96,11 @@
         </div>
         <div class="form-group">
           <label>Data de Ida</label>
-          <input class="form-input" type="date" v-model="form.data_ida" />
+          <input class="form-input" type="date" v-model="form.data_ida" :min="hoje" />
         </div>
         <div class="form-group">
           <label>Data de Volta</label>
-          <input class="form-input" type="date" v-model="form.data_volta" />
+          <input class="form-input" type="date" v-model="form.data_volta" :min="form.data_ida || hoje" />
         </div>
         <div class="form-group full">
           <label>Objetivo da Missão</label>
@@ -214,13 +214,19 @@ const tiposDestino = [
   { val: 'EXTERIOR',    label: 'Exterior' },
 ]
 
-const mockTabela = [
+const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+const hoje = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
+
+const MOCKTabela = [
   { dest: 'INTERIOR_MA',   ico: '🌎', label: 'Interior do Maranhão', valor: 180 },
   { dest: 'CAPITAL_MA',    ico: '🏙️', label: 'São Luís',             valor: 220 },
   { dest: 'OUTRA_CAPITAL', ico: '✈️', label: 'Outra capital',        valor: 340 },
   { dest: 'FORA_MA',      ico: '🗺️', label: 'Fora do Maranhão',     valor: 420 },
   { dest: 'EXTERIOR',     ico: '🌍', label: 'Exterior',             valor: 800 },
 ]
+
+const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+const hoje = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
 
 const MOCK = [
   { SOLICITACAO_ID: 1, nome: 'Maria Silva', matricula: '20250001', DESTINO: 'Brasília/DF', DESTINO_TIPO: 'FORA_MA', DATA_IDA: '2026-03-05', DATA_VOLTA: '2026-03-07', QTDE_DIARIAS: 3, VALOR_TOTAL: 1260, STATUS: 'APROVADA' },
@@ -438,3 +444,4 @@ onMounted(async () => { await carregar(); setTimeout(() => loaded.value = true, 
 .modal-enter-from,.modal-leave-to { opacity:0; }
 .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); background:#1e293b; color:#fff; padding:.8rem 1.5rem; border-radius:12px; font-weight:600; font-size:.88rem; z-index:200; box-shadow:0 8px 32px rgba(0,0,0,.2); }
 </style>
+

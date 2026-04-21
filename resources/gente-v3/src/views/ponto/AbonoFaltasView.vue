@@ -231,7 +231,8 @@ const onDrop = (e) => {
   if (f && ['application/pdf','image/jpeg','image/png'].includes(f.type)) arquivoSelecionado.value = f
 }
 
-const hoje = new Date().toISOString().slice(0, 10)
+const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+const hoje = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
 
 const form = reactive({
   ABONO_FALTA_DATA: '',
@@ -524,3 +525,4 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 .comprovante-link:hover { background: #ede9fe; border-color: #c4b5fd; }
 
 </style>
+

@@ -29,40 +29,6 @@ Route::get('/vinculos', function () {
         return response()->json(['vinculos' => [], 'erro' => $e->getMessage()], 500);
     }
 });
-Route::post('/vinculos', function (\Illuminate\Http\Request $request) {
-    try {
-        $id = \Illuminate\Support\Facades\DB::table('VINCULO')->insertGetId([
-            'VINCULO_NOME' => $request->VINCULO_NOME, 'VINCULO_SIGLA' => $request->VINCULO_SIGLA ?? null,
-            'VINCULO_DESCRICAO' => $request->VINCULO_DESCRICAO ?? null,
-            'VINCULO_TIPO_ESOCIAL' => $request->VINCULO_TIPO_ESOCIAL ?? null,
-            'VINCULO_FGTS' => $request->VINCULO_FGTS ? 1 : 0,
-            'VINCULO_INSS' => $request->VINCULO_INSS ? 1 : 0,
-            'VINCULO_IRRF' => $request->VINCULO_IRRF ? 1 : 0,
-            'VINCULO_ATIVO' => 1, 'created_at' => now(), 'updated_at' => now(),
-        ]);
-        return response()->json(['ok' => true, 'id' => $id], 201);
-    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 422); }
-});
-Route::put('/vinculos/{id}', function (int $id, \Illuminate\Http\Request $request) {
-    try {
-        $data = ['updated_at' => now()];
-        foreach (['VINCULO_NOME','VINCULO_SIGLA','VINCULO_DESCRICAO','VINCULO_TIPO_ESOCIAL'] as $col) {
-            if ($request->has($col)) $data[$col] = $request->input($col);
-        }
-        foreach (['VINCULO_FGTS','VINCULO_INSS','VINCULO_IRRF'] as $flag) {
-            if ($request->has($flag)) $data[$flag] = $request->input($flag) ? 1 : 0;
-        }
-        \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)->update($data);
-        return response()->json(['ok' => true]);
-    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
-});
-Route::delete('/vinculos/{id}', function (int $id) {
-    try {
-        \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)
-            ->update(['VINCULO_ATIVO' => 0, 'updated_at' => now()]);
-        return response()->json(['ok' => true]);
-    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
-});
 
 // PATCH /api/v3/vinculos/{id} — Edição inline dos flags do motor
 Route::patch('/vinculos/{id}', function (int $id, Request $request) {
@@ -180,4 +146,41 @@ Route::delete('/funcionarios/{funcId}/adicionais/{adId}', function (int $funcId,
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
+});
+
+Route::post('/vinculos', function (\Illuminate\Http\Request $request) {
+    try {
+        $id = \Illuminate\Support\Facades\DB::table('VINCULO')->insertGetId([
+            'VINCULO_NOME' => $request->VINCULO_NOME,
+            'VINCULO_SIGLA' => $request->VINCULO_SIGLA ?? null,
+            'VINCULO_DESCRICAO' => $request->VINCULO_DESCRICAO ?? null,
+            'VINCULO_TIPO_ESOCIAL' => $request->VINCULO_TIPO_ESOCIAL ?? null,
+            'VINCULO_FGTS' => $request->VINCULO_FGTS ? 1 : 0,
+            'VINCULO_INSS' => $request->VINCULO_INSS ? 1 : 0,
+            'VINCULO_IRRF' => $request->VINCULO_IRRF ? 1 : 0,
+            'VINCULO_ATIVO' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        return response()->json(['ok' => true, 'id' => $id], 201);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 422); }
+});
+Route::put('/vinculos/{id}', function (int $id, \Illuminate\Http\Request $request) {
+    try {
+        $data = ['updated_at' => now()];
+        foreach (['VINCULO_NOME','VINCULO_SIGLA','VINCULO_DESCRICAO','VINCULO_TIPO_ESOCIAL'] as $col) {
+            if ($request->has($col)) $data[$col] = $request->input($col);
+        }
+        foreach (['VINCULO_FGTS','VINCULO_INSS','VINCULO_IRRF'] as $flag) {
+            if ($request->has($flag)) $data[$flag] = $request->input($flag) ? 1 : 0;
+        }
+        \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)->update($data);
+        return response()->json(['ok' => true]);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
+});
+Route::delete('/vinculos/{id}', function (int $id) {
+    try {
+        \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)
+            ->update(['VINCULO_ATIVO' => 0, 'updated_at' => now()]);
+        return response()->json(['ok' => true]);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
 });

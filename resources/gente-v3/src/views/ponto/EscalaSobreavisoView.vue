@@ -181,13 +181,93 @@ const fetchDados = async () => {
     sobreaviso.value   = (!data.fallback && data.sobreaviso?.length)   ? data.sobreaviso.map(mapSobreaviso)   : mockSobreaviso
     acionamentos.value = (!data.fallback && data.acionamentos?.length) ? data.acionamentos.map(mapAcionamento) : mockAcionamentos
   } catch {
-    // failed
-  } finally {
-    Object.assign(novoAcion, { data: '', local: '', horaIni: '', horaFim: '', motivo: '' })
-    salvando.value  = false
-    modalAberto.value = false
+    sobreaviso.value   = mockSobreaviso
+    acionamentos.value = mockAcionamentos
   }
 }
+
+const salvarAcionamento = async () => {
+  if (salvando.value) return
+  salvando.value = true
+  try {
+    const { data } = await api.post('/api/v3/sobreaviso/acionamento', {
+      data: novoAcion.data,
+      local: novoAcion.local,
+      hora_ini: novoAcion.horaIni,
+      hora_fim: novoAcion.horaFim,
+      motivo: novoAcion.motivo,
+    })
+    acionamentos.value.unshift(mapAcionamento(data.acionamento ?? {
+      ACIONAMENTO_ID: Date.now(),
+      ACIONAMENTO_DATA: novoAcion.data,
+      ACIONAMENTO_MOTIVO: novoAcion.motivo,
+      ACIONAMENTO_LOCAL: novoAcion.local,
+      ACIONAMENTO_HORA_INI: novoAcion.horaIni,
+      ACIONAMENTO_HORA_FIM: novoAcion.horaFim,
+    }))
+    Object.assign(novoAcion, { data: '', local: '', horaIni: '', horaFim: '', motivo: '' })
+    modalAberto.value = false
+  } catch (e) {
+    console.error('Erro ao salvar acionamento:', e)
+  } finally {
+    salvando.value = false
+  }
+}
+
+onMounted(async () => {
+  await fetchDados()
+  setTimeout(() => { loaded.value = true }, 80)
+})
+
+const navMes = (delta) => {
+  const d = new Date(mesAtual.value)
+  d.setMonth(d.getMonth() + delta)
+  mesAtual.value = d
+  fetchDados()
+}
+
+// Dias marcados no calendário
+const diasSobreaviso = computed(() => {
+  const dias = new Set()
+  sobreaviso.value.forEach(s => {
+    if (!s.inicio) return
+    const ini = new Date(s.inicio + 'T12:00:00')
+    const fim = s.fim ? new Date(s.fim + 'T12:00:00') : ini
+    const ano = mesAtual.value.getFullYear(), mes = mesAtual.value.getMonth()
+    for (let d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)) {
+      if (d.getFullYear() === ano && d.getMonth() === mes) dias.add(d.getDate())
+    }
+  })
+  return [...dias]
+})
+
+const diasAcionamento = computed(() =>
+  acionamentos.value
+    .filter(a => {
+      const d = new Date(a.data + 'T12:00:00')
+      return d.getFullYear() === mesAtual.value.getFullYear() && d.getMonth() === mesAtual.value.getMonth()
+    })
+    .map(a => new Date(a.data + 'T12:00:00').getDate())
+)
+
+const valorTotal = computed(() => sobreaviso.value.reduce((a, s) => a + (Number(s.valor) || 0), 0))
+const mesLabel   = computed(() => mesAtual.value.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase()))
+const fmtMoeda   = v => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(v)
+
+const cells = computed(() => {
+  const ano = mesAtual.value.getFullYear(), mes = mesAtual.value.getMonth()
+  const pd = new Date(ano, mes, 1).getDay()
+  const total = new Date(ano, mes + 1, 0).getDate()
+  const hoje  = new Date()
+  const res   = []
+  for (let i = 0; i < pd; i++) res.push({ key: `v${i}`, dia: null, hoje: false, sobAviso: false, acionado: false })
+  for (let d = 1; d <= total; d++) {
+    const eHoje = hoje.getFullYear() === ano && hoje.getMonth() === mes && hoje.getDate() === d
+    res.push({ key: `d${d}`, dia: d, hoje: eHoje, sobAviso: diasSobreaviso.value.includes(d), acionado: diasAcionamento.value.includes(d) })
+  }
+  return res
+})
+
 </script>
 
 <style scoped>

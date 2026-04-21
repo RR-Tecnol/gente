@@ -147,7 +147,7 @@ onMounted(async () => {
 
 async function carregarOss() {
   try {
-    const { data } = await api.get('/oss')
+    const { data } = await api.get('/api/v3/oss')
     ossList.value = data.oss ?? []
   } catch {
     ossList.value = []

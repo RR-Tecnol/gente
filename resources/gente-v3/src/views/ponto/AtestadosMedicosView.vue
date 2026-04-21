@@ -59,7 +59,7 @@
           </div>
         </div>
         <div class="at-actions">
-          <button class="at-act" title="Baixar PDF">📄</button>
+          <button class="at-act" title="Baixar PDF" @click="baixarAtestadoPDF(a.id)">📄</button>
           <!-- Botões de aprovação (gestor) -->
           <template v-if="a.status === 'pendente'">
             <button class="at-act at-act-green" title="Aprovar" @click="abrirAprovacao(a, 'aprovar')">✅</button>
@@ -245,6 +245,10 @@ onMounted(async () => {
 const showToast = (msg) => { toast.value = { visible: true, msg }; setTimeout(() => toast.value.visible = false, 3500) }
 
 const calcDias = (ini, fim) => Math.round((new Date(fim) - new Date(ini)) / 86400000) + 1
+
+const baixarAtestadoPDF = (id) => {
+  window.open(`/api/v3/atestados/${id}/pdf`, '_blank')
+}
 
 const salvarAtestado = async () => {
   salvando.value = true

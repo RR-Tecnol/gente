@@ -125,7 +125,10 @@
             <div class="form-group"><label>Descrição</label><textarea class="cfg-input cfg-ta" rows="4" v-model="novoInc.descricao" placeholder="Descreva o ocorrido com detalhes..."></textarea></div>
             <div class="modal-actions">
               <button class="modal-cancel" @click="modalInc = false">Cancelar</button>
-              <button class="modal-submit" :disabled="!novoInc.descricao || !novoInc.local" @click="notificarInc">✅ Enviar Notificação</button>
+              <button class="modal-submit" :disabled="!novoInc.descricao || !novoInc.local || salvandoInc" @click="notificarInc">
+                <span v-if="salvandoInc">Enviando...</span>
+                <span v-else>✅ Enviar Notificação</span>
+              </button>
             </div>
           </div>
         </div>
@@ -145,6 +148,7 @@ const modalInc = ref(false)
 const toast = ref({ visible: false, msg: '' })
 const novoEpi = reactive({ nome: '', obs: '' })
 const novoInc = reactive({ tipo: 'quase', local: '', descricao: '' })
+const salvandoInc = ref(false)
 
 const gauges = [
   { label: 'Conformidade NR', pct: 88, cor: '#10b981' },
@@ -206,12 +210,34 @@ const solicitarEpi = async () => {
 }
 
 const notificarInc = async () => {
-  const novoItem = { id: Date.now(), tipo: novoInc.tipo, data: new Date().toISOString().slice(0, 10), descricao: novoInc.descricao, local: novoInc.local, cat: null, closed: false }
-  incidentes.value.unshift(novoItem)
-  try { await api.post('/api/v3/seguranca/incidentes', { tipo: novoInc.tipo, local: novoInc.local, descricao: novoInc.descricao }) } catch { /* ok */ }
-  toast.value = { visible: true, msg: '🚨 Notificação de incidente enviada ao SESMT!' }
-  Object.assign(novoInc, { tipo: 'quase', local: '', descricao: '' }); modalInc.value = false
-  setTimeout(() => toast.value.visible = false, 3000)
+  if (salvandoInc.value) return
+  salvandoInc.value = true
+  try {
+    await api.post('/api/v3/seguranca/incidentes', {
+      tipo: novoInc.tipo,
+      local: novoInc.local,
+      descricao: novoInc.descricao
+    })
+    const novoItem = {
+      id: Date.now(),
+      tipo: novoInc.tipo,
+      data: new Date().toLocaleDateString('sv-SE'),
+      descricao: novoInc.descricao,
+      local: novoInc.local,
+      cat: null,
+      closed: false
+    }
+    incidentes.value.unshift(novoItem)
+    Object.assign(novoInc, { tipo: 'quase', local: '', descricao: '' })
+    modalInc.value = false
+    toast.value = { visible: true, msg: '🚨 Notificação de incidente enviada ao SESMT!' }
+    setTimeout(() => toast.value.visible = false, 3000)
+  } catch (e) {
+    toast.value = { visible: true, msg: '❌ Erro ao enviar. Tente novamente.' }
+    setTimeout(() => toast.value.visible = false, 4000)
+  } finally {
+    salvandoInc.value = false
+  }
 }
 </script>
 
@@ -284,7 +310,7 @@ const notificarInc = async () => {
 .inc-status { font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 99px; }
 .is-green { background: #dcfce7; color: #166534; }
 .is-blue { background: #dbeafe; color: #1e40af; }
-.inc-desc { font-size: 13px; color: #64748b; margin: 0 0 8px; line-height: 1.5; }
+.inc-desc { font-size: 13px; color: #64748b; margin: 0 0 8px; line-height: 1.5; word-wrap: break-word; overflow-wrap: break-word; }
 .inc-meta { display: flex; gap: 14px; font-size: 11px; color: #94a3b8; font-weight: 600; }
 .notificar-btn { margin-left: 12px; margin-top: 6px; padding: 10px 18px; border-radius: 12px; border: 2px dashed #e2e8f0; background: transparent; font-size: 13px; font-weight: 700; color: #64748b; cursor: pointer; transition: all 0.18s; width: calc(100% - 12px); }
 .notificar-btn:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }

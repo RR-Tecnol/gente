@@ -83,3 +83,14 @@ Route::post('/conciliar', function () {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+// ALIASES para o Vue
+Route::get('/tesouraria/contas', function () {
+    return app()->make('router')->dispatch(request()->create('/api/v3/contas-bancarias', 'GET'));
+});
+Route::get('/tesouraria/fluxo-caixa', function () {
+    return app()->make('router')->dispatch(request()->create('/api/v3/fluxo-caixa', 'GET'));
+});
+Route::post('/tesouraria/movimentacoes', function () {
+    return app()->make('router')->dispatch(request()->create('/api/v3/conciliar', 'POST'));
+});

@@ -121,6 +121,16 @@ Route::get('/folhas/{id}/detalhes', function (int $id) {
     }
 });
 
+// POST /api/v3/folhas/{id}/confirmar — Fechar a folha
+Route::post('/folhas/{id}/confirmar', function (int $id) {
+    try {
+        DB::table('FOLHA')->where('FOLHA_ID', $id)->update(['FOLHA_STATUS' => 'Fechada', 'FOLHA_SITUACAO' => 'F', 'updated_at' => now()]);
+        return response()->json(['ok' => true]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
 // POST /api/v3/folhas/calcular — Recalcula líquido e aplica consignações (CONSIG-03)
 Route::post('/folhas/calcular', function (Request $request) {
     try {

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CONSIGNAÃ‡Ã•ES EM FOLHA â€” rotas sem use statements
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -209,8 +209,8 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
                 ->update(['STATUS' => 'PENDENTE', 'updated_at' => now()]);
         }
 
-        // Registrar ocorrÃªncia
-        try {
+        // Registrar ocorrência
+        if (\Illuminate\Support\Facades\Schema::hasTable('CONSIG_OCORRENCIA')) {
             DB::table('CONSIG_OCORRENCIA')->insert([
                 'CONTRATO_ID' => $id,
                 'TIPO' => strtoupper($novoStatus),
@@ -222,7 +222,6 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        } catch (\Throwable $oe) { /* tabela pode nÃ£o existir ainda â€” silenciar */
         }
 
         return response()->json(['ok' => true]);
@@ -242,7 +241,7 @@ Route::patch('/consignacao/{id}/autorizar', function ($id) {
             'AUTORIZADO_EM' => now(),
             'updated_at' => now(),
         ]);
-        try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('CONSIG_OCORRENCIA')) {
             DB::table('CONSIG_OCORRENCIA')->insert([
                 'CONTRATO_ID' => $id,
                 'TIPO' => 'AUTORIZACAO',
@@ -251,7 +250,6 @@ Route::patch('/consignacao/{id}/autorizar', function ($id) {
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        } catch (\Throwable $oe) {
         }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
@@ -269,7 +267,7 @@ Route::patch('/consignacao/{id}/rejeitar', function (Request $request, $id) {
             'MOTIVO_REJEICAO' => $request->motivo,
             'updated_at' => now(),
         ]);
-        try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('CONSIG_OCORRENCIA')) {
             DB::table('CONSIG_OCORRENCIA')->insert([
                 'CONTRATO_ID' => $id,
                 'TIPO' => 'REJEICAO',
@@ -279,7 +277,6 @@ Route::patch('/consignacao/{id}/rejeitar', function (Request $request, $id) {
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        } catch (\Throwable $oe) {
         }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {

@@ -113,7 +113,9 @@
               <input v-model.number="motorParams.carencia_piso" type="number" class="cfg-input" placeholder="3"/>
             </div>
           </div>
-          <button class="save-btn" style="margin-top:14px;width:auto" @click="salvarMotorParams">💾 Salvar Parâmetros</button>
+          <button class="save-btn" style="margin-top:14px;width:auto" @click="salvarMotorParams" :disabled="salvandoMotor">
+            <span v-if="salvandoMotor" class="btn-spin"></span><template v-else>💾 Salvar Parâmetros</template>
+          </button>
         </div>
 
         <!-- Vínculos -->
@@ -214,7 +216,7 @@ const tipoCfg = (k) => tiposMap.value[k] || 'STRING'
 
 onMounted(async () => {
   try {
-    const { data } = await api.get('/configuracoes/api')
+    const { data } = await api.get('/api/v3/configuracoes/api')
     const mapa = {}; const tipos = {}
     Object.entries(data).forEach(([chave, obj]) => {
       const tipo = obj.CONFIG_TIPO || 'STRING'
@@ -251,6 +253,7 @@ const salvarTodas = async () => {
 // ── Sprint 3 — Motor de Folha (Parte 9) ───────────────────
 const motorTab      = ref('params')
 const loadingMotor  = ref(false)
+const salvandoMotor = ref(false)
 const vinculos      = ref([])
 const rubricas      = ref([])
 const motorParams   = ref({ salario_minimo: 1518.00, aliquota_rpps: 14, deducao_irrf_dep: 226.86, carencia_piso: 3 })
@@ -296,6 +299,8 @@ const patchVinculo = async (v) => {
 }
 
 const salvarMotorParams = async () => {
+  if (salvandoMotor.value) return;
+  salvandoMotor.value = true;
   try {
     // Salva como CONFIG chaves 'motor.*'
     const pares = Object.entries(motorParams.value)
@@ -305,6 +310,8 @@ const salvarMotorParams = async () => {
     okMsg.value = 'Parâmetros do motor salvos!'; setTimeout(() => okMsg.value = '', 3000)
   } catch (e) {
     erroMsg.value = 'Erro: ' + e.message
+  } finally {
+    salvandoMotor.value = false;
   }
 }
 </script>
@@ -359,3 +366,4 @@ const salvarMotorParams = async () => {
 .badge-on  { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
 .badge-off { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
 </style>
+
