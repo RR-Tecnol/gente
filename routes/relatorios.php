@@ -145,3 +145,52 @@ Route::prefix('relatorios')->group(function () {
         return response()->json($dados);
     });
 });
+
+Route::get('/relatorios/stats', function () {
+    try {
+        $ultFolha = \Illuminate\Support\Facades\DB::table('FOLHA')->orderByDesc('FOLHA_COMPETENCIA')->first();
+        $qtdAtivos = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->whereNull('FUNCIONARIO_DATA_FIM')->count();
+        return response()->json(['funcionarios' => $qtdAtivos, 'competencia' => $ultFolha?->FOLHA_COMPETENCIA ?? null]);
+    } catch (\Throwable $e) { return response()->json(['funcionarios' => 0, 'fallback' => true]); }
+});
+Route::get('/relatorios/funcionarios', function (\Illuminate\Http\Request $request) {
+    try {
+        $query = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
+            ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'f.SETOR_ID')
+            ->whereNull('f.FUNCIONARIO_DATA_FIM')
+            ->select('f.FUNCIONARIO_MATRICULA as matricula','p.PESSOA_NOME as nome','c.CARGO_NOME as cargo','s.SETOR_NOME as setor','f.FUNCIONARIO_DATA_INICIO as admissao');
+        if ($request->busca) $query->where('p.PESSOA_NOME', 'like', '%' . substr($request->busca, 0, 100) . '%');
+        return response()->json($query->orderBy('p.PESSOA_NOME')->paginate(20));
+    } catch (\Throwable $e) { return response()->json(['data' => [], 'total' => 0]); }
+});
+Route::get('/relatorios/admissoes', function (\Illuminate\Http\Request $request) {
+    try {
+        $inicio = $request->data_inicio ?? date('Y-01-01');
+        $fim = $request->data_fim ?? date('Y-m-d');
+        $dados = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
+            ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'f.SETOR_ID')
+            ->whereBetween('f.FUNCIONARIO_DATA_INICIO', [$inicio, $fim])
+            ->select('f.FUNCIONARIO_MATRICULA as matricula','p.PESSOA_NOME as nome','c.CARGO_NOME as cargo','s.SETOR_NOME as setor','f.FUNCIONARIO_DATA_INICIO as admissao')
+            ->orderByDesc('f.FUNCIONARIO_DATA_INICIO')->get()->map(fn($r) => (array)$r);
+        return response()->json($dados);
+    } catch (\Throwable $e) { return response()->json([]); }
+});
+Route::get('/relatorios/frequencia', function (\Illuminate\Http\Request $request) {
+    try {
+        $inicio = $request->data_inicio ?? date('Y-m-01');
+        $fim = $request->data_fim ?? date('Y-m-t');
+        $dados = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO as rp')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'rp.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'f.SETOR_ID')
+            ->whereBetween(\Illuminate\Support\Facades\DB::raw('CAST(rp.REGISTRO_DATA_HORA AS DATE)'), [$inicio, $fim])
+            ->select('p.PESSOA_NOME as nome','s.SETOR_NOME as setor',\Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT CAST(rp.REGISTRO_DATA_HORA AS DATE)) as presencas'))
+            ->groupBy('f.FUNCIONARIO_ID','p.PESSOA_NOME','s.SETOR_NOME')->orderBy('p.PESSOA_NOME')
+            ->get()->map(fn($r) => (array)$r);
+        return response()->json($dados);
+    } catch (\Throwable $e) { return response()->json([]); }
+});

@@ -187,8 +187,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 
+const router = useRouter()
 const loaded = ref(false)
 const busca = ref('')
 const toast = ref({ visible: false, msg: '', tipo: '' })
@@ -309,7 +311,7 @@ const plantoesSemana = computed(() =>
   }))
 )
 
-const verFicha = (m) => { showToast(`🔍 Abrindo ficha de ${m.nome}...`, 'ok') }
+const verFicha = (m) => { router.push('/funcionarios/' + m.id) }
 
 // ── Avaliação de Desempenho ──────────────────────────────────
 const cicloAtual = '2026.1'

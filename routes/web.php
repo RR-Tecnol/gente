@@ -796,6 +796,58 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     require __DIR__ . '/funcionarios.php';
     require __DIR__ . '/folha.php';
+
+// Autocadastro gestão
+Route::get('/autocadastro/pendentes', function () {
+    $pendentes = \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')
+        ->where('TOKEN_STATUS', 'pendente')->orderByDesc('created_at')->get();
+    return response()->json(['pendentes' => $pendentes]);
+});
+Route::post('/autocadastro/gerar-link', function (\Illuminate\Http\Request $request) {
+    $token = \Illuminate\Support\Str::uuid();
+    \Illuminate\Support\Facades\DB::table('AUTOCADASTRO_TOKEN')->insert([
+        'TOKEN_VALOR' => $token, 'TOKEN_STATUS' => 'pendente',
+        'TOKEN_EMAIL' => $request->email, 'created_at' => now(),
+    ]);
+    return response()->json(['link' => url("/autocadastro/{$token}")]);
+});
+// Escala de trabalho
+Route::get('/escala-trabalho', function (\Illuminate\Http\Request $request) {
+    $user = \Illuminate\Support\Facades\Auth::user();
+    $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+    if (!$func) return response()->json(['escala' => []]);
+    $mes = $request->mes ?? now()->month;
+    $ano = $request->ano ?? now()->year;
+    $comp = sprintf('%04d-%02d', $ano, $mes);
+    try {
+        $escala = \Illuminate\Support\Facades\DB::table('ESCALA as e')
+            ->join('DETALHE_ESCALA as de', 'de.ESCALA_ID', '=', 'e.ESCALA_ID')
+            ->where('de.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
+            ->where('e.ESCALA_COMPETENCIA', $comp)
+            ->select('e.*', 'de.*')->get();
+        return response()->json(['escala' => $escala, 'competencia' => $comp]);
+    } catch (\Throwable $e) { return response()->json(['escala' => [], 'competencia' => $comp]); }
+});
+Route::post('/escala-trabalho', function () { return response()->json(['ok' => true]); });
+// Escalas médicas
+Route::post('/escalas', function (\Illuminate\Http\Request $request) {
+    try {
+        $id = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId([
+            'SETOR_ID' => $request->setor_id, 'ESCALA_COMPETENCIA' => $request->competencia,
+            'ESCALA_SITUACAO' => 'rascunho', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        return response()->json(['ok' => true, 'ESCALA_ID' => $id], 201);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
+});
+// Setores
+Route::get('/setores', function () {
+    try {
+        $setores = \Illuminate\Support\Facades\DB::table('SETOR')->where('SETOR_ATIVO', 1)
+            ->orderBy('SETOR_NOME')->select('SETOR_ID as id', 'SETOR_NOME as nome')->get();
+        return response()->json(['setores' => $setores]);
+    } catch (\Throwable $e) { return response()->json(['setores' => []]); }
+});
+
     require __DIR__ . '/motor.php'; // Sprint 3 — endpoints Motor de Folha (vínculos, rubricas, adicionais)
 
     // GET /api/v3/escalas â€” Lista escalas para o seletor da MatrizEscalaView
@@ -814,7 +866,8 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     });
 
     // GET /api/v3/escalas/{id} â€” Grade completa de uma escala
-    Route::get('/escalas/{id}', function (int $id) {
+    Route::get('/escalas/{id}', function ($id) {
+        if (!is_numeric($id)) return response()->json(['erro' => 'ID inválido'], 422); $id = (int) $id;
         $escala = App\Models\Escala::with([
             'setor',
             'detalheEscalas.funcionario.pessoa',
@@ -3371,20 +3424,20 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         if (!$funcionario)
             return response()->json([]);
 
-        $abonos = \Illuminate\Support\Facades\DB::table('JUSTIFICATIVA_PONTO')
+        $abonos = \Illuminate\Support\Facades\DB::table('ABONO_FALTA')
             ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-            ->orderByDesc('JUSTIFICATIVA_DATA')
+            ->orderByDesc('ABONO_FALTA_DATA_INICIO')
             ->get()
             ->map(fn($j) => [
-                'id' => $j->JUSTIFICATIVA_ID,
-                'ABONO_FALTA_DATA' => $j->JUSTIFICATIVA_DATA,
-                'ABONO_FALTA_JUSTIFICATIVA' => $j->JUSTIFICATIVA_DESCRICAO,
-                'tipo' => $j->JUSTIFICATIVA_TIPO ?? null,
-                'status' => $j->JUSTIFICATIVA_STATUS ?? 'pendente',
-                'comprovante_url' => $j->JUSTIFICATIVA_COMPROVANTE
-                    ? asset('storage/abonos/' . $j->JUSTIFICATIVA_COMPROVANTE)
+                'id' => $j->ABONO_FALTA_ID,
+                'ABONO_FALTA_DATA' => $j->ABONO_FALTA_DATA_INICIO,
+                'ABONO_FALTA_JUSTIFICATIVA' => $j->ABONO_FALTA_JUSTIFICATIVA,
+                'tipo' => $j->ABONO_FALTA_TIPO ?? null,
+                'status' => $j->ABONO_FALTA_STATUS ?? 'pendente',
+                'comprovante_url' => $j->ABONO_FALTA_COMPROVANTE
+                    ? asset('storage/abonos/' . $j->ABONO_FALTA_COMPROVANTE)
                     : null,
-                'criado_em' => $j->JUSTIFICATIVA_DATA,
+                'criado_em' => $j->ABONO_FALTA_DATA_INICIO,
             ]);
 
         return response()->json($abonos);

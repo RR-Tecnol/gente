@@ -486,7 +486,7 @@ const fetchEscalas = async () => {
 }
 
 const carregarEscala = async () => {
-  if (!escalaSelecionadaId.value) { funcionariosDaEscala.value = []; return }
+  if (!escalaSelecionadaId.value || String(escalaSelecionadaId.value).startsWith('MOCK')) { funcionariosDaEscala.value = []; return }
   loadingGrade.value = true
   // Limpa grade anterior
   Object.keys(grid).forEach(k => delete grid[k])
@@ -539,6 +539,7 @@ const carregarEscala = async () => {
 }
 
 const salvarTodasAsLinhas = async () => {
+  if (!escalaSelecionadaId.value || String(escalaSelecionadaId.value).startsWith('MOCK')) return
   salvando.value = true
   try {
     for (const func of funcionariosDaEscala.value) {

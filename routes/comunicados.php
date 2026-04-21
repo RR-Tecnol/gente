@@ -123,3 +123,38 @@ Route::delete('/comunicados/{id}', function ($id) use ($tabelaExiste) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+Route::post('/comunicados/{id}/lido', function (int $id) {
+    try {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (\Illuminate\Support\Facades\Schema::hasTable('COMUNICADO_LEITURA')) {
+            $existe = \Illuminate\Support\Facades\DB::table('COMUNICADO_LEITURA')
+                ->where('COMUNICADO_ID', $id)->where('USUARIO_ID', $user->USUARIO_ID)->exists();
+            if (!$existe) {
+                \Illuminate\Support\Facades\DB::table('COMUNICADO_LEITURA')->insert([
+                    'COMUNICADO_ID' => $id, 'USUARIO_ID' => $user->USUARIO_ID, 'LIDO_EM' => now(),
+                ]);
+            }
+        }
+        return response()->json(['ok' => true]);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
+});
+
+Route::post('/comunicados/lidos', function () {
+    try {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (\Illuminate\Support\Facades\Schema::hasTable('COMUNICADO') && \Illuminate\Support\Facades\Schema::hasTable('COMUNICADO_LEITURA')) {
+            $ids = \Illuminate\Support\Facades\DB::table('COMUNICADO')->pluck('COMUNICADO_ID');
+            foreach ($ids as $id) {
+                $existe = \Illuminate\Support\Facades\DB::table('COMUNICADO_LEITURA')
+                    ->where('COMUNICADO_ID', $id)->where('USUARIO_ID', $user->USUARIO_ID)->exists();
+                if (!$existe) {
+                    \Illuminate\Support\Facades\DB::table('COMUNICADO_LEITURA')->insert([
+                        'COMUNICADO_ID' => $id, 'USUARIO_ID' => $user->USUARIO_ID, 'LIDO_EM' => now(),
+                    ]);
+                }
+            }
+        }
+        return response()->json(['ok' => true]);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
+});

@@ -90,7 +90,7 @@
               <span v-else class="overlap-pct">  {{ sobreposicao.pct }}% do setor</span>
               <ul class="overlap-list">
                 <li v-for="m in sobreposicao.membros" :key="m.nome">
-                  {{ m.nome }} ({{ formatDate(m.inicio) }} ? {{ formatDate(m.fim) }})
+                  {{ m.nome }} ({{ formatDate(m.inicio) }} a {{ formatDate(m.fim) }})
                 </li>
               </ul>
             </div>
@@ -122,7 +122,7 @@
               <template v-else>
                 <span class="uz-ico">✅</span>
                 <span class="uz-text"><strong>{{ arquivoFerias.name }}</strong></span>
-                <button class="uz-remove" @click.stop="arquivoFerias = null">?</button>
+                <button class="uz-remove" @click.stop="arquivoFerias = null">🗑️</button>
               </template>
             </div>
           </div>
@@ -156,7 +156,7 @@
                 <span class="tl-status" :class="dotClass(s)">{{ statusLabel(s) }}</span>
               </div>
               <div class="tl-periodo">
-                {{ formatDate(s.FERIAS_DATA_INICIO ?? s.inicio) }} ? {{ formatDate(s.FERIAS_DATA_FIM ?? s.fim) }}
+                {{ formatDate(s.FERIAS_DATA_INICIO ?? s.inicio) }} a {{ formatDate(s.FERIAS_DATA_FIM ?? s.fim) }}
                 &nbsp;&nbsp;<strong>{{ diasPeriodo(s) }} dias</strong>
               </div>
               <div v-if="s.FERIAS_AQUISITIVO_INICIO" class="tl-aquisitivo">
@@ -324,7 +324,7 @@
               <template v-else>
                 <span class="uz-ico">✅</span>
                 <span class="uz-text"><strong>{{ arquivoAfast.name }}</strong></span>
-                <button class="uz-remove" @click.stop="arquivoAfast = null">?</button>
+                <button class="uz-remove" @click.stop="arquivoAfast = null">🗑️</button>
               </template>
             </div>
           </div>
@@ -358,7 +358,7 @@
               </div>
               <div class="tl-periodo">
                 {{ formatDate(a.inicio) }}
-                <template v-if="a.fim"> ? {{ formatDate(a.fim) }} &nbsp;&nbsp; <strong>{{ diasAfastamento(a) }} dias</strong></template>
+                <template v-if="a.fim"> a {{ formatDate(a.fim) }} &nbsp;&nbsp; <strong>{{ diasAfastamento(a) }} dias</strong></template>
               </div>
               <div class="tl-chip-folha" v-if="tipoAfastFolha(a.tipo)">
                 <span class="mini-chip">{{ tipoAfastFolha(a.tipo) }}</span>
@@ -585,8 +585,8 @@ const tiposAfastamento = [
 ]
 
 const tabsAfast = [
-  { id: 'solicitar', ico: '??', nome: 'Solicitar' },
-  { id: 'historico', ico: '??', nome: 'Histórico' },
+  { id: 'solicitar', ico: '📋', nome: 'Solicitar' },
+  { id: 'historico', ico: '🕒', nome: 'Histórico' },
 ]
 
 const tipoSelecionado = computed(() => tiposAfastamento.find(t => t.val === formAfast.tipo) ?? null)
@@ -631,7 +631,7 @@ const solicitarAfast = async () => {
       fim:    formAfast.fim || null,
       obs:    formAfast.obs || null,
     })
-    okAfast.value = `? Solicitação registrada! Protocolo: ${data.protocolo ?? data.id ?? ''}`
+    okAfast.value = `✅ Solicitação registrada! Protocolo: ${data.protocolo ?? data.id ?? ''}`
     afastamentos.value.unshift({
       id: data.id, tipo: formAfast.tipo, tipo_nome: tipoSelecionado.value?.nome,
       inicio: formAfast.inicio, fim: formAfast.fim, obs: formAfast.obs, status: 'Pendente',
@@ -681,11 +681,11 @@ const formatDate = (d) => {
 }
 const diasPeriodo = (s) => {
   const ini = s.FERIAS_DATA_INICIO ?? s.inicio, fim = s.FERIAS_DATA_FIM ?? s.fim
-  if (!ini || !fim) return '?'
+  if (!ini || !fim) return '0'
   return Math.max(0, Math.round((new Date(fim) - new Date(ini)) / (1000 * 60 * 60 * 24)))
 }
 const diasAfastamento = (a) => {
-  if (!a.inicio || !a.fim) return '?'
+  if (!a.inicio || !a.fim) return '0'
   return Math.max(0, Math.round((new Date(a.fim) - new Date(a.inicio)) / (1000 * 60 * 60 * 24)))
 }
 const statusLabel = (s) => {
@@ -710,7 +710,7 @@ const dotAfastClass = (a) => {
   if (st === 'rejeitado') return 'st-red'
   return 'st-gray'
 }
-const tipoAfastIco  = (val) => tiposAfastamento.find(t => t.val === val)?.ico ?? '??'
+const tipoAfastIco  = (val) => tiposAfastamento.find(t => t.val === val)?.ico ?? '📋'
 const tipoAfastFolha = (val) => tiposAfastamento.find(t => t.val === val)?.folha ?? null
 </script>
 
