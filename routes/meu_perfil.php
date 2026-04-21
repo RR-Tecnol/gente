@@ -92,3 +92,27 @@ Route::put('/perfil', function (\Illuminate\Http\Request $request) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+//  POST: alterar senha do usuário
+Route::post('/perfil/alterar-senha', function (\Illuminate\Http\Request $request) {
+    try {
+        $request->validate([
+            'senha_atual' => 'required',
+            'nova_senha' => 'required|min:6'
+        ]);
+
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        if (!\Illuminate\Support\Facades\Hash::check($request->senha_atual, $user->USUARIO_SENHA)) {
+            return response()->json(['erro' => 'Senha atual incorreta.'], 400);
+        }
+
+        $user->USUARIO_SENHA = \Illuminate\Support\Facades\Hash::make($request->nova_senha);
+        $user->USUARIO_ALTERAR_SENHA = 0;
+        $user->save();
+
+        return response()->json(['message' => 'Senha alterada com sucesso.']);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});

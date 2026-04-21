@@ -5,7 +5,7 @@ use App\Http\Controllers\ConsignatariaController;
 use App\Http\Controllers\LayoutConsignatariaController;
 use App\Http\Controllers\ConsigRemessaController;
 
-Route::prefix('consignatarias')->middleware(['perfil:ADMIN'])->group(function () {
+Route::prefix('consignatarias')->middleware(['perfil:Administrador'])->group(function () {
     // CONSIGNATARIA LIST / CREATE (rotas estáticas sem wildcard)
     Route::get('/', [ConsignatariaController::class, 'index']);
     Route::post('/', [ConsignatariaController::class, 'store']);

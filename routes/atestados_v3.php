@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ATESTADOS MEDICOS standalone
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
@@ -99,4 +99,18 @@ Route::delete('/atestados/{id}', function ($id) {
     } catch (\Throwable $e) {
         return response()->json(['message' => 'Removido.']);
     }
+});
+
+Route::put('/atestados/{id}/aprovar', function ($id, \Illuminate\Http\Request $request) {
+    try {
+        \App\Models\Afastamento::where('AFASTAMENTO_ID', $id)->update(['AFASTAMENTO_STATUS' => 'aprovado', 'AFASTAMENTO_PARECER' => $request->parecer ?? null]);
+        return response()->json(['message' => 'Atestado aprovado.']);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
+});
+
+Route::put('/atestados/{id}/rejeitar', function ($id, \Illuminate\Http\Request $request) {
+    try {
+        \App\Models\Afastamento::where('AFASTAMENTO_ID', $id)->update(['AFASTAMENTO_STATUS' => 'rejeitado', 'AFASTAMENTO_PARECER' => $request->parecer ?? null]);
+        return response()->json(['message' => 'Atestado rejeitado.']);
+    } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
 });

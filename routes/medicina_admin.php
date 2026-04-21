@@ -157,7 +157,7 @@ Route::prefix('medicina-admin')->group(function () {
             $totalExames = DB::table('EXAME_OCUPACIONAL')->count();
             $vencidos = DB::table('EXAME_OCUPACIONAL')->whereNotNull('EXAME_DATA_VENCIMENTO')->where('EXAME_DATA_VENCIMENTO', '<', $hoje)->count();
             $proximos = DB::table('EXAME_OCUPACIONAL')->whereNotNull('EXAME_DATA_VENCIMENTO')->whereBetween('EXAME_DATA_VENCIMENTO', [$hoje, $avencer])->count();
-            $agendados = DB::table('AFASTAMENTO')->where('AFASTAMENTO_CID', 'like', 'Z1%')->where('AFASTAMENTO_STATUS', 'agendado')->count();
+            $agendados = DB::table('EXAME_OCUPACIONAL')->where('EXAME_DATA_REALIZACAO', '>=', $hoje)->count();
 
             return response()->json([
                 'total' => $totalExames,

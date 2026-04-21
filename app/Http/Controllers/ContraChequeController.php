@@ -44,7 +44,10 @@ class ContraChequeController extends Controller
 
             // Busca os detalhes financeiros desse funcionário em todas as competências
             $holerites = DetalheFolha::with(['folha', 'EventosDetalhesFolhas.evento'])
-                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'DETALHE_FOLHA.FUNCIONARIO_ID')
+                ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+                ->where('DETALHE_FOLHA.FUNCIONARIO_ID', $funcionarioId)
+                ->select('DETALHE_FOLHA.*', 'p.PESSOA_NOME as nome', 'f.FUNCIONARIO_MATRICULA as matricula')
                 ->get();
 
             \Illuminate\Support\Facades\Log::info("ContraChequeController processou a busca", [
@@ -68,6 +71,8 @@ class ContraChequeController extends Controller
 
                 return [
                     'funcionario_id' => $detalhe->FUNCIONARIO_ID,
+                    'nome' => $detalhe->nome ?? '—',
+                    'matricula' => $detalhe->matricula ?? '—',
                     'detalhe_folha_id' => $detalhe->DETALHE_FOLHA_ID,
                     'competencia' => $detalhe->folha->FOLHA_COMPETENCIA ?? 'N/D',
                     'data_processamento' => $detalhe->folha->FOLHA_CRIACAO ?? null,

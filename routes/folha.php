@@ -160,25 +160,31 @@ Route::post('/folhas/calcular', function (Request $request) {
                 if (!$detalhe)
                     continue;
 
+                $valorParcela = (float) $p->VALOR_PARCELA;
+                if ($valorParcela <= 0 || $valorParcela > 99999.99) {
+                    throw new \Exception("VALOR_PARCELA inválido: {$p->PARCELA_ID}");
+                }
+                $vFormat = number_format($valorParcela, 2, '.', '');
+
                 DB::table('DETALHE_FOLHA')
                     ->where('FOLHA_ID', $folha->FOLHA_ID)
                     ->where('FUNCIONARIO_ID', $p->FUNCIONARIO_ID)
                     ->update([
-                        'DETALHE_FOLHA_DESCONTOS' => DB::raw("COALESCE(DETALHE_FOLHA_DESCONTOS,0) + {$p->VALOR_PARCELA}"),
-                        'DETALHE_FOLHA_LIQUIDO' => DB::raw("COALESCE(DETALHE_FOLHA_LIQUIDO,0) - {$p->VALOR_PARCELA}"),
+                        'DETALHE_FOLHA_DESCONTOS' => DB::raw("COALESCE(DETALHE_FOLHA_DESCONTOS,0) + {$vFormat}"),
+                        'DETALHE_FOLHA_LIQUIDO' => DB::raw("COALESCE(DETALHE_FOLHA_LIQUIDO,0) - {$vFormat}"),
                         'updated_at' => now(),
                     ]);
 
                 DB::table('CONSIG_PARCELA')->where('PARCELA_ID', $p->PARCELA_ID)->update([
                     'STATUS' => 'DESCONTADA',
-                    'VALOR_PAGO' => $p->VALOR_PARCELA,
+                    'VALOR_PAGO' => $valorParcela,
                     'updated_at' => now(),
                 ]);
 
                 $pagas = (int) $p->PARCELAS_PAGAS + 1;
                 $update = [
                     'PARCELAS_PAGAS' => DB::raw('PARCELAS_PAGAS + 1'),
-                    'SALDO_DEVEDOR' => DB::raw("SALDO_DEVEDOR - {$p->VALOR_PARCELA}"),
+                    'SALDO_DEVEDOR' => DB::raw("SALDO_DEVEDOR - {$vFormat}"),
                     'updated_at' => now(),
                 ];
                 if ($pagas >= (int) $p->PRAZO_MESES) {

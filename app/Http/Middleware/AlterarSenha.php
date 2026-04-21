@@ -18,7 +18,7 @@ class AlterarSenha
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::user()->USUARIO_SENHA == md5('SISGEP123') ) {
+        if (Auth::user()->USUARIO_ALTERAR_SENHA == 1) {
             if (route('usuario.alteracao_senha') != route(Route::currentRouteName()))
                 return redirect(route('usuario.alteracao_senha'));
         }

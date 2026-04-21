@@ -151,9 +151,8 @@ class SpaAuthController extends Controller
             // Ignora erros de relacionamento
         }
 
-        // Fallback: usa o login para inferir o perfil quando não cadastrado
         if (!$perfilNome || strtolower(trim($perfilNome)) === 'usuário' || strtolower(trim($perfilNome)) === 'usuario') {
-            $perfilNome = strtolower($user->USUARIO_LOGIN) === 'admin' ? 'admin' : 'funcionario';
+            $perfilNome = 'funcionario';
         }
 
         return response()->json([

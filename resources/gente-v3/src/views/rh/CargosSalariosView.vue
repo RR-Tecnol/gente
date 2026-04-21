@@ -249,11 +249,6 @@
                     <label>Sigla</label>
                     <input v-model="formCargo.CARGO_SIGLA" type="text" class="form-input" placeholder="ENF" maxlength="10" />
                   </div>
-                  <div class="form-group">
-                    <label>CBO (6 dígitos) <span class="req">*</span></label>
-                    <input v-model="formCargo.CARGO_CBO" type="text" class="form-input cbo-input" placeholder="225125" maxlength="6" />
-                    <span class="field-hint">Obrigatório para o eSocial. Consulte <a href="https://cbo.mte.gov.br" target="_blank">cbo.mte.gov.br</a></span>
-                  </div>
                   <div class="form-group col-full">
                     <label>Descrição / Atribuições</label>
                     <textarea v-model="formCargo.CARGO_DESCRICAO" class="form-input" rows="2" placeholder="Descreva as atribuições e responsabilidades do cargo..."></textarea>
@@ -401,7 +396,7 @@ const okModal    = ref('')
 const formCargoVazio = () => ({
   _id: null,
   CARGO_NOME: '', CARGO_SIGLA: '',
-  CARGO_CBO: '', CARGO_DESCRICAO: '',
+  CARGO_DESCRICAO: '',
   CARGO_REMUNERACAO: '', CARGO_ESCOLARIDADE: '',
   CARGO_GESTAO: '0', CARGO_DATA_INICIO: '',
 })
@@ -455,7 +450,7 @@ const abrirModalCargo = (c = null) => {
   erroModal.value = ''; okModal.value = ''
   formCargo.value = c ? {
     _id: c.cargo_id, CARGO_NOME: c.nome ?? '',
-    CARGO_SIGLA: c.sigla ?? '', CARGO_CBO: c.cbo ?? '',
+    CARGO_SIGLA: c.sigla ?? '',
     CARGO_DESCRICAO: c.descricao ?? '',
     CARGO_REMUNERACAO: c.remuneracao ?? '',
     CARGO_ESCOLARIDADE: c.escolaridade ?? '',

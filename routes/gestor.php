@@ -143,6 +143,16 @@ Route::post('/gestor/aprovar', function (\Illuminate\Http\Request $request) {
         $acao = $request->acao; // 'aprovado' ou 'reprovado'
         $tabela = $request->ref_tabela;
         $id = $request->ref_id;
+
+        $acoesPermitidas = ['aprovado', 'reprovado', 'pendente'];
+        if (!in_array($acao, $acoesPermitidas, true)) {
+            return response()->json(['error' => 'Ação inválida'], 422);
+        }
+        $tabelasPermitidas = ['FERIAS_PERIODO', 'PLANTAO_EXTRA', 'SOBREAVISO_ACIONAMENTO'];
+        if (!in_array($tabela, $tabelasPermitidas, true)) {
+            return response()->json(['error' => 'Tabela inválida'], 422);
+        }
+
         if ($tabela && $id) {
             $tabelas = ['FERIAS_PERIODO' => 'FERIAS_STATUS', 'PLANTAO_EXTRA' => 'PLANTAO_STATUS'];
             if (isset($tabelas[$tabela])) {

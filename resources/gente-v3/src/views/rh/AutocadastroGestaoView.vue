@@ -189,8 +189,6 @@
       </div>
     </transition>
 
-    </transition>
-
     <!-- MODAL: confirmar revogação (BUG-EST-04) -->
     <transition name="modal">
       <div v-if="modalRevogar.visible" class="modal-overlay" @click.self="modalRevogar.visible = false">

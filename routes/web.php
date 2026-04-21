@@ -881,7 +881,14 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     require __DIR__ . '/sagres.php';
     // Sprint 5 â€” banco de horas e atestados
     require __DIR__ . '/banco_horas.php';
-    require __DIR__ . '/atestados.php';
+    // require __DIR__ . '/atestados.php';
+    require __DIR__ . '/progressao_funcional.php';
+    require __DIR__ . '/afastamentos_v3.php';
+    require __DIR__ . '/parametros_financeiros_v3.php';
+    require __DIR__ . '/turnos_v3.php';
+    require __DIR__ . '/feriados_v3.php';
+    require __DIR__ . '/tabelas_auxiliares.php';
+    require __DIR__ . '/eventos_folha_v3.php';
     // Refatoracao 30/03/2026 - blocos extraidos do web.php
     require __DIR__ . '/cargos_salarios.php';
     require __DIR__ . '/ferias_v3.php';
@@ -929,7 +936,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     require __DIR__ . '/controle_externo.php';   // ERP-6 — Controle Externo SAGRES/SICONFI
 
     // GAP-OSS — Monitor OSS (admin-only, mock PoC)
-    Route::middleware('perfil:ADMIN')->group(function () {
+    Route::middleware('perfil:Administrador')->group(function () {
         require __DIR__ . '/oss.php';
     });
 
@@ -1044,7 +1051,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 try {
                     $isAdmin = DB::table('USUARIO_UNIDADE_ACESSO')->where('USUARIO_ID', $user->USUARIO_ID)->exists();
                 } catch (\Throwable $ex) {
-                    $isAdmin = true;
+                    return response()->json(['error' => 'Erro ao verificar permissões'], 500);
                 }
                 if (!$isAdmin) {
                     \Illuminate\Support\Facades\Log::channel('security')->warning('acesso_negado', ['usuario' => Auth::id(), 'rota' => request()->path(), 'ip' => request()->ip()]);
@@ -1395,7 +1402,7 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::get('get-by-setor/{setorId}', [SetorAtribuicaoController::class, "getBySetor"]);
     });
 
-    Route::prefix('perfil')->middleware('perfil:ADMINISTRADOR,GESTOR,ADMIN')->group(function () {
+    Route::prefix('perfil')->middleware('perfil:ADMINISTRADOR,GESTOR,Administrador')->group(function () {
         Route::get('/', [PerfilController::class, "view"]);
         Route::get('view', [PerfilController::class, "view"]);
         Route::post('create', [PerfilController::class, "create"]);
@@ -1775,7 +1782,7 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::post("imprimir_unidade", [RelatorioController::class, "imprimirUnidade"])->name('imprimir_unidade');
     });
 
-    Route::prefix('aplicacao')->middleware('perfil:ADMINISTRADOR,ADMIN')->group(function () {
+    Route::prefix('aplicacao')->middleware('perfil:ADMINISTRADOR,Administrador')->group(function () {
         Route::get('/', [AplicacaoController::class, "view"]);
         Route::get('view', [AplicacaoController::class, "view"])->name('aplicacao.view');
         Route::get('search', [AplicacaoController::class, "search"]);

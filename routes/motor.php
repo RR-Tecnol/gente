@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 // GET /api/v3/vinculos — Lista todos os tipos de vínculo
 Route::get('/vinculos', function () {
     try {
-        $cols = array_column(DB::select('PRAGMA table_info(VINCULO)'), 'name');
+        $cols = \Illuminate\Support\Facades\Schema::getColumnListing('VINCULO');
         $query = DB::table('VINCULO')->orderBy('VINCULO_NOME');
         $vinculos = $query->get()->map(function ($v) use ($cols) {
             $row = (array) $v;
@@ -33,7 +33,7 @@ Route::get('/vinculos', function () {
 // PATCH /api/v3/vinculos/{id} — Edição inline dos flags do motor
 Route::patch('/vinculos/{id}', function (int $id, Request $request) {
     try {
-        $cols = array_column(DB::select('PRAGMA table_info(VINCULO)'), 'name');
+        $cols = \Illuminate\Support\Facades\Schema::getColumnListing('VINCULO');
         $data = [];
         foreach (['VINCULO_REGIME', 'VINCULO_FGTS', 'VINCULO_INSS', 'VINCULO_IRRF', 'VINCULO_ANUENIO_PCT'] as $col) {
             if (in_array($col, $cols) && $request->has($col)) {
@@ -57,7 +57,7 @@ Route::patch('/vinculos/{id}', function (int $id, Request $request) {
 // GET /api/v3/rubricas — Lista rubricas (opcional: ?camada=1|2|3)
 Route::get('/rubricas', function (Request $request) {
     try {
-        $cols = array_column(DB::select('PRAGMA table_info(RUBRICA)'), 'name');
+        $cols = \Illuminate\Support\Facades\Schema::getColumnListing('RUBRICA');
         $query = DB::table('RUBRICA')->where('RUBRICA_ATIVO', 1)->orderBy('RUBRICA_CODIGO');
         if ($request->camada && in_array('RUBRICA_CAMADA', $cols)) {
             $query->where('RUBRICA_CAMADA', $request->camada);
@@ -118,7 +118,7 @@ Route::post('/funcionarios/{id}/adicionais', function (int $id, Request $request
             $data['ADICIONAL_VIGENCIA_FIM'] = $request->vigencia_fim;
 
         // timestamps se existirem
-        $cols = array_column(DB::select('PRAGMA table_info(ADICIONAL_SERVIDOR)'), 'name');
+        $cols = \Illuminate\Support\Facades\Schema::getColumnListing('ADICIONAL_SERVIDOR');
         if (in_array('created_at', $cols)) {
             $data['created_at'] = now();
             $data['updated_at'] = now();
@@ -134,7 +134,7 @@ Route::post('/funcionarios/{id}/adicionais', function (int $id, Request $request
 Route::delete('/funcionarios/{funcId}/adicionais/{adId}', function (int $funcId, int $adId) {
     try {
         $data = ['ADICIONAL_VIGENCIA_FIM' => now()->toDateString()];
-        $cols = array_column(DB::select('PRAGMA table_info(ADICIONAL_SERVIDOR)'), 'name');
+        $cols = \Illuminate\Support\Facades\Schema::getColumnListing('ADICIONAL_SERVIDOR');
         if (in_array('updated_at', $cols))
             $data['updated_at'] = now();
 

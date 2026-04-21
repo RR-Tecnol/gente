@@ -157,20 +157,14 @@ const pedidosPaginados = computed(() => {
 
 const contarTab = (key) => key === 'todos' ? pedidos.value.length : pedidos.value.filter(p => p.status === key).length
 
-const mockPedidos = [
-  { id: 1, nome: 'Declaração de Vínculo Empregatício', data: '2026-02-20', status: 'pronto', protocolo: 'REQ-2026-082' },
-  { id: 2, nome: 'Declaração para Financiamento Imobiliário', data: '2026-02-18', status: 'andamento', protocolo: 'REQ-2026-071' },
-  { id: 3, nome: 'Certidão de Tempo de Serviço', data: '2026-01-10', status: 'pronto', protocolo: 'REQ-2026-012' },
-]
-
 onMounted(async () => {
   try {
     const { data } = await api.get('/api/v3/declaracoes')
     pedidos.value = (!data.fallback && data.pedidos?.length)
       ? data.pedidos.map(p => ({ id: p.PEDIDO_ID ?? p.id, nome: p.PEDIDO_NOME ?? p.nome, data: p.PEDIDO_DATA ?? p.data, status: p.PEDIDO_STATUS ?? p.status, protocolo: p.PEDIDO_PROTOCOLO ?? p.protocolo }))
-      : mockPedidos
+      : []
   } catch {
-    pedidos.value = mockPedidos
+    pedidos.value = []
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
@@ -183,6 +177,8 @@ const solicitarDoc = async (d) => {
     const proto = resp.data?.protocolo ?? `REQ-${new Date().getFullYear()}-${String(pedidos.value.length + 90).padStart(3,'0')}`
     if (d.instantaneo) {
       toast.value = { visible: true, msg: `✅ "${d.nome}" emitido com sucesso! Baixando...` }
+      const novoId = resp.data?.id
+      if (novoId) window.open(`/api/v3/declaracoes/${novoId}/download`, '_blank')
     } else {
       pedidos.value.unshift({ id: Date.now(), nome: d.nome, data: new Date().toISOString().slice(0,10), status: 'andamento', protocolo: proto })
       toast.value = { visible: true, msg: `📨 Solicitação registrada! Protocolo: ${proto}` }

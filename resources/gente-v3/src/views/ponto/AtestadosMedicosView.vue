@@ -295,7 +295,7 @@ const confirmarAprovacao = async () => {
   if (!modalAprovacao.value) return
   aprovando.value = true
   try {
-    const { data } = await api.put(`/api/v3/atestados/${modalAprovacao.value.id}/aprovar`, {
+    const { data } = await api.put(`/api/v3/atestados-v3/${modalAprovacao.value.id}/status`, {
       acao: acaoAtual.value,
       observacao: obsGestor.value || null,
     })

@@ -19,7 +19,7 @@ Route::get('/cargos', function (\Illuminate\Http\Request $request) {
         'cargo_id' => $c->CARGO_ID,
         'nome' => $c->CARGO_NOME,
         'sigla' => $c->CARGO_SIGLA ?? null,
-        'cbo' => $c->CARGO_CODIGO_CBO ?? $c->CARGO_CBO ?? null,
+        'cbo' => $c->CARGO_CODIGO_CBO ?? null,
         'descricao' => $c->CARGO_DESCRICAO ?? null,
         'escolaridade' => $c->CARGO_ESCOLARIDADE ?? null,
         'remuneracao' => (float) ($c->CARGO_REMUNERACAO ?? 0),
@@ -47,10 +47,7 @@ Route::post('/cargos', function (\Illuminate\Http\Request $request) {
         $cargo->CARGO_ESCOLARIDADE = $request->CARGO_ESCOLARIDADE ?? null;
         $cargo->CARGO_GESTAO = $request->CARGO_GESTAO ?? 0;
         $cargo->CARGO_ATIVO = 1;
-        try {
-            $cargo->CARGO_CBO = $request->CARGO_CBO ?? null;
-        } catch (\Throwable $e) {
-        }
+
         try {
             $cargo->CARGO_DESCRICAO = $request->CARGO_DESCRICAO ?? null;
         } catch (\Throwable $e) {
@@ -79,7 +76,6 @@ Route::put('/cargos/{id}', function ($id, \Illuminate\Http\Request $request) {
             'CARGO_SIGLA',
             'CARGO_ESCOLARIDADE',
             'CARGO_GESTAO',
-            'CARGO_CBO',
             'CARGO_DESCRICAO',
             'CARGO_DATA_INICIO',
             'CARGO_DATA_FIM',

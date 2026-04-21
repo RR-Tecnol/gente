@@ -19,7 +19,7 @@
       </div>
 
       <!-- Avatar -->
-      <div class="sidebar-profile">
+      <div class="sidebar-profile" @click="$router.push('/meu-perfil')" style="cursor:pointer">
         <div class="avatar">{{ userInitials }}</div>
         <div class="profile-info">
           <span class="profile-name">{{ userName }}</span>

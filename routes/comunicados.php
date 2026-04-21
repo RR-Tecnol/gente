@@ -44,7 +44,12 @@ Route::get('/comunicados', function () use ($tabelaExiste) {
         }
     } catch (\Throwable $e) {
     }
-    // Fallback: retorna vazio (front usarÃ¡ dados mockados)
+    // Fallback: retorna vazio (front usará dados mockados)
+    return response()->json(['comunicados' => [], 'fallback' => true]);
+});
+
+// Endpoint RH para evitar 404
+Route::get('/comunicados/rh', function () {
     return response()->json(['comunicados' => [], 'fallback' => true]);
 });
 

@@ -179,7 +179,7 @@ onMounted(async () => {
       plantoes.value = mockPlantoes
     }
   } catch {
-    plantoes.value = mockPlantoes
+    // failed
   } finally {
     loading.value = false
     setTimeout(() => { loaded.value = true }, 80)
@@ -238,12 +238,7 @@ const solicitarPlantao = async () => {
     }))
     showToast('✅ Solicitação enviada ao coordenador para aprovação!')
   } catch {
-    plantoes.value.push(mapearPlantao({
-      id: Date.now(), PLANTAO_DATA: novoP.data, PLANTAO_SETOR: novoP.setor,
-      PLANTAO_HORA_INI: novoP.horaIni, PLANTAO_HORA_FIM: novoP.horaFim,
-      PLANTAO_DURACAO: 12, PLANTAO_TIPO: novoP.tipo, PLANTAO_STATUS: 'PENDENTE',
-    }))
-    showToast('✅ Solicitação registrada! (aguardando sincronização)')
+    // failed
   } finally {
     Object.assign(novoP, { data: '', tipo: 'programado', horaIni: '', horaFim: '', setor: '', justificativa: '' })
     enviando.value = false

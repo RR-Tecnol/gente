@@ -50,7 +50,7 @@ class EscalaController extends Controller
         //     ]);
         // }
         // $turnos = collect($turnos_selects);
-        return view('escala.escala_view', compact('setores', 'tiposEscalas'));
+        return redirect('/escala-matriz-v3');
     }
 
     public function avaliacao_view()
