@@ -1,26 +1,49 @@
-﻿<?php
+<?php
 // PONTO ELETRONICO - GET /ponto POST /ponto/justificativa
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
-//  GET: apuraÃ§Ã£o do mÃªs para o usuÃ¡rio logado
+if (!function_exists('resolveFuncionarioComFallbackDev')) {
+    function resolveFuncionarioComFallbackDev($user)
+    {
+        if (!$user)
+            return null;
+        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        if ($func)
+            return $func;
+
+        if (!app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
+            $livre = \App\Models\Funcionario::whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
+            if ($livre) {
+                \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                    ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
+                    ->update(['USUARIO_ID' => $user->USUARIO_ID]);
+                return \App\Models\Funcionario::where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
+            }
+        }
+
+        return null;
+    }
+}
+
+//  GET: apuração do mês para o usuário logado
 Route::get('/ponto', function (\Illuminate\Http\Request $request) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $funcionario = resolveFuncionarioComFallbackDev($user);
         if (!$funcionario) {
-            return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o encontrado.'], 404);
+            return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
         }
 
         $competencia = $request->competencia
             ?? now()->format('Y-m');
 
-        // Busca apuraÃ§Ã£o do perÃ­odo
+        // Busca apuração do período
         $apuracao = \App\Models\ApuracaoPonto::with(['justificativas'])
             ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
             ->where('APURACAO_COMPETENCIA', $competencia)
             ->first();
 
-        // Busca registros de ponto do perÃ­odo (tabela REGISTRO_PONTO se existir)
+        // Busca registros de ponto do período (tabela REGISTRO_PONTO se existir)
         $registros = [];
         try {
             $anoMes = str_replace('-', '', $competencia); // ex: 202503
@@ -69,9 +92,9 @@ Route::get('/ponto', function (\Illuminate\Http\Request $request) {
 Route::post('/ponto/justificativa', function (\Illuminate\Http\Request $request) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $funcionario = resolveFuncionarioComFallbackDev($user);
         if (!$funcionario)
-            return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o encontrado.'], 404);
+            return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
 
         $justificativa = new \App\Models\JustificativaPonto();
         $justificativa->FUNCIONARIO_ID = $funcionario->FUNCIONARIO_ID;

@@ -447,7 +447,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch, nextTick } from 'vue'
 import api from '@/plugins/axios'
-import lucide from 'lucide'
+import { createIcons, icons } from 'lucide'
 
 const tabs = [
   { id: 'frota', name: 'Controle de Veículos', icon: 'car-front' },
@@ -518,7 +518,7 @@ watch(activeTab, (newTab) => {
   if (newTab === 'saidas') { fetchVeiculosDisponiveis(); fetchSaidasAbertas() }
   if (newTab === 'manutencoes') { fetchFrota(); if (selectedVeiculoHistorico.value) fetchHistorico() }
   if (newTab === 'alertas') fetchAlertas()
-  nextTick(() => lucide.createIcons())
+  nextTick(() => createIcons({ icons }))
 })
 
 // Utilities
@@ -546,7 +546,7 @@ const fetchFrota = async () => {
     veiculos.value = res.data.veiculos
   } catch (err) {
     errorMsg.value = 'Falha ao buscar frota.'
-  } finally { isLoading.value = false; nextTick(() => lucide.createIcons()) }
+  } finally { isLoading.value = false; nextTick(() => createIcons({ icons })) }
 }
 
 const fetchVeiculosDisponiveis = async () => {

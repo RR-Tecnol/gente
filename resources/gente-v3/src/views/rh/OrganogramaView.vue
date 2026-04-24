@@ -176,6 +176,7 @@
                     <span class="asc-resp">{{ s.responsavel || '—' }}</span>
                     <div class="asc-bar-wrap"><div class="asc-bar" :style="{ width: ((s.funcionarios.length/(maxFuncPorSetor||1))*100)+'%', background: dir.cor }"></div></div>
                     <div class="asc-actions" @click.stop>
+                      <button class="sca-btn sca-link" @click="abrirModalVincular(s)">Vincular</button>
                       <button class="sca-btn sca-edit" @click="abrirModalEditar(s)">Editar</button>
                       <button class="sca-btn sca-del" @click="confirmarExcluir(s)">Excluir</button>
                     </div>
@@ -224,6 +225,7 @@
               <p class="drawer-sub">{{ setorAberto.funcionarios.length }} servidor{{ setorAberto.funcionarios.length !== 1 ? 'es' : '' }}</p>
             </div>
             <div class="drawer-hdr-actions">
+              <button class="sca-btn sca-link" @click="abrirModalVincular(setorAberto); setorAberto = null" title="Vincular">Vincular</button>
               <button class="sca-btn sca-edit" @click="abrirModalEditar(setorAberto); setorAberto = null" title="Editar">Editar</button>
               <button class="drawer-close" @click="setorAberto = null">✕</button>
             </div>
@@ -277,6 +279,32 @@
                 <option v-for="u in unidadesFlat" :key="u.id" :value="u.id">{{ u.nome }}</option>
               </select>
             </div>
+            <div class="mf-group">
+              <label>Vincular Funcionários (opcional)</label>
+              <div class="vf-toolbar">
+                <input v-model="buscaFuncionariosModal" class="mf-input" placeholder="Pesquisar funcionário..." />
+                <div class="vf-filtros">
+                  <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosModal === 'todos' }" @click="filtroFuncionariosModal = 'todos'">Todos</button>
+                  <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosModal === 'com_matricula' }" @click="filtroFuncionariosModal = 'com_matricula'">Com matrícula</button>
+                  <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosModal === 'sem_matricula' }" @click="filtroFuncionariosModal = 'sem_matricula'">Sem matrícula</button>
+                </div>
+              </div>
+              <div class="vf-lista">
+                <button
+                  v-for="f in funcionariosFiltradosModal"
+                  :key="f.id"
+                  type="button"
+                  class="vf-item"
+                  :class="{ selected: ordemSelecao(formSetor.funcionario_ids, f.id) > 0 }"
+                  @click="toggleSelecao(formSetor.funcionario_ids, f.id)"
+                >
+                  <span class="vf-nome">{{ f.nome }}</span>
+                  <span class="vf-meta">{{ f.matricula ? `Matrícula ${f.matricula}` : 'Sem matrícula' }}</span>
+                  <span v-if="ordemSelecao(formSetor.funcionario_ids, f.id) > 0" class="vf-ordem">{{ ordemSelecao(formSetor.funcionario_ids, f.id) }}</span>
+                </button>
+              </div>
+              <small class="vf-hint">{{ formSetor.funcionario_ids.length }} selecionado(s). Clique no nome para marcar/desmarcar.</small>
+            </div>
             <p v-if="erroModal" class="modal-err">{{ erroModal }}</p>
           </div>
           <div class="modal-footer">
@@ -284,6 +312,51 @@
             <button class="modal-save" :disabled="salvando || !formSetor.nome.trim()" @click="salvarSetor">
               <span v-if="salvando" class="btn-spin"></span>
               <template v-else>{{ editandoId ? 'Salvar' : 'Criar Setor' }}</template>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- MODAL VINCULAR FUNCIONÁRIOS ───────────────────────────── -->
+    <transition name="modal">
+      <div v-if="modalVincularAberto" class="modal-overlay" @click.self="modalVincularAberto = false">
+        <div class="modal">
+          <div class="modal-hdr">
+            <h3>Vincular Funcionários — {{ setorVinculo?.nome }}</h3>
+            <button class="modal-close" @click="modalVincularAberto = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="vf-toolbar">
+              <input v-model="buscaFuncionariosVinculo" class="mf-input" placeholder="Pesquisar funcionário..." />
+              <div class="vf-filtros">
+                <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosVinculo === 'todos' }" @click="filtroFuncionariosVinculo = 'todos'">Todos</button>
+                <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosVinculo === 'com_matricula' }" @click="filtroFuncionariosVinculo = 'com_matricula'">Com matrícula</button>
+                <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosVinculo === 'sem_matricula' }" @click="filtroFuncionariosVinculo = 'sem_matricula'">Sem matrícula</button>
+              </div>
+            </div>
+            <div class="vf-lista">
+              <button
+                v-for="f in funcionariosFiltradosVinculo"
+                :key="f.id"
+                type="button"
+                class="vf-item"
+                :class="{ selected: ordemSelecao(funcionariosSelecionadosVinculo, f.id) > 0 }"
+                @click="toggleSelecao(funcionariosSelecionadosVinculo, f.id)"
+              >
+                <span class="vf-nome">{{ f.nome }}</span>
+                <span class="vf-meta">{{ f.matricula ? `Matrícula ${f.matricula}` : 'Sem matrícula' }}</span>
+                <span v-if="ordemSelecao(funcionariosSelecionadosVinculo, f.id) > 0" class="vf-ordem">{{ ordemSelecao(funcionariosSelecionadosVinculo, f.id) }}</span>
+              </button>
+            </div>
+            <small class="vf-hint">{{ funcionariosSelecionadosVinculo.length }} selecionado(s). A bolha mostra a ordem de seleção.</small>
+            <p v-if="erroVinculoModal" class="modal-err">{{ erroVinculoModal }}</p>
+          </div>
+          <div class="modal-footer">
+            <button class="modal-cancel" @click="modalVincularAberto = false">Cancelar</button>
+            <button class="modal-save" :disabled="salvandoVinculo" @click="salvarVinculos">
+              <span v-if="salvandoVinculo" class="btn-spin"></span>
+              <template v-else>Salvar Vínculos</template>
             </button>
           </div>
         </div>
@@ -447,8 +520,19 @@ const editandoId     = ref(null)
 const salvando       = ref(false)
 const excluindo      = ref(false)
 const erroModal      = ref('')
-const formSetor      = reactive({ nome: '', sigla: '', unidade_id: null, ico: '🏥' })
+const formSetor      = reactive({ nome: '', sigla: '', unidade_id: null, funcionario_ids: [], ico: '🏥' })
 const unidadesFlat   = ref([])
+const funcionariosDisponiveis = ref([])
+const buscaFuncionariosModal = ref('')
+const filtroFuncionariosModal = ref('todos')
+
+const modalVincularAberto = ref(false)
+const setorVinculo = ref(null)
+const funcionariosSelecionadosVinculo = ref([])
+const buscaFuncionariosVinculo = ref('')
+const filtroFuncionariosVinculo = ref('todos')
+const salvandoVinculo = ref(false)
+const erroVinculoModal = ref('')
 
 // ── CRUD Diretoria state ──────────────────────────────────────
 const modalDiretoriaAberto    = ref(false)
@@ -512,22 +596,80 @@ const mapEstrutura = (unidades) => {
 }
 
 onMounted(async () => {
+  await carregarOrganograma()
+  await carregarFuncionariosDisponiveis()
+  // TASK-ORG-01: iniciar todas as diretorias colapsadas por padrão
+  estrutura.value.forEach(dir => colapsados.add(dir.id))
+  setTimeout(() => { loaded.value = true }, 80)
+})
+
+const carregarOrganograma = async () => {
   try {
     const { data } = await api.get('/api/v3/organograma')
     if (!data.fallback && data.unidades?.length) {
       estrutura.value  = mapEstrutura(data.unidades)
       unidadesFlat.value = data.unidades_flat ?? []
+      return
     } else {
-      estrutura.value  = mockEstrutura
+      estrutura.value = data.unidades ? mapEstrutura(data.unidades) : mockEstrutura
+      unidadesFlat.value = data.unidades_flat ?? []
     }
   } catch {
     estrutura.value = mockEstrutura
-  } finally {
-    // TASK-ORG-01: iniciar todas as diretorias colapsadas por padrão
-    estrutura.value.forEach(dir => colapsados.add(dir.id))
-    setTimeout(() => { loaded.value = true }, 80)
+    unidadesFlat.value = []
   }
-})
+}
+
+const carregarFuncionariosDisponiveis = async () => {
+  try {
+    const { data } = await api.get('/api/v3/organograma/funcionarios')
+    funcionariosDisponiveis.value = data?.funcionarios ?? []
+  } catch {
+    funcionariosDisponiveis.value = []
+  }
+}
+
+const obterIdsFuncionariosSetor = (setorId) => {
+  for (const dir of estrutura.value) {
+    const setor = dir.setores.find(s => s.id === setorId)
+    if (setor) return (setor.funcionarios || []).map(f => String(f.id))
+  }
+  return []
+}
+
+const filtrarFuncionarios = (lista, buscaTxt, filtro) => {
+  const termo = (buscaTxt || '').toLowerCase().trim()
+  return (lista || []).filter((f) => {
+    const casaBusca = !termo || (f.nome || '').toLowerCase().includes(termo) || String(f.matricula || '').toLowerCase().includes(termo)
+    if (!casaBusca) return false
+    if (filtro === 'com_matricula') return !!f.matricula
+    if (filtro === 'sem_matricula') return !f.matricula
+    return true
+  })
+}
+
+const funcionariosFiltradosModal = computed(() =>
+  filtrarFuncionarios(funcionariosDisponiveis.value, buscaFuncionariosModal.value, filtroFuncionariosModal.value)
+)
+
+const funcionariosFiltradosVinculo = computed(() =>
+  filtrarFuncionarios(funcionariosDisponiveis.value, buscaFuncionariosVinculo.value, filtroFuncionariosVinculo.value)
+)
+
+const toggleSelecao = (targetArray, funcionarioId) => {
+  const id = String(funcionarioId)
+  const idx = targetArray.indexOf(id)
+  if (idx >= 0) {
+    targetArray.splice(idx, 1)
+    return
+  }
+  targetArray.push(id)
+}
+
+const ordemSelecao = (lista, funcionarioId) => {
+  const idx = (lista || []).indexOf(String(funcionarioId))
+  return idx >= 0 ? idx + 1 : 0
+}
 
 
 // ── Computed ──────────────────────────────────────────────────
@@ -555,18 +697,44 @@ const showToast = (msg) => { toast.value = { visible: true, msg }; setTimeout(()
 // ── CRUD Setor ────────────────────────────────────────────────
 const abrirModalNovo = () => {
   editandoId.value = null; erroModal.value = ''
-  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: null, ico: '🏥' })
+  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: null, funcionario_ids: [], ico: '🏥' })
+  buscaFuncionariosModal.value = ''
+  filtroFuncionariosModal.value = 'todos'
   modalAberto.value = true
 }
 const abrirModalNovoNaDir = (dir) => {
   editandoId.value = null; erroModal.value = ''
-  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: dir.id, ico: '🏥' })
+  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: dir.id, funcionario_ids: [], ico: '🏥' })
+  buscaFuncionariosModal.value = ''
+  filtroFuncionariosModal.value = 'todos'
   modalAberto.value = true
 }
 const abrirModalEditar = (s) => {
   editandoId.value = s.id; erroModal.value = ''
-  Object.assign(formSetor, { nome: s.nome, sigla: s.sigla ?? '', unidade_id: s.unidade_id ?? null, ico: s.ico ?? '🏥' })
+  Object.assign(formSetor, {
+    nome: s.nome,
+    sigla: s.sigla ?? '',
+    unidade_id: s.unidade_id ?? null,
+    funcionario_ids: obterIdsFuncionariosSetor(s.id),
+    ico: s.ico ?? '🏥',
+  })
+  buscaFuncionariosModal.value = ''
+  filtroFuncionariosModal.value = 'todos'
   modalAberto.value = true
+}
+const abrirModalVincular = (s) => {
+  if (!s?.id) return
+  setorVinculo.value = {
+    id: s.id,
+    nome: s.nome ?? '',
+    sigla: s.sigla ?? '',
+    unidade_id: s.unidade_id ?? null,
+  }
+  funcionariosSelecionadosVinculo.value = obterIdsFuncionariosSetor(s.id)
+  buscaFuncionariosVinculo.value = ''
+  filtroFuncionariosVinculo.value = 'todos'
+  erroVinculoModal.value = ''
+  modalVincularAberto.value = true
 }
 const confirmarExcluir = (s) => { confirmExcluir.value = s }
 
@@ -575,49 +743,18 @@ const salvarSetor = async () => {
   salvando.value = true; erroModal.value = ''
   try {
     if (editandoId.value) {
-      await api.put(`/api/v3/organograma/setor/${editandoId.value}`, { ...formSetor })
-
-      // Encontrar em qual diretoria o setor está atualmente
-      let setorSnapshot = null
-      let dirAtualIdx = -1
-      estrutura.value.forEach((dir, di) => {
-        const idx = dir.setores.findIndex(s => s.id === editandoId.value)
-        if (idx !== -1) { setorSnapshot = { ...dir.setores[idx] }; dirAtualIdx = di }
+      await api.put(`/api/v3/organograma/setor/${editandoId.value}`, {
+        ...formSetor,
+        funcionario_ids: (formSetor.funcionario_ids || []).map(v => Number(v)).filter(Boolean),
       })
-
-      const novaUnidadeId = formSetor.unidade_id ?? 0
-      const velhaUnidadeId = setorSnapshot?.unidade_id ?? 0
-      const setorAtualizado = { ...setorSnapshot, nome: formSetor.nome, sigla: formSetor.sigla, ico: formSetor.ico, unidade_id: novaUnidadeId }
-
-      if (dirAtualIdx !== -1 && novaUnidadeId !== velhaUnidadeId) {
-        // Mudou de diretoria: remover da antiga
-        estrutura.value[dirAtualIdx].setores = estrutura.value[dirAtualIdx].setores.filter(s => s.id !== editandoId.value)
-        // Inserir na nova diretoria
-        const novaDirIdx = estrutura.value.findIndex(d => {
-          if (novaUnidadeId === 0 || novaUnidadeId === null) return !d.id || d.id === 0
-          return d.id === novaUnidadeId
-        })
-        if (novaDirIdx !== -1) {
-          estrutura.value[novaDirIdx].setores.push(setorAtualizado)
-        } else {
-          // Criar grupo 'Sem Diretoria' caso não exista
-          estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏥', cor: '#64748b', setores: [setorAtualizado] })
-        }
-        // Limpar grupos virtuais vazios
-        estrutura.value = estrutura.value.filter(d => d.setores.length > 0 || (d.id && d.id !== 0))
-      } else if (dirAtualIdx !== -1) {
-        // Mesma diretoria: apenas atualizar campos
-        const idx = estrutura.value[dirAtualIdx].setores.findIndex(s => s.id === editandoId.value)
-        if (idx !== -1) estrutura.value[dirAtualIdx].setores[idx] = setorAtualizado
-      }
-
+      await carregarOrganograma()
       showToast(`Setor "${formSetor.nome}" atualizado!`)
     } else {
-      const { data } = await api.post('/api/v3/organograma/setor', { ...formSetor })
-      const novoSetor = { id: data.id ?? Date.now(), nome: formSetor.nome, sigla: formSetor.sigla, ico: formSetor.ico, responsavel: '—', unidade_id: formSetor.unidade_id, funcionarios: [] }
-      const dirIdx = estrutura.value.findIndex(d => d.id === formSetor.unidade_id)
-      if (dirIdx !== -1) { estrutura.value[dirIdx].setores.push(novoSetor) }
-      else { estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏥', cor: '#64748b', setores: [novoSetor] }) }
+      const { data } = await api.post('/api/v3/organograma/setor', {
+        ...formSetor,
+        funcionario_ids: (formSetor.funcionario_ids || []).map(v => Number(v)).filter(Boolean),
+      })
+      await carregarOrganograma()
       showToast(`Setor "${formSetor.nome}" criado!`)
     }
     modalAberto.value = false
@@ -628,6 +765,27 @@ const salvarSetor = async () => {
   }
 }
 
+const salvarVinculos = async () => {
+  if (!setorVinculo.value?.id) return
+  salvandoVinculo.value = true
+  erroVinculoModal.value = ''
+  try {
+    await api.put(`/api/v3/organograma/setor/${setorVinculo.value.id}`, {
+      nome: setorVinculo.value.nome,
+      sigla: setorVinculo.value.sigla,
+      unidade_id: setorVinculo.value.unidade_id,
+      funcionario_ids: funcionariosSelecionadosVinculo.value.map(v => Number(v)).filter(Boolean),
+    })
+    await carregarOrganograma()
+    showToast(`Vínculos atualizados em "${setorVinculo.value.nome}".`)
+    modalVincularAberto.value = false
+  } catch (e) {
+    erroVinculoModal.value = e?.response?.data?.error ?? 'Erro ao salvar vínculos.'
+  } finally {
+    salvandoVinculo.value = false
+  }
+}
+
 const excluirSetor = async () => {
   if (!confirmExcluir.value) return
   excluindo.value = true
@@ -635,11 +793,10 @@ const excluirSetor = async () => {
   const nome = confirmExcluir.value.nome
   try {
     await api.delete(`/api/v3/organograma/setor/${id}`)
-    estrutura.value.forEach(dir => { dir.setores = dir.setores.filter(s => s.id !== id) })
+    await carregarOrganograma()
     showToast(`🗑️ Setor "${nome}" removido.`)
   } catch {
-    showToast(`🗑️ Setor "${nome}" removido.`)
-    estrutura.value.forEach(dir => { dir.setores = dir.setores.filter(s => s.id !== id) })
+    showToast('❌ Erro ao remover setor.')
   } finally {
     excluindo.value = false
     confirmExcluir.value = null
@@ -849,6 +1006,7 @@ const excluirDiretoria = async () => {
 .sca-btn { padding: 4px 10px; border-radius: 7px; border: none; background: #f8fafc; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.13s; white-space: nowrap; height: auto; width: auto; }
 .sca-edit:hover { background: #eff6ff; color: #3b82f6; }
 .sca-del:hover { background: #fef2f2; color: #ef4444; }
+.sca-link:hover { background: #ecfeff; color: #0e7490; }
 .sc-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .sc-count { font-size: 11px; font-weight: 700; color: #475569; }
 .sc-resp { font-size: 10px; color: #94a3b8; }
@@ -907,6 +1065,18 @@ const excluirDiretoria = async () => {
 .mf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .mf-input { border: 1.5px solid #e2e8f0; border-radius: 11px; padding: 10px 14px; font-size: 14px; font-family: inherit; color: #1e293b; background: #f8fafc; outline: none; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
 .mf-input:focus { border-color: #6366f1; }
+.vf-toolbar { display: flex; flex-direction: column; gap: 8px; }
+.vf-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+.vf-filtro-btn { border: 1px solid #e2e8f0; background: #fff; color: #475569; border-radius: 10px; padding: 5px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.vf-filtro-btn.active { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; }
+.vf-lista { max-height: 280px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.vf-item { width: 100%; border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; padding: 9px 10px; text-align: left; cursor: pointer; display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 10px; }
+.vf-item:hover { border-color: #c7d2fe; background: #f8faff; }
+.vf-item.selected { border-color: #6366f1; background: #eef2ff; }
+.vf-nome { font-size: 12px; font-weight: 700; color: #1e293b; }
+.vf-meta { font-size: 11px; color: #64748b; }
+.vf-ordem { min-width: 24px; height: 24px; border-radius: 999px; background: #6366f1; color: #fff; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.vf-hint { font-size: 11px; color: #64748b; }
 .ico-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 .ico-btn { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-size: 16px; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.13s; }
 .ico-btn:hover { border-color: #6366f1; }

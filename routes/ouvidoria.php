@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // OUVIDORIA - GET/POST /ouvidoria
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 

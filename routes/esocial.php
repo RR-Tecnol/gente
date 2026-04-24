@@ -101,13 +101,16 @@ Route::get('/esocial/gerar/S-1200/{competencia}', function (string $competencia)
 // ── PATCH: marcar como enviado / reprocessar ─────────────────────
 Route::patch('/esocial/eventos/{id}', function (Request $request, $id) {
     try {
-        DB::table('ESOCIAL_EVENTO')->where('EVENTO_ID', $id)->update([
+        $updated = DB::table('ESOCIAL_EVENTO')->where('EVENTO_ID', $id)->update([
             'STATUS' => $request->status,
             'NUMERO_RECIBO' => $request->numero_recibo,
             'MOTIVO_ERRO' => $request->motivo_erro,
             'DT_ENVIO' => $request->status === 'ENVIADO' ? now() : null,
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Evento eSocial não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);

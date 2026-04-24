@@ -195,7 +195,7 @@ const routes = [
                 path: 'funcionario/:id',
                 name: 'PerfilFuncionario',
                 component: () => import('../views/rh/PerfilFuncionarioView.vue'),
-                meta: { roles: ['admin', 'rh'] }
+                meta: { roles: ['admin', 'rh', 'gestor'] }
             },
             {
                 path: 'relatorios',

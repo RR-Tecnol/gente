@@ -1,0 +1,264 @@
+{
+  "base": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "name": "GET setores",
+      "method": "GET",
+      "path": "/api/v3/setores",
+      "status": 200,
+      "body_preview": "{\"setores\": [{\"id\": \"2\", \"nome\": \"Assessoria Especial do Prefeito\"}, {\"id\": \"61\", \"nome\": \"Assessoria Política\"}, {\"id\": \"1\", \"nome\": \"Chefia de Gabinete\"}, {\"id\": \"9\", \"nome\": \"Contadoria Geral do Município\"}, {\"id\": \"37\", \"nome\": \"Coordenação de Agricultura\"}, {\"id\": \"45\", \"nome\": \"Coordenação de Articulação Política\"}, {\"id\": \"25\", \"nome\": \"Coordenação de Assistência Social\"}, {\"id\": \"23\", \"nome\": \"Coordenação de Banco de Dados\"}, {\"id\": \"6\", \"nome\": \"Coordenação de Cadastro Funcional\"}, {\"id"
+    },
+    {
+      "name": "GET servidores/buscar",
+      "method": "GET",
+      "path": "/api/v3/servidores/buscar?q=a",
+      "status": 200,
+      "body_preview": "{\"servidores\": [{\"id\": \"1\", \"nome\": \"Ana Cristina Barros\", \"matricula\": \"2010-0001\", \"admissao\": \"2010-02-01\", \"regime_prev\": \"RPPS\", \"cargo\": null, \"CARGO_SALARIO\": null, \"CARGO_ID\": null, \"CARREIRA_ID\": \"1\", \"FUNCIONARIO_CLASSE\": \"V\", \"FUNCIONARIO_REFERENCIA\": \"C\", \"setor\": \"Setor Smoke 2026-04-22\", \"secretaria\": null, \"unidade_id\": null}, {\"id\": \"2\", \"nome\": \"José Carlos Lima\", \"matricula\": \"2008-0002\", \"admissao\": \"2008-05-15\", \"regime_prev\": \"RPPS\", \"cargo\": null, \"CARGO_SALARIO\": null, \"CA"
+    },
+    {
+      "name": "GET escalas",
+      "method": "GET",
+      "path": "/api/v3/escalas",
+      "status": 200,
+      "body_preview": "{\"escalas\": [{\"ESCALA_ID\": \"16\", \"ESCALA_COMPETENCIA\": \"2026-04\", \"ESCALA_DESCRICAO\": \"Escala 2026-04\", \"setor\": \"Assessoria Especial do Prefeito\", \"funcionarios\": 18, \"status\": \"CADASTRADA\"}, {\"ESCALA_ID\": \"15\", \"ESCALA_COMPETENCIA\": \"2026-04\", \"ESCALA_DESCRICAO\": null, \"setor\": \"Setor Smoke 2026-04-22\", \"funcionarios\": 1, \"status\": \"CADASTRADA\"}, {\"ESCALA_ID\": \"14\", \"ESCALA_COMPETENCIA\": \"2026-04\", \"ESCALA_DESCRICAO\": \"Escala 2026-04\", \"setor\": \"Assessoria Especial do Prefeito\", \"funcionarios\""
+    },
+    {
+      "name": "POST ponto/registro",
+      "method": "POST",
+      "path": "/api/v3/ponto/registro",
+      "status": 200,
+      "body_preview": "{\"ok\": true, \"id\": 295, \"hora\": \"18:52\", \"tipo\": \"entrada\", \"protocolo\": \"REG-000295\"}"
+    },
+    {
+      "name": "POST escala-trabalho",
+      "method": "POST",
+      "path": "/api/v3/escala-trabalho",
+      "status": 201,
+      "body_preview": "{\"ok\": true, \"escala_id\": 17, \"detalhe_id\": 104}"
+    },
+    {
+      "name": "POST escalas (médica)",
+      "method": "POST",
+      "path": "/api/v3/escalas",
+      "status": 201,
+      "body_preview": "{\"ok\": true, \"escala_id\": 18, \"competencia\": \"2026-04\"}"
+    },
+    {
+      "name": "POST substituicoes",
+      "method": "POST",
+      "path": "/api/v3/substituicoes",
+      "status": 201,
+      "body_preview": "{\"id\": 16}"
+    },
+    {
+      "name": "POST ferias",
+      "method": "POST",
+      "path": "/api/v3/ferias",
+      "status": 201,
+      "body_preview": "{\"message\": \"Férias agendadas com sucesso.\", \"ferias_id\": 9}"
+    },
+    {
+      "name": "POST afastamentos",
+      "method": "POST",
+      "path": "/api/v3/afastamentos",
+      "status": 201,
+      "body_preview": "{\"ok\": true, \"id\": 8, \"protocolo\": \"AFT-00008\"}"
+    },
+    {
+      "name": "POST organograma/setor",
+      "method": "POST",
+      "path": "/api/v3/organograma/setor",
+      "status": 201,
+      "body_preview": "{\"id\": 69, \"nome\": \"Setor Smoke 2026-04-22\", \"sigla\": \"SMK\", \"unidade_id\": 0, \"funcionario_id\": 1, \"message\": \"Setor criado com sucesso!\"}"
+    },
+    {
+      "name": "POST declaracoes",
+      "method": "POST",
+      "path": "/api/v3/declaracoes",
+      "status": 200,
+      "body_preview": "{\"ok\": true, \"id\": 12, \"protocolo\": \"REQ-2026-012\", \"status\": \"andamento\"}"
+    },
+    {
+      "name": "POST avaliacoes",
+      "method": "POST",
+      "path": "/api/v3/avaliacoes",
+      "status": 201,
+      "body_preview": "{\"ok\": true, \"avaliacao_id\": 5, \"nota_final\": 8, \"ciclo\": \"2026-04\"}"
+    },
+    {
+      "name": "POST plantoes-extras",
+      "method": "POST",
+      "path": "/api/v3/plantoes-extras",
+      "status": 201,
+      "body_preview": "{\"id\": 13, \"plantao\": {\"PLANTAO_ID\": 13, \"PLANTAO_DATA\": \"2026-04-23\", \"PLANTAO_SETOR\": \"UTI Adulto\", \"PLANTAO_HORA_INI\": \"07:00\", \"PLANTAO_HORA_FIM\": \"19:00\", \"PLANTAO_HORAS\": 12, \"PLANTAO_TIPO\": \"programado\", \"PLANTAO_STATUS\": \"PENDENTE\"}}"
+    },
+    {
+      "name": "POST sobreaviso/acionamento",
+      "method": "POST",
+      "path": "/api/v3/sobreaviso/acionamento",
+      "status": 201,
+      "body_preview": "{\"id\": 10, \"acionamento\": {\"ACIONAMENTO_ID\": 10, \"ACIONAMENTO_DATA\": \"2026-04-22\", \"ACIONAMENTO_MOTIVO\": \"Smoke automático\", \"ACIONAMENTO_LOCAL\": \"UTI\", \"ACIONAMENTO_HORA_INI\": \"08:00\", \"ACIONAMENTO_HORA_FIM\": \"10:00\"}}"
+    },
+    {
+      "name": "POST hora-extra",
+      "method": "POST",
+      "path": "/api/v3/hora-extra",
+      "status": 200,
+      "body_preview": "{\"ok\": true, \"id\": 12, \"valor_calculado\": 0}"
+    },
+    {
+      "name": "POST plantao-extra",
+      "method": "POST",
+      "path": "/api/v3/plantao-extra",
+      "status": 200,
+      "body_preview": "{\"ok\": true, \"id\": 14, \"valor_calculado\": 168}"
+    },
+    {
+      "name": "POST diarias",
+      "method": "POST",
+      "path": "/api/v3/diarias",
+      "status": 200,
+      "body_preview": "{\"mensagem\": \"Solicitação registrada.\", \"id\": 3, \"qtde_diarias\": 2, \"valor_total\": 0}"
+    },
+    {
+      "name": "POST estagiarios",
+      "method": "POST",
+      "path": "/api/v3/estagiarios",
+      "status": 200,
+      "body_preview": "{\"mensagem\": \"Estagiário cadastrado.\", \"estagiario_id\": 3, \"contrato_id\": 2}"
+    },
+    {
+      "name": "POST seguranca/epis",
+      "method": "POST",
+      "path": "/api/v3/seguranca/epis",
+      "status": 200,
+      "body_preview": "{\"success\": true}"
+    },
+    {
+      "name": "POST seguranca/incidentes",
+      "method": "POST",
+      "path": "/api/v3/seguranca/incidentes",
+      "status": 200,
+      "body_preview": "{\"success\": true}"
+    },
+    {
+      "name": "POST medicina/agendar",
+      "method": "POST",
+      "path": "/api/v3/medicina/agendar",
+      "status": 201,
+      "body_preview": "{\"id\": 3, \"message\": \"Agendamento registrado.\"}"
+    },
+    {
+      "name": "GET /api/v3/ponto",
+      "method": "GET",
+      "path": "/api/v3/ponto",
+      "status": 200,
+      "body_preview": "{\"registros\": [{\"dia\": 1, \"batidas\": [{\"hora\": \"08:00\", \"tipo\": \"entrada\", \"id\": \"1\"}]}, {\"dia\": 22, \"batidas\": [{\"hora\": \"17:17\", \"tipo\": \"entrada\", \"id\": \"291\"}, {\"hora\": \"18:31\", \"tipo\": \"entrada\", \"id\": \"292\"}, {\"hora\": \"18:49\", \"tipo\": \"entrada\", \"id\": \"293\"}, {\"hora\": \"18:50\", \"tipo\": \"entrada\", \"id\": \"294\"}, {\"hora\": \"18:52\", \"tipo\": \"entrada\", \"id\": \"295\"}]}]}"
+    },
+    {
+      "name": "GET /api/v3/banco-horas",
+      "method": "GET",
+      "path": "/api/v3/banco-horas",
+      "status": 200,
+      "body_preview": "{\"saldo\": 0, \"extrato\": []}"
+    },
+    {
+      "name": "GET /api/v3/ferias",
+      "method": "GET",
+      "path": "/api/v3/ferias",
+      "status": 200,
+      "body_preview": "{\"ferias\": [{\"FERIAS_ID\": 3, \"FERIAS_DATA_INICIO\": \"2026-06-21\", \"FERIAS_DATA_FIM\": \"2026-06-26\", \"FERIAS_AQUISITIVO_INICIO\": 2025, \"FERIAS_AQUISITIVO_FIM\": 2026, \"ferias_id\": 3, \"ferias_inicio\": \"2026-06-21\", \"ferias_fim\": \"2026-06-26\", \"aquisitivo_inicio\": 2025, \"aquisitivo_fim\": 2026, \"dias\": 5, \"status\": \"PROGRAMADA\"}, {\"FERIAS_ID\": 2, \"FERIAS_DATA_INICIO\": \"2026-06-01\", \"FERIAS_DATA_FIM\": \"2026-06-06\", \"FERIAS_AQUISITIVO_INICIO\": 2025, \"FERIAS_AQUISITIVO_FIM\": 2026, \"ferias_id\": 2, \"ferias_"
+    },
+    {
+      "name": "GET /api/v3/afastamentos",
+      "method": "GET",
+      "path": "/api/v3/afastamentos",
+      "status": 200,
+      "body_preview": "{\"afastamentos\": [{\"id\": \"2\", \"tipo\": \"licenca_premio\", \"tipo_nome\": \"licenca_premio\", \"inicio\": \"2026-07-01\", \"fim\": \"2026-07-05\", \"obs\": null, \"status\": \"pendente\", \"AFASTAMENTO_ID\": \"2\", \"AFASTAMENTO_TIPO\": \"1\", \"AFASTAMENTO_DATA_INICIO\": \"2026-07-01\", \"AFASTAMENTO_DATA_FIM\": \"2026-07-05\", \"AFASTAMENTO_STATUS\": \"pendente\"}, {\"id\": \"4\", \"tipo\": \"licenca_premio\", \"tipo_nome\": \"licenca_premio\", \"inicio\": \"2026-06-01\", \"fim\": \"2026-06-03\", \"obs\": null, \"status\": \"pendente\", \"AFASTAMENTO_ID\": \"4\","
+    },
+    {
+      "name": "GET /api/v3/organograma",
+      "method": "GET",
+      "path": "/api/v3/organograma",
+      "status": 200,
+      "body_preview": "{\"unidades\": [{\"id\": 27, \"nome\": \"Diretoria de TI\", \"sigla\": \"TI\", \"setores\": [{\"id\": \"64\", \"nome\": \"TI\", \"sigla\": \"TI\", \"unidade_id\": \"27\", \"responsavel\": \"\", \"total_funcionarios\": 0, \"funcionarios\": []}]}, {\"id\": 1, \"nome\": \"Gabinete do Prefeito\", \"sigla\": \"GABPREF\", \"setores\": [{\"id\": \"2\", \"nome\": \"Assessoria Especial do Prefeito\", \"sigla\": null, \"unidade_id\": \"1\", \"responsavel\": \"\", \"total_funcionarios\": 0, \"funcionarios\": []}, {\"id\": \"1\", \"nome\": \"Chefia de Gabinete\", \"sigla\": null, \"unidad"
+    },
+    {
+      "name": "GET /api/v3/escala-trabalho",
+      "method": "GET",
+      "path": "/api/v3/escala-trabalho",
+      "status": 200,
+      "body_preview": "{\"competencia\": \"2026-04\", \"escala\": [{\"funcionario_id\": 1, \"nome\": \"Ana Cristina Barros\", \"setor\": \"Setor Smoke 2026-04-22\", \"dias\": {\"1\": {\"turno\": \"M\", \"obs\": \"\"}, \"2\": {\"turno\": \"V\", \"obs\": \"\"}, \"3\": {\"turno\": \"N\", \"obs\": \"\"}, \"6\": {\"turno\": \"M\", \"obs\": \"\"}, \"7\": {\"turno\": \"V\", \"obs\": \"\"}, \"8\": {\"turno\": \"N\", \"obs\": \"\"}, \"9\": {\"turno\": \"I\", \"obs\": \"\"}, \"10\": {\"turno\": \"F\", \"obs\": \"\"}, \"13\": {\"turno\": \"N\", \"obs\": \"\"}, \"14\": {\"turno\": \"I\", \"obs\": \"\"}, \"15\": {\"turno\": \"F\", \"obs\": \"\"}, \"16\": {\"t"
+    },
+    {
+      "name": "GET /api/v3/escalas",
+      "method": "GET",
+      "path": "/api/v3/escalas",
+      "status": 200,
+      "body_preview": "{\"escalas\": [{\"ESCALA_ID\": \"18\", \"ESCALA_COMPETENCIA\": \"2026-04\", \"ESCALA_DESCRICAO\": \"Escala 2026-04\", \"setor\": \"Assessoria Especial do Prefeito\", \"funcionarios\": 18, \"status\": \"CADASTRADA\"}, {\"ESCALA_ID\": \"17\", \"ESCALA_COMPETENCIA\": \"2026-04\", \"ESCALA_DESCRICAO\": null, \"setor\": \"Setor Smoke 2026-04-22\", \"funcionarios\": 1, \"status\": \"CADASTRADA\"}, {\"ESCALA_ID\": \"16\", \"ESCALA_COMPETENCIA\": \"2026-04\", \"ESCALA_DESCRICAO\": \"Escala 2026-04\", \"setor\": \"Assessoria Especial do Prefeito\", \"funcionarios\""
+    },
+    {
+      "name": "GET /api/v3/substituicoes",
+      "method": "GET",
+      "path": "/api/v3/substituicoes",
+      "status": 200,
+      "body_preview": "{\"substituicoes\": [{\"id\": \"10\", \"escala_id\": \"12\", \"competencia\": \"2026-05\", \"solicitante_id\": \"16\", \"solicitante\": \"Geraldo Augusto Reis\", \"substituto_id\": \"17\", \"substituto\": \"Silvana Monteiro Cruz\", \"data_plantao\": \"2026-05-04\", \"turno\": \"I\", \"setor\": \"Gabinete do Secretário\", \"motivo\": null, \"status\": \"pendente\", \"criado_em\": \"2026-05-04\"}, {\"id\": \"9\", \"escala_id\": \"11\", \"competencia\": \"2026-05\", \"solicitante_id\": \"12\", \"solicitante\": \"Luciana Moura Castro\", \"substituto_id\": \"13\", \"substitut"
+    },
+    {
+      "name": "GET /api/v3/hora-extra",
+      "method": "GET",
+      "path": "/api/v3/hora-extra",
+      "status": 200,
+      "body_preview": "{\"lista\": [{\"HORA_EXTRA_ID\": \"9\", \"FUNCIONARIO_ID\": \"1\", \"UNIDADE_ID\": \"27\", \"SETOR_ID\": \"66\", \"COMPETENCIA\": \"2026-04\", \"DATA_REALIZACAO\": \"2026-04-22\", \"HORA_INICIO\": \"18:00:00.0000000\", \"HORA_FIM\": \"20:00:00.0000000\", \"TOTAL_HORAS\": \"2.00\", \"TIPO_HORA_EXTRA\": \"50_PORCENTO\", \"PERCENTUAL\": \"50.00\", \"VALOR_HORA_BASE\": \".00\", \"VALOR_CALCULADO\": \".00\", \"AUTORIZADO_POR\": \"1\", \"STATUS\": \"PENDENTE\", \"OBSERVACAO\": \"smoke\", \"created_at\": \"2026-04-22 18:44:02.803\", \"updated_at\": \"2026-04-22 18:44:02.803"
+    },
+    {
+      "name": "GET /api/v3/plantao-extra",
+      "method": "GET",
+      "path": "/api/v3/plantao-extra",
+      "status": 200,
+      "body_preview": "{\"lista\": [{\"PLANTAO_ID\": \"7\", \"FUNCIONARIO_ID\": \"1\", \"SETOR_ID\": null, \"ESCALA_ID\": null, \"PLANTAO_DATA\": \"2026-04-23\", \"PLANTAO_TURNO\": \"D\", \"PLANTAO_HORAS\": \"12.00\", \"PLANTAO_STATUS\": \"PENDENTE\", \"PLANTAO_MOTIVO\": \"Teste persistencia plantao\", \"nome\": \"Ana Cristina Barros\", \"matricula\": \"2010-0001\", \"secretaria\": \"\", \"DATA_PLANTAO\": \"2026-04-23\", \"TOTAL_HORAS\": \"12.00\", \"STATUS\": \"PENDENTE\", \"VALOR_CALCULADO\": 0}, {\"PLANTAO_ID\": \"9\", \"FUNCIONARIO_ID\": \"1\", \"SETOR_ID\": null, \"ESCALA_ID\": null,"
+    },
+    {
+      "name": "GET /api/v3/plantoes-extras",
+      "method": "GET",
+      "path": "/api/v3/plantoes-extras",
+      "status": 200,
+      "body_preview": "{\"plantoes\": [{\"PLANTAO_ID\": \"7\", \"FUNCIONARIO_ID\": \"1\", \"SETOR_ID\": null, \"ESCALA_ID\": null, \"PLANTAO_DATA\": \"2026-04-23\", \"PLANTAO_TURNO\": \"D\", \"PLANTAO_HORAS\": \"12.00\", \"PLANTAO_STATUS\": \"PENDENTE\", \"PLANTAO_MOTIVO\": \"Teste persistencia plantao\", \"PLANTAO_HORA_INI\": null, \"PLANTAO_HORA_FIM\": null, \"PLANTAO_SETOR\": null, \"PLANTAO_TIPO\": \"programado\"}, {\"PLANTAO_ID\": \"9\", \"FUNCIONARIO_ID\": \"1\", \"SETOR_ID\": null, \"ESCALA_ID\": null, \"PLANTAO_DATA\": \"2026-04-23\", \"PLANTAO_TURNO\": \"D\", \"PLANTAO_HOR"
+    },
+    {
+      "name": "GET /api/v3/sobreaviso",
+      "method": "GET",
+      "path": "/api/v3/sobreaviso",
+      "status": 200,
+      "body_preview": "{\"fallback\": true, \"sobreaviso\": [], \"acionamentos\": [], \"erro\": \"SQLSTATE[42S02]: [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'SOBREAVISO'. (SQL: select * from [SOBREAVISO] where [FUNCIONARIO_ID] = 1 and ([SOBREAVISO_INICIO] between 2026-04-01 and 2026-04-30 or [SOBREAVISO_FIM] between 2026-04-01 and 2026-04-30))\"}"
+    },
+    {
+      "name": "GET /api/v3/declaracoes",
+      "method": "GET",
+      "path": "/api/v3/declaracoes",
+      "status": 200,
+      "body_preview": "{\"pedidos\": [{\"id\": \"9\", \"nome\": \"Declaração de Vínculo Empregatício\", \"data\": \"2026-04-22\", \"status\": \"pronto\", \"protocolo\": \"REQ-2026-009\", \"arquivo\": null}, {\"id\": \"10\", \"nome\": \"Declaração de tempo de serviço\", \"data\": \"2026-04-22\", \"status\": \"andamento\", \"protocolo\": \"REQ-2026-010\", \"arquivo\": null}, {\"id\": \"11\", \"nome\": \"Declaração de tempo de serviço\", \"data\": \"2026-04-22\", \"status\": \"andamento\", \"protocolo\": \"REQ-2026-011\", \"arquivo\": null}, {\"id\": \"12\", \"nome\": \"Declaração de tempo de s"
+    },
+    {
+      "name": "GET /api/v3/avaliacoes",
+      "method": "GET",
+      "path": "/api/v3/avaliacoes",
+      "status": 200,
+      "body_preview": "{\"fallback\": false, \"avaliacoes\": [{\"id\": \"5\", \"ciclo\": \"2026-04\", \"nota\": 8, \"status\": \"enviada\", \"avaliador\": \"Administrador do Sistema\", \"criado_em\": \"2026-04-22 18:52:09.473\", \"criterios\": [{\"nome\": \"Assiduidade\", \"peso\": \"1\", \"nota\": \"8\", \"obs\": \"Smoke\"}]}, {\"id\": \"4\", \"ciclo\": \"2026-04\", \"nota\": 8, \"status\": \"enviada\", \"avaliador\": \"Administrador do Sistema\", \"criado_em\": \"2026-04-22 18:51:05.867\", \"criterios\": [{\"nome\": \"Assiduidade\", \"peso\": \"1\", \"nota\": \"8\", \"obs\": \"Smoke\"}]}, {\"id\": \"3"
+    },
+    {
+      "name": "GET /api/v3/diarias",
+      "method": "GET",
+      "path": "/api/v3/diarias",
+      "status": 200,
+      "body_preview": "{\"diarias\": {\"current_page\": 1, \"data\": [{\"SOLICITACAO_ID\": \"3\", \"FUNCIONARIO_ID\": \"1\", \"DESTINO\": \"São Luís\", \"DESTINO_TIPO\": \"CAPITAL_MA\", \"OBJETIVO\": \"Smoke automático\", \"DATA_IDA\": \"2026-04-22\", \"DATA_VOLTA\": \"2026-04-23\", \"QTDE_DIARIAS\": \"2.0\", \"VALOR_TOTAL\": \".00\", \"PORTARIA_NUM\": null, \"STATUS\": \"PENDENTE\", \"APROVADO_POR\": null, \"created_at\": \"2026-04-22 18:52:11.863\", \"updated_at\": \"2026-04-22 18:52:11.863\", \"nome\": \"Ana Cristina Barros\", \"matricula\": \"2010-0001\"}, {\"SOLICITACAO_ID\": \"2\""
+    },
+    {
+      "name": "GET /api/v3/estagiarios",
+      "method": "GET",
+      "path": "/api/v3/estagiarios",
+      "status": 200,
+      "body_preview": "{\"contratos\": {\"current_page\": 1, \"data\": [{\"CONTRATO_ID\": \"1\", \"ESTAGIARIO_ID\": \"1\", \"SETOR_ID\": null, \"UNIDADE_ID\": null, \"SUPERVISOR_ID\": null, \"DATA_INICIO\": \"2026-04-22\", \"DATA_FIM\": \"2026-10-19\", \"CARGA_HR_DIA\": \"6.0\", \"BOLSA_VALOR\": \"800.00\", \"AUXILIO_TRANSPORTE\": \"50.00\", \"RENOVACOES\": \"0\", \"STATUS\": \"ATIVO\", \"created_at\": \"2026-04-22 18:49:55.610\", \"updated_at\": \"2026-04-22 18:49:55.610\", \"nome\": \"SMOKE ESTAGIáRIO\", \"cpf\": \"52998224725\", \"instituicao\": \"Universidade Smoke\", \"agente\": \"C"
+    }
+  ]
+}

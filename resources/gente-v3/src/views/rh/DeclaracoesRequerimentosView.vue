@@ -198,7 +198,7 @@ const baixar = async (p) => {
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href     = url
-    a.download = `declaracao-REQ-${new Date().getFullYear()}-${String(p.id).padStart(3,'0')}.html`
+    a.download = `declaracao-REQ-${new Date().getFullYear()}-${String(p.id).padStart(3,'0')}.pdf`
     a.click()
     URL.revokeObjectURL(url)
     toast.value = { visible: true, msg: `⬇️ "${p.nome}" baixado com sucesso!` }

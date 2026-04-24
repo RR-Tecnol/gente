@@ -33,7 +33,7 @@
     <!-- APROVAÇÕES PENDENTES -->
     <div class="section-hdr" :class="{ loaded }">
       <h2 class="sh-title">⏳ Aprovações Pendentes</h2>
-      <span class="sh-badge" v-if="pendencias.length > 0">{{ pendencias.length }}</span>
+      <span class="sh-badge" v-if="totalPendencias > 0">{{ totalPendencias }}</span>
     </div>
     <div class="aprovacoes-list" :class="{ loaded }">
       <div v-for="(p, i) in pendencias" :key="p.id" class="aprov-item" :style="{ '--api': i }">
@@ -56,6 +56,36 @@
       </div>
       <div v-if="pendencias.length === 0" class="ap-empty">
         <span>✅</span><p>Todas as solicitações foram resolvidas!</p>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO DE DECISÕES -->
+    <div class="section-hdr" :class="{ loaded }">
+      <h2 class="sh-title">🗂️ Histórico de Decisões</h2>
+      <div class="hist-filters">
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'todos' }" @click="filtroHistorico = 'todos'">Todos</button>
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'aprovado' }" @click="filtroHistorico = 'aprovado'">Aprovados</button>
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'reprovado' }" @click="filtroHistorico = 'reprovado'">Recusados</button>
+      </div>
+    </div>
+    <div class="aprovacoes-list" :class="{ loaded }">
+      <div v-for="(h, i) in historicoFiltrado" :key="h.id || i" class="aprov-item" :style="{ '--api': i }">
+        <div class="ap-tipo-ico" :style="{ background: tipoCor(h.tipo) + '15', borderColor: tipoCor(h.tipo) + '30' }">
+          <span>{{ h.status === 'aprovado' ? '✅' : '❌' }}</span>
+        </div>
+        <div class="ap-info">
+          <span class="ap-nome">{{ h.servidor || 'Servidor' }}</span>
+          <span class="ap-tipo-txt">{{ tipoLabel(h.tipo) }} — {{ h.status === 'aprovado' ? 'Aprovado' : 'Recusado' }}</span>
+          <span class="ap-detalhe">{{ h.detalhe || 'Sem detalhe' }}</span>
+          <span v-if="h.justificativa" class="ap-just">Motivo da recusa: {{ h.justificativa }}</span>
+        </div>
+        <div class="ap-data">
+          <span class="apd-val">{{ formatarDataHora(h.data) }}</span>
+          <span class="apd-label">Atualizado</span>
+        </div>
+      </div>
+      <div v-if="historicoFiltrado.length === 0" class="ap-empty">
+        <span>🗃️</span><p>Nenhuma decisão no filtro selecionado.</p>
       </div>
     </div>
 
@@ -172,11 +202,61 @@
           <div v-if="modalAv.erro" class="av-msg-err">❌ {{ modalAv.erro }}</div>
           <div v-if="modalAv.ok"   class="av-msg-ok">✅ Avaliação salva com sucesso!</div>
 
+          <div class="av-hist-wrap">
+            <div class="av-hist-hdr">
+              <h3>Histórico de Avaliações</h3>
+              <span v-if="carregandoHistoricoAv">Carregando...</span>
+            </div>
+            <div v-if="!carregandoHistoricoAv && historicoAv.length === 0" class="av-hist-empty">
+              Nenhuma avaliação registrada para este servidor.
+            </div>
+            <div v-else class="av-hist-list">
+              <div v-for="h in historicoAv" :key="h.id || `${h.ciclo}-${h.criado_em}`" class="av-hist-item">
+                <div>
+                  <strong>{{ h.ciclo || 'Ciclo não informado' }}</strong>
+                  <span>{{ formatarDataHora(h.criado_em) }}</span>
+                </div>
+                <div>
+                  <strong :style="{ color: avNotaCor(Number(h.nota || 0)) }">{{ Number(h.nota || 0).toFixed(1) }}</strong>
+                  <span>{{ h.status || 'enviada' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="av-modal-footer">
             <button class="av-btn-cancel" @click="modalAv.open = false">Cancelar</button>
             <button class="av-btn-save" :disabled="modalAv.salvando" @click="salvarAvaliacao">
               <span v-if="modalAv.salvando" class="btn-spin"></span>
               <template v-else>💾 Salvar Avaliação</template>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- MODAL RECUSA -->
+    <transition name="modal">
+      <div v-if="modalRecusa.open" class="av-overlay" @click.self="modalRecusa.open = false">
+        <div class="av-modal" style="max-width:520px">
+          <div class="av-modal-hdr">
+            <div>
+              <span class="av-modal-eyebrow">❌ Recusar solicitação</span>
+              <h2 class="av-modal-title">{{ modalRecusa.item?.servidor }}</h2>
+              <span class="av-modal-sub">{{ tipoLabel(modalRecusa.item?.tipo || 'outros') }}</span>
+            </div>
+            <button class="av-modal-close" @click="modalRecusa.open = false">✕</button>
+          </div>
+          <div style="padding:16px 24px">
+            <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px">Justificativa da recusa *</label>
+            <textarea v-model="modalRecusa.justificativa" class="av-obs" rows="4" placeholder="Informe o motivo da recusa para registrar no histórico"></textarea>
+            <div v-if="modalRecusa.erro" class="av-msg-err" style="margin:10px 0 0">❌ {{ modalRecusa.erro }}</div>
+          </div>
+          <div class="av-modal-footer">
+            <button class="av-btn-cancel" @click="modalRecusa.open = false">Cancelar</button>
+            <button class="av-btn-save" :disabled="modalRecusa.salvando" @click="confirmarRecusa">
+              <span v-if="modalRecusa.salvando" class="btn-spin"></span>
+              <template v-else>Recusar com justificativa</template>
             </button>
           </div>
         </div>
@@ -238,7 +318,9 @@ const mockPendencias = [
 
 const equipe    = ref([])
 const pendencias = ref([])
+const historico = ref([])
 const kpisData  = ref(null)
+const filtroHistorico = ref('todos')
 
 // ── KPIs: usa valores do backend ou calcula a partir da equipe localmente ──
 const kpis = computed(() => {
@@ -261,20 +343,27 @@ onMounted(async () => {
     if (!data.fallback && data.equipe?.length) {
       equipe.value    = data.equipe.map(mapMembro)
       pendencias.value = (data.pendencias ?? []).map(mapPendencia)
+      historico.value = data.historico ?? []
       kpisData.value  = data.kpis ?? null
     } else {
       equipe.value    = mockEquipe
       pendencias.value = mockPendencias
+      historico.value = []
     }
   } catch {
     equipe.value    = mockEquipe
     pendencias.value = mockPendencias
+    historico.value = []
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
 })
 
 const totalPendencias = computed(() => pendencias.value.length)
+const historicoFiltrado = computed(() => {
+  if (filtroHistorico.value === 'todos') return historico.value
+  return historico.value.filter(h => h.status === filtroHistorico.value)
+})
 const equipeFiltrada  = computed(() => busca.value
   ? equipe.value.filter(m => (m.nome + m.cargo).toLowerCase().includes(busca.value.toLowerCase()))
   : equipe.value)
@@ -286,15 +375,72 @@ const formatDate = (d) => { try { return new Date(d+'T12:00:00').toLocaleDateStr
 const showToast  = (msg, tipo = 'ok') => { toast.value = { visible: true, msg, tipo }; setTimeout(() => toast.value.visible = false, 3500) }
 
 const aprovar = async (p) => {
-  try { await api.post('/api/v3/gestor/aprovar', { acao: 'aprovado', ref_id: p.ref_id, ref_tabela: p.ref_tabela }) } catch { /* fallback */ }
-  pendencias.value = pendencias.value.filter(x => x.id !== p.id)
-  showToast(`✅ "${p.servidor}" — ${tipoLabel(p.tipo)} aprovad${p.tipo === 'ferias' ? 'as' : 'o'}!`, 'ok')
+  try {
+    const resp = await api.post('/api/v3/gestor/aprovar', {
+      acao: 'aprovado',
+      ref_id: p.ref_id,
+      ref_tabela: p.ref_tabela,
+      tipo: p.tipo,
+      servidor: p.servidor,
+      detalhe: p.detalhe,
+    })
+    pendencias.value = pendencias.value.filter(x => x.id !== p.id)
+    historico.value.unshift({
+      id: resp?.data?.historico_item?.id || `hist-${Date.now()}`,
+      servidor: p.servidor,
+      tipo: p.tipo,
+      detalhe: p.detalhe,
+      data: resp?.data?.historico_item?.data || new Date().toISOString(),
+      status: 'aprovado',
+      justificativa: null,
+    })
+    showToast(`✅ "${p.servidor}" — ${tipoLabel(p.tipo)} aprovad${p.tipo === 'ferias' ? 'as' : 'o'}!`, 'ok')
+  } catch (e) {
+    showToast(e?.response?.data?.error || 'Falha ao aprovar solicitação.', 'err')
+  }
 }
 
-const reprovar = async (p) => {
-  try { await api.post('/api/v3/gestor/aprovar', { acao: 'reprovado', ref_id: p.ref_id, ref_tabela: p.ref_tabela }) } catch { /* fallback */ }
-  pendencias.value = pendencias.value.filter(x => x.id !== p.id)
-  showToast(`❌ "${p.servidor}" — solicitação reprovada.`, 'err')
+const modalRecusa = ref({ open: false, item: null, justificativa: '', erro: '', salvando: false })
+const reprovar = (p) => {
+  modalRecusa.value = { open: true, item: p, justificativa: '', erro: '', salvando: false }
+}
+
+const confirmarRecusa = async () => {
+  const p = modalRecusa.value.item
+  const justificativa = (modalRecusa.value.justificativa || '').trim()
+  if (!justificativa) {
+    modalRecusa.value.erro = 'A justificativa é obrigatória para recusar.'
+    return
+  }
+  modalRecusa.value.salvando = true
+  modalRecusa.value.erro = ''
+  try {
+    const resp = await api.post('/api/v3/gestor/aprovar', {
+      acao: 'reprovado',
+      ref_id: p.ref_id,
+      ref_tabela: p.ref_tabela,
+      tipo: p.tipo,
+      servidor: p.servidor,
+      detalhe: p.detalhe,
+      justificativa,
+    })
+    pendencias.value = pendencias.value.filter(x => x.id !== p.id)
+    historico.value.unshift({
+      id: resp?.data?.historico_item?.id || `hist-${Date.now()}`,
+      servidor: p.servidor,
+      tipo: p.tipo,
+      detalhe: p.detalhe,
+      data: resp?.data?.historico_item?.data || new Date().toISOString(),
+      status: 'reprovado',
+      justificativa,
+    })
+    modalRecusa.value.open = false
+    showToast(`❌ "${p.servidor}" — solicitação reprovada.`, 'err')
+  } catch (e) {
+    modalRecusa.value.erro = e?.response?.data?.error || 'Falha ao recusar solicitação.'
+  } finally {
+    modalRecusa.value.salvando = false
+  }
 }
 
 const avaliacdes = [
@@ -311,10 +457,12 @@ const plantoesSemana = computed(() =>
   }))
 )
 
-const verFicha = (m) => { router.push('/funcionarios/' + m.id) }
+const verFicha = (m) => { router.push('/funcionario/' + m.id) }
 
 // ── Avaliação de Desempenho ──────────────────────────────────
 const cicloAtual = '2026.1'
+const historicoAv = ref([])
+const carregandoHistoricoAv = ref(false)
 
 const criarCriterios = () => [
   { id: 1, ico: '🎯', nome: 'Cumprimento de Metas',     peso: 25, nota: 7, hovered: 0, obs: '' },
@@ -336,6 +484,29 @@ const avConceito   = (n) => n >= 9 ? 'Excelente' : n >= 7 ? 'Bom' : n >= 5 ? 'Re
 
 const abrirAvaliacao = (m) => {
   modalAv.value = { open: true, membro: m, criterios: criarCriterios(), salvando: false, ok: false, erro: '' }
+  carregarHistoricoAvaliacao(m.id)
+}
+
+const formatarDataHora = (v) => {
+  if (!v) return 'Sem data'
+  try {
+    return new Date(v).toLocaleString('pt-BR')
+  } catch {
+    return String(v)
+  }
+}
+
+const carregarHistoricoAvaliacao = async (funcionarioId) => {
+  carregandoHistoricoAv.value = true
+  historicoAv.value = []
+  try {
+    const { data } = await api.get('/api/v3/avaliacoes', { params: { funcionario_id: funcionarioId } })
+    historicoAv.value = Array.isArray(data?.avaliacoes) ? data.avaliacoes : []
+  } catch {
+    historicoAv.value = []
+  } finally {
+    carregandoHistoricoAv.value = false
+  }
 }
 
 const salvarAvaliacao = async () => {
@@ -348,6 +519,7 @@ const salvarAvaliacao = async () => {
       ciclo: cicloAtual,
       criterios: modalAv.value.criterios.map(c => ({ nome: c.nome, peso: c.peso, nota: c.nota, obs: c.obs })),
     })
+    await carregarHistoricoAvaliacao(modalAv.value.membro.id)
     modalAv.value.ok = true
     showToast(`✅ Avaliação de ${modalAv.value.membro.nome} salva!`, 'ok')
     setTimeout(() => { modalAv.value.open = false }, 1800)
@@ -412,6 +584,10 @@ const salvarAvaliacao = async () => {
 .ap-empty { display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; }
 .ap-empty span { font-size: 32px; }
 .ap-empty p { font-size: 14px; color: #94a3b8; margin: 0; }
+.ap-just { display:block; margin-top:4px; font-size:11px; color:#991b1b; font-weight:700; }
+.hist-filters { display:flex; gap:8px; flex-wrap:wrap; }
+.hf-btn { border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+.hf-btn.active { background:#f0fdf4; border-color:#86efac; color:#166534; }
 .equipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.1s; }
 .equipe-grid.loaded { opacity: 1; transform: none; }
 .membro-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; animation: mcIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--mi) * 40ms) both; transition: all 0.18s; }
@@ -497,6 +673,16 @@ const salvarAvaliacao = async () => {
 .av-nf-conceito { display: block; font-size: 14px; font-weight: 700; margin-top: 4px; }
 .av-msg-err { margin: 0 24px 10px; font-size: 12px; font-weight: 600; color: #dc2626; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 8px 12px; }
 .av-msg-ok  { margin: 0 24px 10px; font-size: 12px; font-weight: 600; color: #166534; background: #dcfce7; border: 1px solid #86efac; border-radius: 10px; padding: 8px 12px; }
+.av-hist-wrap { margin: 0 24px 12px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc; }
+.av-hist-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.av-hist-hdr h3 { margin: 0; font-size: 12px; font-weight: 800; color: #1e293b; }
+.av-hist-hdr span { font-size: 11px; color: #64748b; }
+.av-hist-empty { font-size: 12px; color: #64748b; padding: 6px 2px; }
+.av-hist-list { max-height: 140px; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.av-hist-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
+.av-hist-item > div { display: flex; flex-direction: column; }
+.av-hist-item strong { font-size: 12px; color: #0f172a; }
+.av-hist-item span { font-size: 11px; color: #64748b; }
 .av-modal-footer { display: flex; gap: 10px; padding: 16px 24px; border-top: 1px solid #f1f5f9; }
 .av-btn-cancel { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 14px; font-weight: 700; color: #64748b; cursor: pointer; transition: all 0.15s; }
 .av-btn-cancel:hover { background: #f1f5f9; }

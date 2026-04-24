@@ -30,9 +30,9 @@
           <div class="hero-avatar" :style="{ '--hue': avatarHue(funcionario.FUNCIONARIO_ID) }">{{ iniciais(funcionario.pessoa?.PESSOA_NOME) }}</div>
           <div class="hero-info">
             <div class="hero-badges">
-              <span class="status-chip" :class="funcionario.FUNCIONARIO_DATA_FIM ? 'inactive' : 'active'">
+              <span class="status-chip" :class="isFuncionarioAtivo(funcionario) ? 'active' : 'inactive'">
                 <span class="chip-dot"></span>
-                {{ funcionario.FUNCIONARIO_DATA_FIM ? 'Inativo' : 'Ativo' }}
+                {{ isFuncionarioAtivo(funcionario) ? 'Ativo' : 'Inativo' }}
               </span>
               <span class="matricula-chip">🪪 Matrícula: <strong>{{ funcionario.FUNCIONARIO_MATRICULA || 'N/D' }}</strong></span>
             </div>
@@ -178,8 +178,8 @@
               <div class="tl-line"></div>
               <div class="tl-item" v-if="funcionario.setor"><div class="tl-dot setor"></div><div class="tl-content"><span class="tl-title">Lotação: {{ funcionario.setor }}</span><span class="tl-date">Vigente</span></div></div>
               <div class="tl-line" v-if="funcionario.setor"></div>
-              <div class="tl-item"><div class="tl-dot" :class="funcionario.FUNCIONARIO_DATA_FIM ? 'demitido' : 'atual'"></div><div class="tl-content">
-                <span class="tl-title">{{ !funcionario.FUNCIONARIO_DATA_FIM ? '🟢 Ativo até hoje' : '🔴 Desligamento' }}</span>
+              <div class="tl-item"><div class="tl-dot" :class="isFuncionarioAtivo(funcionario) ? 'atual' : 'demitido'"></div><div class="tl-content">
+                <span class="tl-title">{{ !funcionario.FUNCIONARIO_DATA_FIM ? '🟢 Ativo até hoje' : (isFuncionarioAtivo(funcionario) ? '🟡 Desligamento previsto' : '🔴 Desligamento') }}</span>
                 <span class="tl-date">{{ funcionario.FUNCIONARIO_DATA_FIM ? formatDate(funcionario.FUNCIONARIO_DATA_FIM) : 'Atualmente' }}</span>
               </div></div>
             </div>
@@ -192,7 +192,7 @@
               <div v-for="h in holeritesFuncionario.slice(0, 4)" :key="h.detalhe_folha_id" class="holerite-mini-row">
                 <div class="hm-comp"><span class="hm-label">{{ formatCompetencia(h.competencia) }}</span></div>
                 <div class="hm-liquido">{{ formatMoney(h.liquido) }}</div>
-                <a :href="`/contra-cheque/${h.funcionario_id}/${h.competencia}/pdf`" target="_blank" class="hm-pdf">PDF</a>
+                <a :href="`/api/v3/holerite-pdf/${h.detalhe_folha_id}`" target="_blank" class="hm-pdf">PDF</a>
               </div>
             </div>
             <div v-else class="no-data-sm">Nenhum holerite disponível</div>
@@ -815,7 +815,7 @@ const showToast = (msg, tipo = 'ok') => {
 const tempoServico = computed(() => {
   if (!funcionario.value?.FUNCIONARIO_DATA_INICIO) return null
   const inicio = new Date(funcionario.value.FUNCIONARIO_DATA_INICIO)
-  const fim = funcionario.value.FUNCIONARIO_DATA_FIM ? new Date(funcionario.value.FUNCIONARIO_DATA_FIM) : new Date()
+  const fim = isFuncionarioAtivo(funcionario.value) ? new Date() : new Date(funcionario.value.FUNCIONARIO_DATA_FIM)
   const meses = Math.floor((fim - inicio) / (1000 * 60 * 60 * 24 * 30.44))
   const anos = Math.floor(meses / 12); const m = meses % 12
   if (anos > 0) return `${anos} ano${anos > 1 ? 's' : ''}${m > 0 ? ` e ${m} mês${m > 1 ? 'es' : ''}` : ''}`
@@ -831,6 +831,12 @@ const formatCompetencia = (c) => { if (!c || String(c).length !== 6) return c ||
 const sexoLabel = (v) => (['Masculino','Feminino','Outro'])[v - 1] || v
 const estadoCivilLabel = (v) => (['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'])[v - 1] || v
 const escolaridadeLabel = (v) => ({ 1:'Fundamental Incompleto',2:'Fundamental Completo',3:'Médio Incompleto',4:'Médio Completo',5:'Superior Incompleto',6:'Superior Completo',7:'Pós-Graduação',8:'Mestrado',9:'Doutorado' })[v] || v
+const isFuncionarioAtivo = (f) => {
+  const fim = f?.FUNCIONARIO_DATA_FIM
+  if (!fim) return true
+  const d = new Date(`${String(fim).slice(0, 10)}T23:59:59`)
+  return !Number.isNaN(d.getTime()) && d.getTime() > Date.now()
+}
 
 const maskPis = (v) => {
   const d = (v || '').replace(/\D/g, '').slice(0, 11)
@@ -940,6 +946,24 @@ const maskPis = (v) => {
 .irrf-sim { background: #dcfce7; color: #166534; }
 .irrf-nao { background: #f1f5f9; color: #64748b; }
 .dep-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Adicionais e Vantagens */
+.adicional-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+.form-row-3 { display: flex; flex-direction: column; gap: 5px; }
+.form-row-3 label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #475569; }
+.form-sel, .form-inp { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; font-size: 13px; color: #1e293b; background: #fff; outline: none; }
+.form-sel:focus, .form-inp:focus { border-color: #6366f1; }
+.btn-primary-sm { border: none; border-radius: 10px; background: #6366f1; color: #fff; padding: 9px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-primary-sm:disabled { opacity: .6; cursor: not-allowed; }
+.btn-sm { border: 1px solid #e2e8f0; background: #fff; border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.btn-orange { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.btn-red-ghost { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.adicional-list { display: flex; flex-direction: column; gap: 8px; }
+.adicional-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; }
+.adic-info { display: flex; flex-direction: column; gap: 3px; }
+.adic-rubrica { font-size: 13px; font-weight: 700; color: #1e293b; }
+.adic-val { font-size: 13px; font-weight: 700; color: #059669; }
+.adic-meta { font-size: 11px; color: #94a3b8; }
 
 /* MODAIS */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }

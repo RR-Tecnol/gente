@@ -15,7 +15,7 @@
             <button :class="['mt-btn', { active: !modoEquipe }]" @click="modoEquipe = false">👤 Meu Saldo</button>
             <button :class="['mt-btn', { active: modoEquipe }]" @click="modoEquipe = true">👥 Equipe</button>
           </div>
-          <div class="month-nav" v-if="!modoEquipe">
+          <div class="month-nav">
             <button class="mnav-btn" @click="mesAnterior">‹</button>
             <span class="mes-label-nav">{{ mesLabel }}</span>
             <button class="mnav-btn" @click="mesPosterior">›</button>
@@ -28,7 +28,7 @@
     <div v-if="loading" class="loading-bar"><span></span></div>
 
     <!-- KPI STRIP ───────────────────────────────────────────── -->
-    <div class="kpi-strip" :class="{ loaded }">
+    <div v-if="!modoEquipe" class="kpi-strip" :class="{ loaded }">
       <div class="kpi-card kc-blue">
         <span class="kc-ico">🎯</span>
         <div class="kc-info">
@@ -67,7 +67,7 @@
     </div>
 
     <!-- PROGRESSO DO MÊS ─────────────────────────────────────── -->
-    <div class="progress-card" :class="{ loaded }">
+    <div v-if="!modoEquipe" class="progress-card" :class="{ loaded }">
       <div class="prog-hdr">
         <h2 class="prog-title">Progresso do Mês</h2>
         <span class="prog-dias">{{ diasUtilsPassados }} de {{ diasUteis }} dias úteis</span>
@@ -89,7 +89,7 @@
     </div>
 
     <!-- TABELA DIÁRIA ────────────────────────────────────────── -->
-    <div class="table-card" :class="{ loaded }">
+    <div v-if="!modoEquipe" class="table-card" :class="{ loaded }">
       <div class="tc-hdr">
         <h2 class="tc-title">📅 Registro Diário</h2>
         <div class="tc-filters">
@@ -139,7 +139,12 @@
     <div v-if="modoEquipe" class="table-card" :class="{ loaded }" style="margin-top:8px">
       <div class="tc-hdr">
         <h2 class="tc-title">👥 Banco de Horas da Equipe — {{ equipeResp.setor ?? 'Meu Setor' }}</h2>
-        <button class="f-btn active" @click="fetchEquipe">🔄 Atualizar</button>
+        <div class="tc-filters">
+          <button v-for="f in filterOptsEquipe" :key="f.val" class="f-btn" :class="{ active: tipoFiltroEquipe === f.val }" @click="tipoFiltroEquipe = f.val">
+            {{ f.label }}
+          </button>
+          <button class="f-btn active" @click="fetchEquipe">🔄 Atualizar</button>
+        </div>
       </div>
       <div v-if="carregandoEquipe" class="loading-bar" style="margin:16px"><span></span></div>
       <div v-else-if="!equipeResp.membros?.length" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px">
@@ -152,7 +157,7 @@
             <th>Saldo Mês</th><th>Créd. Mês</th><th>Déb. Mês</th><th>Saldo Acumulado</th>
           </tr></thead>
           <tbody>
-            <tr v-for="m in equipeResp.membros" :key="m.funcionario_id" class="bh-row">
+            <tr v-for="m in membrosEquipeFiltrados" :key="m.funcionario_id" class="bh-row">
               <td class="td-nome">{{ m.nome }}</td>
               <td style="font-size:12px;color:#64748b">{{ m.cargo }}</td>
               <td style="font-family:monospace;font-size:12px">{{ m.matricula }}</td>
@@ -190,6 +195,13 @@ const filterOpts = [
   { val: 'extra', label: '📈 Extras' },
   { val: 'negativo', label: '📉 Negativos' },
   { val: 'falta', label: '🚫 Faltas' },
+]
+const tipoFiltroEquipe = ref('todos')
+const filterOptsEquipe = [
+  { val: 'todos', label: 'Todos' },
+  { val: 'positivo', label: '📈 Saldo +' },
+  { val: 'negativo', label: '📉 Saldo -' },
+  { val: 'zerado', label: '⚪ Zerado' },
 ]
 
 const DOW = ['Do','Se','Te','Qu','Qu','Se','Sá']
@@ -313,10 +325,16 @@ onMounted(async () => {
   setTimeout(() => { loaded.value = true }, 80)
 })
 
-watch(modoEquipe, (v) => { if (v) fetchEquipe() })
+const atualizarPorModo = () => (modoEquipe.value ? fetchEquipe() : fetchRegistros())
+watch(modoEquipe, () => {
+  tipoFiltro.value = 'todos'
+  tipoFiltroEquipe.value = 'todos'
+  atualizarPorModo()
+})
+watch(mesAtual, () => { atualizarPorModo() })
 
-const mesAnterior = () => { const d = new Date(mesAtual.value); d.setMonth(d.getMonth() - 1); mesAtual.value = d; fetchRegistros() }
-const mesPosterior = () => { const d = new Date(mesAtual.value); d.setMonth(d.getMonth() + 1); mesAtual.value = d; fetchRegistros() }
+const mesAnterior = () => { const d = new Date(mesAtual.value); d.setMonth(d.getMonth() - 1); mesAtual.value = d }
+const mesPosterior = () => { const d = new Date(mesAtual.value); d.setMonth(d.getMonth() + 1); mesAtual.value = d }
 const mesLabel = computed(() => mesAtual.value.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase()))
 
 const saldoAcumuladoDisplay = computed(() => {
@@ -339,6 +357,14 @@ const diasFiltrados = computed(() => {
   if (tipoFiltro.value === 'todos') return diasComSit.value
   const map = { extra: 'Extra', negativo: 'Negativo', falta: 'Falta' }
   return diasComSit.value.filter(d => d.sitLabel === map[tipoFiltro.value])
+})
+const membrosEquipeFiltrados = computed(() => {
+  const membros = equipeResp.value?.membros ?? []
+  if (tipoFiltroEquipe.value === 'todos') return membros
+  if (tipoFiltroEquipe.value === 'positivo') return membros.filter(m => Number(m.saldo_mes) > 0)
+  if (tipoFiltroEquipe.value === 'negativo') return membros.filter(m => Number(m.saldo_mes) < 0)
+  if (tipoFiltroEquipe.value === 'zerado') return membros.filter(m => Number(m.saldo_mes) === 0)
+  return membros
 })
 
 const diasUteis = computed(() => registros.value.filter(d => !d.isFds).length)

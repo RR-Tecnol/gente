@@ -5,36 +5,46 @@
 // GET /api/v3/organograma  Lista setores agrupados por unidade
 Route::get('/organograma', function (\Illuminate\Http\Request $request) {
     try {
-        // Buscar setores ativos
         $setores = \Illuminate\Support\Facades\DB::table('SETOR')
             ->where('SETOR_ATIVO', 1)
             ->orderBy('SETOR_NOME')
             ->get();
 
         if ($setores->isEmpty()) {
-            return response()->json(['unidades' => [], 'setores_flat' => [], 'fallback' => true]);
+            return response()->json(['unidades' => [], 'setores_flat' => [], 'unidades_flat' => [], 'fallback' => false]);
         }
 
-        // Contar funcionÃ¡rios por setor
-        $contagens = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-            ->whereIn('SETOR_ID', $setores->pluck('SETOR_ID'))
-            ->whereNull('FUNCIONARIO_DATA_DEMISSAO')
-            ->select('SETOR_ID', \Illuminate\Support\Facades\DB::raw('COUNT(*) as total'))
-            ->groupBy('SETOR_ID')
-            ->pluck('total', 'SETOR_ID');
+        $setorIds = $setores->pluck('SETOR_ID')->values()->all();
 
-        // Buscar funcionÃ¡rios por setor (nome + cargo)
-        $funcionarios = [];
-        $funcRows = \App\Models\Funcionario::whereIn('SETOR_ID', $setores->pluck('SETOR_ID'))
-            ->whereNull('FUNCIONARIO_DATA_DEMISSAO')
-            ->with('cargo')
+        // Buscar funcionários por setor via lotação ativa
+        $funcRows = \Illuminate\Support\Facades\DB::table('LOTACAO as l')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'l.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
+            ->whereIn('l.SETOR_ID', $setorIds)
+            ->whereNull('l.LOTACAO_DATA_FIM')
+            ->whereNull('f.FUNCIONARIO_DATA_FIM')
+            ->orderBy('p.PESSOA_NOME')
+            ->select(
+                'l.SETOR_ID',
+                'f.FUNCIONARIO_ID',
+                'p.PESSOA_NOME',
+                'f.FUNCIONARIO_MATRICULA',
+                'c.CARGO_NOME'
+            )
             ->get();
+
+        $funcionarios = [];
         foreach ($funcRows as $f) {
             $funcionarios[$f->SETOR_ID][] = [
-                'nome' => trim(($f->FUNCIONARIO_NOME ?? '') . ' ' . ($f->FUNCIONARIO_SOBRENOME ?? '')),
-                'cargo' => $f->cargo?->CARGO_NOME ?? $f->CARGO_NOME ?? '',
+                'id' => (int) $f->FUNCIONARIO_ID,
+                'nome' => $f->PESSOA_NOME ?? '—',
+                'cargo' => $f->CARGO_NOME ?? 'Servidor',
+                'matricula' => $f->FUNCIONARIO_MATRICULA ?? null,
             ];
         }
+
+        $contagens = collect($funcionarios)->map(fn($lista) => count($lista));
 
         // Tentar buscar unidades/diretorias
         $unidadesNomes = [];
@@ -49,15 +59,9 @@ Route::get('/organograma', function (\Illuminate\Http\Request $request) {
         } catch (\Throwable $e) {
         }
 
-        // ResponsÃ¡vel: funcionÃ¡rio com cargo de chefia no setor
-        $responsaveis = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-            ->whereIn('SETOR_ID', $setores->pluck('SETOR_ID'))
-            ->whereNull('FUNCIONARIO_DATA_DEMISSAO')
-            ->orderBy('FUNCIONARIO_ID')
-            ->take(200)
-            ->get(['SETOR_ID', 'FUNCIONARIO_NOME', 'FUNCIONARIO_SOBRENOME'])
-            ->groupBy('SETOR_ID')
-            ->map(fn($g) => trim(($g->first()->FUNCIONARIO_NOME ?? '') . ' ' . ($g->first()->FUNCIONARIO_SOBRENOME ?? '')))
+        // Responsável: primeiro funcionário lotado no setor (fallback seguro)
+        $responsaveis = collect($funcionarios)
+            ->map(fn($lista) => $lista[0]['nome'] ?? '')
             ->toArray();
 
         // Agrupar setores por UNIDADE_ID
@@ -100,7 +104,7 @@ Route::get('/organograma', function (\Illuminate\Http\Request $request) {
             ];
         }
 
-        // Setores flat para montar selects de ediÃ§Ã£o
+        // Setores flat para montar selects de edição
         $setoresFlat = $setores->map(fn($s) => [
             'id' => $s->SETOR_ID,
             'nome' => $s->SETOR_NOME,
@@ -126,15 +130,46 @@ Route::get('/organograma', function (\Illuminate\Http\Request $request) {
     }
 });
 
+// GET /api/v3/organograma/funcionarios  Lista de servidores para vincular no setor
+Route::get('/organograma/funcionarios', function () {
+    try {
+        $rows = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
+            ->whereNull('f.FUNCIONARIO_DATA_FIM')
+            ->orderBy('p.PESSOA_NOME')
+            ->limit(800)
+            ->get([
+                'f.FUNCIONARIO_ID as id',
+                'p.PESSOA_NOME as nome',
+                'f.FUNCIONARIO_MATRICULA as matricula',
+                'c.CARGO_NOME as cargo',
+            ]);
+
+        return response()->json(['funcionarios' => $rows, 'fallback' => false]);
+    } catch (\Throwable $e) {
+        return response()->json(['funcionarios' => [], 'fallback' => true, 'error' => $e->getMessage()]);
+    }
+});
+
 // POST /api/v3/organograma/setor  Criar setor
 Route::post('/organograma/setor', function (\Illuminate\Http\Request $request) {
     try {
         $nome = trim($request->nome ?? '');
         $sigla = trim($request->sigla ?? '');
-        $unidade = $request->unidade_id ?? 0; // 0 Ã© fallback seguro para NOT NULL
+        $unidade = $request->unidade_id ?? 0; // 0 é fallback seguro para NOT NULL
+        $funcionarioIds = collect($request->funcionario_ids ?? [])
+            ->merge($request->funcionario_id ? [(int) $request->funcionario_id] : [])
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
 
         if (!$nome)
-            return response()->json(['error' => 'Nome Ã© obrigatÃ³rio.'], 422);
+            return response()->json(['error' => 'Nome é obrigatório.'], 422);
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
 
         $id = \Illuminate\Support\Facades\DB::table('SETOR')->insertGetId([
             'SETOR_NOME' => $nome,
@@ -143,15 +178,42 @@ Route::post('/organograma/setor', function (\Illuminate\Http\Request $request) {
             'SETOR_ATIVO' => 1,
         ]);
 
+        // Vínculo opcional de funcionário ao setor recém-criado
+        foreach ($funcionarioIds as $funcionarioId) {
+            $func = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->whereNull('FUNCIONARIO_DATA_FIM')
+                ->first();
+            if (!$func) {
+                continue;
+            }
+            // Encerra lotação ativa anterior para manter uma lotação principal ativa
+            \Illuminate\Support\Facades\DB::table('LOTACAO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->whereNull('LOTACAO_DATA_FIM')
+                ->update(['LOTACAO_DATA_FIM' => now()->toDateString()]);
+            \Illuminate\Support\Facades\DB::table('LOTACAO')->insert([
+                'FUNCIONARIO_ID' => $funcionarioId,
+                'SETOR_ID' => $id,
+                'LOTACAO_DATA_INICIO' => now()->toDateString(),
+                'LOTACAO_DATA_FIM' => null,
+                'VINCULO_ID' => null,
+            ]);
+        }
+
+        \Illuminate\Support\Facades\DB::commit();
+
         return response()->json([
             'id' => $id,
             'nome' => $nome,
             'sigla' => $sigla ?: null,
             'unidade_id' => $unidade,
+            'funcionario_ids' => $funcionarioIds,
             'message' => 'Setor criado com sucesso!',
         ], 201);
     } catch (\Throwable $e) {
-        return response()->json(['error' => 'Erro ao criar setor.'], 500);
+        \Illuminate\Support\Facades\DB::rollBack();
+        return response()->json(['error' => 'Erro ao criar setor: ' . $e->getMessage()], 500);
     }
 });
 
@@ -161,14 +223,14 @@ Route::put('/organograma/setor/{id}', function (\Illuminate\Http\Request $reques
         $nome = trim($request->nome ?? '');
         $sigla = trim($request->sigla ?? '');
         if (!$nome)
-            return response()->json(['error' => 'Nome Ã© obrigatÃ³rio.'], 422);
+            return response()->json(['error' => 'Nome é obrigatório.'], 422);
 
         // Verifica se o setor existe antes de tentar atualizar
         $setor = \Illuminate\Support\Facades\DB::table('SETOR')->where('SETOR_ID', $id)->first();
         if (!$setor)
-            return response()->json(['error' => 'Setor nÃ£o encontrado.'], 404);
+            return response()->json(['error' => 'Setor não encontrado.'], 404);
 
-        // UNIDADE_ID nÃ£o pode ser NULL (NOT NULL na tabela SETOR) â€” usa 0 como fallback
+        // UNIDADE_ID não pode ser NULL (NOT NULL na tabela SETOR) — usa 0 como fallback
         $unidadeId = $request->unidade_id ? (int) $request->unidade_id : ($setor->UNIDADE_ID ?? 0);
 
         \Illuminate\Support\Facades\DB::table('SETOR')
@@ -179,7 +241,45 @@ Route::put('/organograma/setor/{id}', function (\Illuminate\Http\Request $reques
                 'UNIDADE_ID' => $unidadeId,
             ]);
 
-        return response()->json(['message' => 'Setor atualizado!', 'id' => (int) $id]);
+        $funcionarioIds = collect($request->funcionario_ids ?? [])
+            ->merge($request->funcionario_id ? [(int) $request->funcionario_id] : [])
+            ->map(fn($fid) => (int) $fid)
+            ->filter(fn($fid) => $fid > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($funcionarioIds as $funcionarioId) {
+            $func = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->whereNull('FUNCIONARIO_DATA_FIM')
+                ->first();
+            if (!$func) {
+                continue;
+            }
+            // Evita recriar lotação se já estiver ativo no setor alvo
+            $jaNoSetor = \Illuminate\Support\Facades\DB::table('LOTACAO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->where('SETOR_ID', $id)
+                ->whereNull('LOTACAO_DATA_FIM')
+                ->exists();
+            if ($jaNoSetor) {
+                continue;
+            }
+            \Illuminate\Support\Facades\DB::table('LOTACAO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->whereNull('LOTACAO_DATA_FIM')
+                ->update(['LOTACAO_DATA_FIM' => now()->toDateString()]);
+            \Illuminate\Support\Facades\DB::table('LOTACAO')->insert([
+                'FUNCIONARIO_ID' => $funcionarioId,
+                'SETOR_ID' => $id,
+                'LOTACAO_DATA_INICIO' => now()->toDateString(),
+                'LOTACAO_DATA_FIM' => null,
+                'VINCULO_ID' => null,
+            ]);
+        }
+
+        return response()->json(['message' => 'Setor atualizado!', 'id' => (int) $id, 'funcionario_ids' => $funcionarioIds]);
     } catch (\Throwable $e) {
         return response()->json(['error' => 'Erro ao editar setor: ' . $e->getMessage()], 500);
     }
@@ -204,7 +304,7 @@ Route::post('/organograma/diretoria', function (\Illuminate\Http\Request $reques
     try {
         $nome = trim($request->nome ?? '');
         if (!$nome)
-            return response()->json(['error' => 'Nome Ã© obrigatÃ³rio.'], 422);
+            return response()->json(['error' => 'Nome é obrigatório.'], 422);
 
         $id = \Illuminate\Support\Facades\DB::table('UNIDADE')->insertGetId([
             'UNIDADE_NOME' => $nome,
@@ -229,11 +329,11 @@ Route::put('/organograma/diretoria/{id}', function (\Illuminate\Http\Request $re
     try {
         $nome = trim($request->nome ?? '');
         if (!$nome)
-            return response()->json(['error' => 'Nome Ã© obrigatÃ³rio.'], 422);
+            return response()->json(['error' => 'Nome é obrigatório.'], 422);
 
         $diretoria = \Illuminate\Support\Facades\DB::table('UNIDADE')->where('UNIDADE_ID', $id)->first();
         if (!$diretoria)
-            return response()->json(['error' => 'Diretoria nÃ£o encontrada.'], 404);
+            return response()->json(['error' => 'Diretoria não encontrada.'], 404);
 
         \Illuminate\Support\Facades\DB::table('UNIDADE')
             ->where('UNIDADE_ID', $id)

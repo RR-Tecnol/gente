@@ -64,7 +64,7 @@ class Funcionario extends Model
 
     public function usuario()
     {
-        return $this->hasOne(Usuario::class, 'FUNCIONARIO_ID', 'FUNCIONARIO_ID');
+        return $this->hasOne(Usuario::class, 'USUARIO_ID', 'USUARIO_ID');
     }
 
     public function detalheEscalas()

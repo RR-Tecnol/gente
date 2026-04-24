@@ -374,11 +374,14 @@ Route::post('/progressao-funcional/aplicar/{id}', function (Request $request, $i
         if (!$eleg['elegivel'])
             return response()->json(['erro' => 'Não elegível.', 'bloqueios' => $eleg['bloqueios']], 422);
         $vencAt = $getVencBase($func);
-        DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $id)->update([
+        $updated = DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $id)->update([
             'FUNCIONARIO_REFERENCIA' => $eleg['proxima_referencia'],
             'FUNCIONARIO_DATA_ULTIMA_PROGRESSAO' => now()->toDateString(),
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Servidor não encontrado ou sem alterações.'], 404);
+        }
         DB::table('HISTORICO_FUNCIONAL')->insert([
             'FUNCIONARIO_ID' => $id,
             'HISTORICO_TIPO' => 'progressao',
@@ -424,12 +427,15 @@ Route::post('/progressao-funcional/promover/{id}', function (Request $request, $
         $novoVenc = DB::table('TABELA_SALARIAL')
             ->where('CARREIRA_ID', $func->CARREIRA_ID)->where('TABELA_CLASSE', $novaClasse)->where('TABELA_REFERENCIA', $novaRef)
             ->value('TABELA_VENCIMENTO_BASE') ?? $vencAt;
-        DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $id)->update([
+        $updated = DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $id)->update([
             'FUNCIONARIO_CLASSE' => $novaClasse,
             'FUNCIONARIO_REFERENCIA' => $novaRef,
             'FUNCIONARIO_DATA_ULTIMA_PROGRESSAO' => now()->toDateString(),
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Servidor não encontrado ou sem alterações.'], 404);
+        }
         DB::table('HISTORICO_FUNCIONAL')->insert([
             'FUNCIONARIO_ID' => $id,
             'HISTORICO_TIPO' => 'promocao',
@@ -633,7 +639,10 @@ Route::post('/progressao-funcional/tabela-salarial', function (Request $request)
 
 Route::delete('/progressao-funcional/tabela-salarial/{id}', function ($id) {
     try {
-        DB::table('TABELA_SALARIAL')->where('TABELA_ID', $id)->delete();
+        $deleted = DB::table('TABELA_SALARIAL')->where('TABELA_ID', $id)->delete();
+        if (!$deleted) {
+            return response()->json(['erro' => 'Registro da tabela salarial não encontrado.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);

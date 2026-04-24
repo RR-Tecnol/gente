@@ -168,28 +168,33 @@ Route::get('/banco-horas/equipe', function (Request $request) {
     try {
         $user = Auth::user();
         $comp = $request->competencia ?? now()->format('Y-m');
+        $temLotacaoFim = \Illuminate\Support\Facades\Schema::hasColumn('LOTACAO', 'LOTACAO_DATA_FIM');
+        $temFuncionarioFim = \Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM');
 
         $func = DB::table('FUNCIONARIO as f')
             ->join('LOTACAO as l', function ($j) {
-                $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM');
+                $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID');
             })
+            ->when($temLotacaoFim, fn($q) => $q->whereNull('l.LOTACAO_DATA_FIM'))
             ->where('f.USUARIO_ID', $user->USUARIO_ID)
             ->select('f.FUNCIONARIO_ID', 'l.SETOR_ID')
             ->first();
 
-        if (!$func) {
+        if (!$func || !$func->SETOR_ID) {
             return response()->json(['membros' => [], 'aviso' => 'Setor não encontrado.']);
         }
 
         $membros = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->join('LOTACAO as l', function ($j) {
-                $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')->whereNull('l.LOTACAO_DATA_FIM');
+                $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID');
             })
             ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
             ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
+            ->when($temLotacaoFim, fn($q) => $q->whereNull('l.LOTACAO_DATA_FIM'))
             ->where('l.SETOR_ID', $func->SETOR_ID)
-            ->whereNull('f.FUNCIONARIO_DATA_FIM')
+            ->where('f.FUNCIONARIO_ID', '<>', $func->FUNCIONARIO_ID)
+            ->when($temFuncionarioFim, fn($q) => $q->whereNull('f.FUNCIONARIO_DATA_FIM'))
             ->select('f.FUNCIONARIO_ID', 'p.PESSOA_NOME as nome', 'c.CARGO_NOME as cargo', 's.SETOR_NOME as setor', 'f.FUNCIONARIO_MATRICULA as matricula')
             ->get();
 

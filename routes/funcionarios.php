@@ -12,6 +12,7 @@ use App\Models\DetalheFolha;
 
 // GET /api/v3/funcionarios — Lista paginada para o módulo RH do Vue
 Route::get('/funcionarios', function (Request $request) {
+    $hoje = now()->toDateString();
     $query = Funcionario::with([
         'pessoa',
         'lotacoes' => function ($q) {
@@ -29,9 +30,13 @@ Route::get('/funcionarios', function (Request $request) {
 
     // Filtro ativo/inativo
     if ($request->funcionario_ativo === '1') {
-        $query->whereNull('FUNCIONARIO_DATA_FIM');
+        $query->where(function ($q) use ($hoje) {
+            $q->whereNull('FUNCIONARIO_DATA_FIM')
+                ->orWhere('FUNCIONARIO_DATA_FIM', '>', $hoje);
+        });
     } elseif ($request->funcionario_ativo === '0') {
-        $query->whereNotNull('FUNCIONARIO_DATA_FIM');
+        $query->whereNotNull('FUNCIONARIO_DATA_FIM')
+            ->where('FUNCIONARIO_DATA_FIM', '<=', $hoje);
     }
 
     /** @var \Illuminate\Pagination\LengthAwarePaginator $resultados */
@@ -48,7 +53,12 @@ Route::get('/funcionarios', function (Request $request) {
     });
 
     // BUG-EST-07: incluir contagem global de ativos (independente de paginação/filtro)
-    $totalAtivos = DB::table('FUNCIONARIO')->whereNull('FUNCIONARIO_DATA_FIM')->count();
+    $totalAtivos = DB::table('FUNCIONARIO')
+        ->where(function ($q) use ($hoje) {
+            $q->whereNull('FUNCIONARIO_DATA_FIM')
+                ->orWhere('FUNCIONARIO_DATA_FIM', '>', $hoje);
+        })
+        ->count();
 
     $response = $resultados->toArray();
     $response['total_ativos'] = $totalAtivos;

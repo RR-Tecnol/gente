@@ -2,11 +2,34 @@
 // ATESTADOS MEDICOS standalone
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
-//  GET: listar afastamentos/atestados do funcionÃ¡rio
+if (!function_exists('resolveFuncionarioComFallbackDev')) {
+    function resolveFuncionarioComFallbackDev($user)
+    {
+        if (!$user)
+            return null;
+        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        if ($func)
+            return $func;
+
+        if (!app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
+            $livre = \App\Models\Funcionario::whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
+            if ($livre) {
+                \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                    ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
+                    ->update(['USUARIO_ID' => $user->USUARIO_ID]);
+                return \App\Models\Funcionario::where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
+            }
+        }
+
+        return null;
+    }
+}
+
+//  GET: listar afastamentos/atestados do funcionário
 Route::get('/atestados', function () {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $func = resolveFuncionarioComFallbackDev($user);
         if (!$func)
             return response()->json(['atestados' => [], 'fallback' => true]);
 
@@ -41,9 +64,9 @@ Route::get('/atestados', function () {
 Route::post('/atestados', function (\Illuminate\Http\Request $request) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $func = resolveFuncionarioComFallbackDev($user);
         if (!$func)
-            return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o encontrado.'], 404);
+            return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
 
         $af = new \App\Models\Afastamento();
         $af->FUNCIONARIO_ID = $func->FUNCIONARIO_ID;
@@ -52,7 +75,7 @@ Route::post('/atestados', function (\Illuminate\Http\Request $request) {
         try {
             $af->AFASTAMENTO_TIPO = 1;
         } catch (\Throwable $e) {
-        } // tipo padrÃ£o: doenÃ§a
+        } // tipo padrão: doença
         try {
             $af->AFASTAMENTO_CID = $request->cid;
         } catch (\Throwable $e) {
@@ -90,7 +113,7 @@ Route::post('/atestados', function (\Illuminate\Http\Request $request) {
 Route::delete('/atestados/{id}', function ($id) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $func = resolveFuncionarioComFallbackDev($user);
         $af = \App\Models\Afastamento::find($id);
         if ($af && $func && $af->FUNCIONARIO_ID == $func->FUNCIONARIO_ID) {
             $af->delete();

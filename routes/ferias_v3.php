@@ -2,13 +2,36 @@
 // FERIAS CRUD - POST/PUT/DELETE /ferias
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
-//  Criar agendamento de fÃ©rias
+if (!function_exists('resolveFuncionarioComFallbackDev')) {
+    function resolveFuncionarioComFallbackDev($user)
+    {
+        if (!$user)
+            return null;
+        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        if ($func)
+            return $func;
+
+        if (!app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
+            $livre = \App\Models\Funcionario::whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
+            if ($livre) {
+                \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                    ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
+                    ->update(['USUARIO_ID' => $user->USUARIO_ID]);
+                return \App\Models\Funcionario::where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
+            }
+        }
+
+        return null;
+    }
+}
+
+//  Criar agendamento de férias
 Route::post('/ferias', function (\Illuminate\Http\Request $request) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $funcionario = resolveFuncionarioComFallbackDev($user);
         if (!$funcionario) {
-            return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o vinculado ao seu usuÃ¡rio.'], 422);
+            return response()->json(['erro' => 'Funcionário não vinculado ao seu usuário.'], 422);
         }
 
         $ferias = \App\Models\Ferias::create([
@@ -19,24 +42,28 @@ Route::post('/ferias', function (\Illuminate\Http\Request $request) {
             'FERIAS_AQUISITIVO_FIM' => $request->FERIAS_AQUISITIVO_FIM ?? null,
         ]);
 
-        return response()->json(['message' => 'FÃ©rias agendadas com sucesso.', 'ferias_id' => $ferias->FERIAS_ID], 201);
+        return response()->json(['message' => 'Férias agendadas com sucesso.', 'ferias_id' => $ferias->FERIAS_ID], 201);
     } catch (\Throwable $e) {
-        \Illuminate\Support\Facades\Log::error('Erro ao criar fÃ©rias: ' . $e->getMessage());
-        return response()->json(['erro' => 'Erro ao registrar fÃ©rias: ' . $e->getMessage()], 500);
+        \Illuminate\Support\Facades\Log::error('Erro ao criar férias: ' . $e->getMessage());
+        return response()->json(['erro' => 'Erro ao registrar férias: ' . $e->getMessage()], 500);
     }
 });
 
-//  Atualizar perÃ­odo de fÃ©rias
+//  Atualizar período de férias
 Route::put('/ferias/{id}', function ($id, \Illuminate\Http\Request $request) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $funcionario = resolveFuncionarioComFallbackDev($user);
+        $isAdminDev = !app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin';
 
-        $ferias = \App\Models\Ferias::findOrFail($id);
+        $ferias = \App\Models\Ferias::find($id);
+        if (!$ferias) {
+            return response()->json(['erro' => 'Férias não encontradas.'], 404);
+        }
 
-        // Verifica se a fÃ©rias pertence ao funcionÃ¡rio logado (ou Ã© admin)
-        if ($funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
-            return response()->json(['erro' => 'Sem permissÃ£o para editar esta fÃ©rias.'], 403);
+        // Verifica se as férias pertencem ao funcionário logado (ou é admin)
+        if (!$isAdminDev && $funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
+            return response()->json(['erro' => 'Sem permissão para editar estas férias.'], 403);
         }
 
         if ($request->has('FERIAS_DATA_INICIO'))
@@ -47,28 +74,37 @@ Route::put('/ferias/{id}', function ($id, \Illuminate\Http\Request $request) {
             $ferias->FERIAS_AQUISITIVO_INICIO = $request->FERIAS_AQUISITIVO_INICIO;
         if ($request->has('FERIAS_AQUISITIVO_FIM'))
             $ferias->FERIAS_AQUISITIVO_FIM = $request->FERIAS_AQUISITIVO_FIM;
+        if (!$ferias->isDirty()) {
+            return response()->json(['erro' => 'Nenhuma alteração informada para as férias.'], 422);
+        }
         $ferias->save();
 
-        return response()->json(['message' => 'FÃ©rias atualizadas com sucesso.']);
+        return response()->json(['message' => 'Férias atualizadas com sucesso.']);
     } catch (\Throwable $e) {
         return response()->json(['erro' => 'Erro ao atualizar: ' . $e->getMessage()], 500);
     }
 });
 
-//  Cancelar / excluir fÃ©rias
+//  Cancelar / excluir férias
 Route::delete('/ferias/{id}', function ($id) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+        $funcionario = resolveFuncionarioComFallbackDev($user);
+        $isAdminDev = !app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin';
 
-        $ferias = \App\Models\Ferias::findOrFail($id);
-
-        if ($funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
-            return response()->json(['erro' => 'Sem permissÃ£o para cancelar esta fÃ©rias.'], 403);
+        $ferias = \App\Models\Ferias::find($id);
+        if (!$ferias) {
+            return response()->json(['erro' => 'Férias não encontradas.'], 404);
         }
 
-        $ferias->delete();
-        return response()->json(['message' => 'FÃ©rias canceladas com sucesso.']);
+        if (!$isAdminDev && $funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
+            return response()->json(['erro' => 'Sem permissão para cancelar estas férias.'], 403);
+        }
+
+        if (!$ferias->delete()) {
+            return response()->json(['erro' => 'Não foi possível cancelar as férias.'], 500);
+        }
+        return response()->json(['message' => 'Férias canceladas com sucesso.']);
     } catch (\Throwable $e) {
         return response()->json(['erro' => 'Erro ao cancelar: ' . $e->getMessage()], 500);
     }

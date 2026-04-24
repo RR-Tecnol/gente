@@ -20,11 +20,11 @@ export default defineConfig({
     proxy: {
       // ⚠️  Apenas rotas REAIS do Laravel — todas as outras vão para o Vue Router
       '^/(api|csrf-cookie|sanctum|storage|remessa)': {
-        target: 'http://127.0.0.1:8080',
+        target: 'http://127.0.0.1:8081',
         changeOrigin: true,
         secure: false,
         // Reescreve o domínio dos cookies para que o browser em :5173 os aceite
-        cookieDomainRewrite: 'localhost',
+        cookieDomainRewrite: '127.0.0.1',
         // Garante que o header Set-Cookie não tem Secure (sem HTTPS)
         configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes) => {

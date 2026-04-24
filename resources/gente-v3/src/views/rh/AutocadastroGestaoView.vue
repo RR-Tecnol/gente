@@ -89,6 +89,7 @@
       </div>
 
       <div v-if="carregando" class="state-box"><div class="spinner"></div><p>Carregando...</p></div>
+      <div v-else-if="erroLista" class="state-box"><p>{{ erroLista }}</p></div>
       <div v-else-if="listaFiltrada.length === 0" class="state-box">
         <p>Nenhum cadastro {{ filtroAtivo !== 'todos' ? 'com este status' : '' }}</p>
       </div>
@@ -232,6 +233,7 @@ const tokenAberto = ref(null)
 const linkGerado  = ref(null)
 const copiado     = ref(false)
 const erroAprovacao = ref('')
+const erroLista = ref('')
 const filtroAtivo = ref('todos')
 const toast = ref({ visible: false, msg: '' })
 const modalRevogar = ref({ visible: false, nome: '', token: null }) // BUG-EST-04
@@ -254,8 +256,10 @@ const carregar = async () => {
   try {
     const { data } = await api.get('/api/v3/autocadastro/pendentes')
     tokens.value = data.pendentes ?? []
-  } catch {
+    erroLista.value = ''
+  } catch (e) {
     tokens.value = []
+    erroLista.value = e?.response?.data?.erro || 'Falha ao carregar cadastros de autocadastro.'
   } finally {
     carregando.value = false
   }
@@ -296,7 +300,11 @@ const gerarLink = async () => {
 }
 
 const copiar = async (url) => {
-  try { await navigator.clipboard.writeText(url) } catch { }
+  try {
+    await navigator.clipboard.writeText(url)
+  } catch {
+    showToast('❌ Não foi possível copiar automaticamente. Copie manualmente o link exibido.')
+  }
   copiado.value = true
   setTimeout(() => copiado.value = false, 2500)
 }
@@ -346,8 +354,8 @@ const revogar = async (t) => {
     const idx = tokens.value.findIndex(x => x.TOKEN === t.TOKEN)
     if (idx !== -1) tokens.value[idx].TOKEN_STATUS = 'revogado'
     showToast('✕ Token revogado.')
-  } catch {
-    showToast('❌ Erro ao revogar.')
+  } catch (e) {
+    showToast('❌ Erro ao revogar: ' + (e?.response?.data?.erro || 'falha na API.'))
   }
 }
 

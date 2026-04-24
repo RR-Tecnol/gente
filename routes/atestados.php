@@ -100,12 +100,15 @@ Route::patch('/atestados/{id}/validar', function (Request $request, $id) {
             return response()->json(['erro' => 'Status deve ser VALIDADO ou REJEITADO.'], 422);
         }
 
-        DB::table('ATESTADO_MEDICO')->where('ATESTADO_ID', $id)->update([
+        $updated = DB::table('ATESTADO_MEDICO')->where('ATESTADO_ID', $id)->update([
             'STATUS' => $request->status,
             'VALIDADO_POR' => $user->USUARIO_ID ?? null,
             'OBSERVACAO' => $request->observacao,
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Atestado não encontrado ou sem alterações.'], 404);
+        }
 
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {

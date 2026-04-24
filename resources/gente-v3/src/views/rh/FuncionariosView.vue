@@ -37,6 +37,9 @@
         <span class="result-count">{{ funcionarios.length }} resultado{{ funcionarios.length !== 1 ? 's' : '' }}</span>
       </div>
     </div>
+    <div v-if="erroApoio" class="state-box error" style="padding:14px 20px;">
+      <p style="margin:0;">{{ erroApoio }}</p>
+    </div>
 
     <!-- LOADING -->
     <div v-if="loading" class="state-box"><div class="spinner"></div><p>Carregando servidores...</p></div>
@@ -92,9 +95,9 @@
             <td><span class="vinculo-badge">{{ f.vinculo || '—' }}</span></td>
             <td>{{ formatDate(f.FUNCIONARIO_DATA_INICIO) }}</td>
             <td>
-              <span class="status-badge" :class="f.FUNCIONARIO_DATA_FIM ? 'badge-red' : 'badge-green'">
+              <span class="status-badge" :class="isFuncionarioAtivo(f) ? 'badge-green' : 'badge-red'">
                 <span class="badge-dot"></span>
-                {{ f.FUNCIONARIO_DATA_FIM ? 'Inativo' : 'Ativo' }}
+                {{ isFuncionarioAtivo(f) ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
             <td>
@@ -105,7 +108,7 @@
                 <button class="act-btn act-purple" title="Editar" @click.stop="abrirModalEdicao(f)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <button v-if="!f.FUNCIONARIO_DATA_FIM" class="act-btn act-red" title="Inativar" @click.stop="confirmarInativacao(f)">
+                <button v-if="isFuncionarioAtivo(f)" class="act-btn act-red" title="Inativar" @click.stop="confirmarInativacao(f)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 </button>
               </div>
@@ -150,7 +153,7 @@
                   </div>
                   <div class="form-group">
                     <label>CPF</label>
-                    <input v-model="form.PESSOA_CPF_NUMERO" type="text" class="form-input" placeholder="000.000.000-00" />
+                    <input v-model="form.PESSOA_CPF_NUMERO" @input="onInputCpf" type="text" class="form-input" placeholder="000.000.000-00" />
                   </div>
                   <div class="form-group">
                     <label>Data de Nascimento</label>
@@ -275,11 +278,11 @@
                   </div>
                   <div class="form-group">
                     <label>Celular</label>
-                    <input v-model="form.PESSOA_CELULAR" type="text" class="form-input" placeholder="(00) 90000-0000" />
+                    <input v-model="form.PESSOA_CELULAR" @input="onInputCelular" type="text" class="form-input" placeholder="(00) 90000-0000" />
                   </div>
                   <div class="form-group">
                     <label>Telefone</label>
-                    <input v-model="form.PESSOA_TELEFONE" type="text" class="form-input" placeholder="(00) 0000-0000" />
+                    <input v-model="form.PESSOA_TELEFONE" @input="onInputTelefone" type="text" class="form-input" placeholder="(00) 0000-0000" />
                   </div>
                 </div>
               </div>
@@ -298,7 +301,7 @@
                   </div>
                   <div class="form-group">
                     <label>CEP</label>
-                    <input v-model="form.PESSOA_CEP" type="text" class="form-input" placeholder="00000-000" />
+                    <input v-model="form.PESSOA_CEP" @input="onInputCep" type="text" class="form-input" placeholder="00000-000" />
                   </div>
                 </div>
               </div>
@@ -309,7 +312,7 @@
                 <div class="form-grid">
                   <div class="form-group">
                     <label>RG (Número)</label>
-                    <input v-model="form.PESSOA_RG_NUMERO" type="text" class="form-input" placeholder="Número do RG" />
+                    <input v-model="form.PESSOA_RG_NUMERO" @input="onInputRg" type="text" class="form-input" placeholder="Somente números" />
                   </div>
                   <div class="form-group">
                     <label>RG (Órgão Expedidor)</label>
@@ -341,7 +344,7 @@
                   </div>
                   <div class="form-group">
                     <label>CNH (Número)</label>
-                    <input v-model="form.PESSOA_CNH_NUMERO" type="text" class="form-input" placeholder="Número da CNH" />
+                    <input v-model="form.PESSOA_CNH_NUMERO" @input="onInputCnh" type="text" class="form-input" placeholder="Somente números" />
                   </div>
                   <div class="form-group">
                     <label>CNH (Categoria)</label>
@@ -370,7 +373,7 @@
                   </div>
                   <div class="form-group">
                     <label>PIS / PASEP</label>
-                    <input v-model="form.PESSOA_PIS_PASEP" type="text" class="form-input" placeholder="000.00000.00-0" />
+                    <input v-model="form.PESSOA_PIS_PASEP" @input="onInputPis" type="text" class="form-input" placeholder="000.00000.00-0" />
                   </div>
                 </div>
               </div>
@@ -379,6 +382,15 @@
               <div class="form-section">
                 <h3 class="section-label">Dados Funcionais</h3>
                 <div class="form-grid">
+                  <div class="form-group col-2">
+                    <label>Cargo <span class="req">*</span></label>
+                    <select v-model="form.CARGO_ID" class="form-input" required>
+                      <option value="">Selecione o cargo</option>
+                      <option v-for="c in apoio.cargos" :key="c.id" :value="c.id">
+                        {{ c.nome }}
+                      </option>
+                    </select>
+                  </div>
                   <div class="form-group">
                     <label>Matrícula</label>
                     <input v-model="form.FUNCIONARIO_MATRICULA" type="text" class="form-input" placeholder="Número de matrícula" />
@@ -419,11 +431,14 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Atribuição / Cargo</label>
+                    <label>Atribuição</label>
                     <select v-model="form.ATRIBUICAO_ID" class="form-input">
                       <option value="">Selecione a atribuição</option>
                       <option v-for="a in apoio.atribuicoes" :key="a.id" :value="a.id">{{ a.nome }}</option>
                     </select>
+                    <small v-if="!apoio.atribuicoes.length" class="hint-erro">
+                      Nenhuma atribuição ativa encontrada. Cadastre/ative em Atribuições para concluir.
+                    </small>
                   </div>
                 </div>
               </div>
@@ -486,6 +501,7 @@ const funcionarios = ref([])
 const loading      = ref(true)
 const loaded       = ref(false)
 const erro         = ref('')
+const erroApoio    = ref('')
 const busca        = ref('')
 const filtroAtivo  = ref('1')
 const paginaAtual  = ref(1)
@@ -493,7 +509,7 @@ const ultimaPagina = ref(1)
 const total        = ref(0)
 const totalAtivos  = ref(0)
 
-const apoio = ref({ setores: [], vinculos: [], atribuicoes: [] })
+const apoio = ref({ setores: [], vinculos: [], atribuicoes: [], cargos: [] })
 
 // ── Modal ───────────────────────────────────────────────────
 const modalAberto    = ref(false)
@@ -522,6 +538,7 @@ const formVazio = () => ({
   /* Funcionário */
   FUNCIONARIO_MATRICULA: '', FUNCIONARIO_DATA_INICIO: '', FUNCIONARIO_DATA_FIM: '',
   FUNCIONARIO_OBSERVACAO: '',
+  CARGO_ID: '',
   /* Lotação */
   SETOR_ID: '', VINCULO_ID: '', ATRIBUICAO_ID: '',
   /* ID para edição */
@@ -552,7 +569,7 @@ const fetchFuncionarios = async (pag = 1) => {
     ultimaPagina.value = data.last_page ?? 1
     total.value        = data.total ?? funcionarios.value.length
     // BUG-EST-07: total_ativos do backend ou fallback local (conta apenas a página)
-    totalAtivos.value  = data.total_ativos ?? funcionarios.value.filter(f => !f.FUNCIONARIO_DATA_FIM).length
+    totalAtivos.value  = data.total_ativos ?? funcionarios.value.filter(isFuncionarioAtivo).length
   } catch (e) {
     erro.value = e.response?.data?.message || 'Erro ao carregar funcionários.'
   } finally {
@@ -564,7 +581,10 @@ const fetchApoio = async () => {
   try {
     const { data } = await api.get('/api/v3/apoio')
     apoio.value = data
-  } catch {}
+    erroApoio.value = ''
+  } catch (e) {
+    erroApoio.value = e?.response?.data?.erro || 'Falha ao carregar vínculos/setores de apoio. Cadastro pode ficar incompleto.'
+  }
 }
 
 // ── Debounce busca ──────────────────────────────────────────
@@ -575,6 +595,52 @@ const debounceBusca = () => {
 }
 
 const mudarPagina = (pag) => { fetchFuncionarios(pag) }
+const isFuncionarioAtivo = (f) => {
+  const fim = f?.FUNCIONARIO_DATA_FIM
+  if (!fim) return true
+  const d = new Date(`${String(fim).slice(0, 10)}T23:59:59`)
+  return !Number.isNaN(d.getTime()) && d.getTime() > Date.now()
+}
+
+const onlyDigits = (v, max = null) => {
+  const d = String(v ?? '').replace(/\D+/g, '')
+  return max ? d.slice(0, max) : d
+}
+const maskCpf = (v) => {
+  const d = onlyDigits(v, 11)
+  return d.replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1-$2')
+}
+const maskPis = (v) => {
+  const d = onlyDigits(v, 11)
+  return d.replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{5})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{2})(\d)/, '.$1-$2')
+}
+const maskTelefone = (v) => {
+  const d = onlyDigits(v, 10)
+  return d.length <= 2
+    ? d
+    : `(${d.slice(0, 2)}) ${d.slice(2, 6)}${d.length > 6 ? '-' + d.slice(6) : ''}`
+}
+const maskCelular = (v) => {
+  const d = onlyDigits(v, 11)
+  return d.length <= 2
+    ? d
+    : `(${d.slice(0, 2)}) ${d.slice(2, 7)}${d.length > 7 ? '-' + d.slice(7) : ''}`
+}
+const maskCep = (v) => {
+  const d = onlyDigits(v, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+const onInputCpf = () => { form.value.PESSOA_CPF_NUMERO = maskCpf(form.value.PESSOA_CPF_NUMERO) }
+const onInputPis = () => { form.value.PESSOA_PIS_PASEP = maskPis(form.value.PESSOA_PIS_PASEP) }
+const onInputTelefone = () => { form.value.PESSOA_TELEFONE = maskTelefone(form.value.PESSOA_TELEFONE) }
+const onInputCelular = () => { form.value.PESSOA_CELULAR = maskCelular(form.value.PESSOA_CELULAR) }
+const onInputCep = () => { form.value.PESSOA_CEP = maskCep(form.value.PESSOA_CEP) }
+const onInputRg = () => { form.value.PESSOA_RG_NUMERO = onlyDigits(form.value.PESSOA_RG_NUMERO, 20) }
+const onInputCnh = () => { form.value.PESSOA_CNH_NUMERO = onlyDigits(form.value.PESSOA_CNH_NUMERO, 11) }
 
 // ── Modal: Novo ─────────────────────────────────────────────
 const abrirModalNovo = () => {
@@ -628,6 +694,7 @@ const abrirModalEdicao = (f) => {
     FUNCIONARIO_DATA_INICIO:  f.FUNCIONARIO_DATA_INICIO ?? '',
     FUNCIONARIO_DATA_FIM:     f.FUNCIONARIO_DATA_FIM ?? '',
     FUNCIONARIO_OBSERVACAO:   f.FUNCIONARIO_OBSERVACAO ?? '',
+    CARGO_ID:                 f.CARGO_ID ?? '',
     /* Lotação */
     SETOR_ID:       lotacao?.SETOR_ID ?? '',
     VINCULO_ID:     lotacao?.VINCULO_ID ?? '',
@@ -644,6 +711,8 @@ const fecharModal = () => { modalAberto.value = false }
 // ── Salvar (criar ou editar) ────────────────────────────────
 const salvar = async () => {
   if (!form.value.PESSOA_NOME) { erroModal.value = 'O nome é obrigatório.'; return }
+  if (!form.value.CARGO_ID) { erroModal.value = 'Cargo é obrigatório.'; return }
+  form.value.PESSOA_EMAIL = String(form.value.PESSOA_EMAIL || '').trim().toLowerCase()
   salvando.value  = true
   erroModal.value = ''
 
@@ -822,6 +891,7 @@ const formatDate = (d) => {
 .form-group.col-2 { grid-column: span 2; }
 .form-group.col-full { grid-column: 1 / -1; }
 .form-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
+.hint-erro { color:#b91c1c; font-size:11px; font-weight:600; margin-top:2px; }
 .form-input {
   width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px;
   font-size: 13px; font-family: inherit; color: #1e293b; outline: none;

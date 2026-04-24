@@ -90,6 +90,10 @@ class SpaAuthController extends Controller
                 \Log::warning('SpaAuth: não foi possível atualizar USUARIO_ULTIMO_ACESSO: ' . $ex->getMessage());
             }
 
+            // Em ambiente não-produtivo, garante vínculo do admin a um FUNCIONARIO
+            // para telas que dependem de FUNCIONARIO_ID (ponto, declarações etc).
+            $this->ensureAdminFuncionarioVinculo($user);
+
             RateLimiter::clear($throttleKey);
 
             return response()->json([
@@ -163,5 +167,142 @@ class SpaAuthController extends Controller
             'perfil' => $perfilNome,
             'alterar_senha' => (bool) $user->USUARIO_ALTERAR_SENHA,
         ]);
+    }
+
+    /**
+     * Chamado pelo login em routes/web.php e por {@see login()} aqui.
+     * Em produção não altera dados (no-op).
+     */
+    public function applyDevAdminFuncionarioVinculo(Usuario $user): void
+    {
+        $this->ensureAdminFuncionarioVinculo($user);
+    }
+
+    private function ensureAdminFuncionarioVinculo(Usuario $user): void
+    {
+        if (app()->isProduction()) {
+            return;
+        }
+
+        if (strtolower((string) ($user->USUARIO_LOGIN ?? '')) !== 'admin') {
+            return;
+        }
+
+        if (
+            !\Illuminate\Support\Facades\Schema::hasTable('FUNCIONARIO') ||
+            !\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'USUARIO_ID')
+        ) {
+            return;
+        }
+
+        $jaVinculado = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+            ->where('USUARIO_ID', $user->USUARIO_ID)
+            ->first();
+        if ($jaVinculado) {
+            $this->ensureAdminLotacao((int) $jaVinculado->FUNCIONARIO_ID);
+            return;
+        }
+
+        // 1) tenta reaproveitar funcionário sem usuário
+        $funcLivre = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+            ->whereNull('USUARIO_ID')
+            ->orderBy('FUNCIONARIO_ID')
+            ->first();
+        if ($funcLivre) {
+            \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                ->where('FUNCIONARIO_ID', $funcLivre->FUNCIONARIO_ID)
+                ->update(['USUARIO_ID' => $user->USUARIO_ID]);
+            $this->ensureAdminLotacao((int) $funcLivre->FUNCIONARIO_ID);
+            return;
+        }
+
+        // 2) fallback: cria pessoa/funcionário técnico para o admin
+        if (!\Illuminate\Support\Facades\Schema::hasTable('PESSOA')) {
+            return;
+        }
+
+        try {
+            $pessoaCols = \Illuminate\Support\Facades\Schema::getColumnListing('PESSOA');
+            $funcCols = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCIONARIO');
+
+            $cpfAdmin = '00000000000';
+            $pessoaId = \Illuminate\Support\Facades\DB::table('PESSOA')
+                ->where('PESSOA_CPF_NUMERO', $cpfAdmin)
+                ->value('PESSOA_ID');
+
+            if (!$pessoaId) {
+                $pessoaData = [];
+                if (in_array('PESSOA_NOME', $pessoaCols, true))
+                    $pessoaData['PESSOA_NOME'] = $user->USUARIO_NOME ?: 'Administrador Técnico';
+                if (in_array('PESSOA_CPF_NUMERO', $pessoaCols, true))
+                    $pessoaData['PESSOA_CPF_NUMERO'] = $cpfAdmin;
+                if (in_array('PESSOA_CPF', $pessoaCols, true))
+                    $pessoaData['PESSOA_CPF'] = $cpfAdmin;
+                if (in_array('PESSOA_ATIVO', $pessoaCols, true))
+                    $pessoaData['PESSOA_ATIVO'] = 1;
+                if (in_array('PESSOA_DATA_CADASTRO', $pessoaCols, true))
+                    $pessoaData['PESSOA_DATA_CADASTRO'] = now()->toDateString();
+                if (in_array('PESSOA_DATA_NASCIMENTO', $pessoaCols, true))
+                    $pessoaData['PESSOA_DATA_NASCIMENTO'] = '1990-01-01';
+                if (in_array('PESSOA_NASC', $pessoaCols, true))
+                    $pessoaData['PESSOA_NASC'] = '1990-01-01';
+
+                $pessoaId = \Illuminate\Support\Facades\DB::table('PESSOA')->insertGetId($pessoaData);
+            }
+
+            $funcData = ['PESSOA_ID' => $pessoaId, 'USUARIO_ID' => $user->USUARIO_ID];
+            if (in_array('FUNCIONARIO_MATRICULA', $funcCols, true))
+                $funcData['FUNCIONARIO_MATRICULA'] = 'ADM-FAKE-' . str_pad((string) $user->USUARIO_ID, 4, '0', STR_PAD_LEFT);
+            if (in_array('FUNCIONARIO_ATIVO', $funcCols, true))
+                $funcData['FUNCIONARIO_ATIVO'] = 1;
+            if (in_array('FUNCIONARIO_DATA_INICIO', $funcCols, true))
+                $funcData['FUNCIONARIO_DATA_INICIO'] = now()->toDateString();
+            if (in_array('FUNCIONARIO_DATA_CADASTRO', $funcCols, true))
+                $funcData['FUNCIONARIO_DATA_CADASTRO'] = now()->toDateString();
+            if (in_array('FUNCIONARIO_DATA_ATUALIZACAO', $funcCols, true))
+                $funcData['FUNCIONARIO_DATA_ATUALIZACAO'] = now()->toDateString();
+            if (in_array('FUNCIONARIO_REGIME_PREV', $funcCols, true))
+                $funcData['FUNCIONARIO_REGIME_PREV'] = 'RPPS';
+
+            $funcId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->insertGetId($funcData);
+            $this->ensureAdminLotacao((int) $funcId);
+        } catch (\Throwable $e) {
+            \Log::warning('SpaAuth: não foi possível garantir vínculo técnico do admin: ' . $e->getMessage());
+        }
+    }
+
+    private function ensureAdminLotacao(int $funcionarioId): void
+    {
+        if (
+            $funcionarioId <= 0 ||
+            !\Illuminate\Support\Facades\Schema::hasTable('LOTACAO') ||
+            !\Illuminate\Support\Facades\Schema::hasTable('SETOR')
+        ) {
+            return;
+        }
+
+        $lotAtiva = \Illuminate\Support\Facades\DB::table('LOTACAO')
+            ->where('FUNCIONARIO_ID', $funcionarioId)
+            ->whereNull('LOTACAO_DATA_FIM')
+            ->exists();
+        if ($lotAtiva) {
+            return;
+        }
+
+        $setorId = \Illuminate\Support\Facades\DB::table('SETOR')->value('SETOR_ID');
+        if (!$setorId) {
+            return;
+        }
+
+        $dados = ['FUNCIONARIO_ID' => $funcionarioId, 'SETOR_ID' => $setorId];
+        $lotCols = \Illuminate\Support\Facades\Schema::getColumnListing('LOTACAO');
+        if (in_array('LOTACAO_DATA_INICIO', $lotCols, true))
+            $dados['LOTACAO_DATA_INICIO'] = now()->toDateString();
+        if (in_array('LOTACAO_DATA_CADASTRO', $lotCols, true))
+            $dados['LOTACAO_DATA_CADASTRO'] = now()->toDateString();
+        if (in_array('LOTACAO_DATA_ATUALIZACAO', $lotCols, true))
+            $dados['LOTACAO_DATA_ATUALIZACAO'] = now()->toDateString();
+
+        \Illuminate\Support\Facades\DB::table('LOTACAO')->insert($dados);
     }
 }

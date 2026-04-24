@@ -17,6 +17,7 @@ class VinculosPMSLzSeeder extends Seeder
         $temInss = Schema::hasColumn('VINCULO', 'VINCULO_INSS');
         $temIrrf = Schema::hasColumn('VINCULO', 'VINCULO_IRRF');
         $temAnuenio = Schema::hasColumn('VINCULO', 'VINCULO_ANUENIO_PCT');
+        $temAtivo = Schema::hasColumn('VINCULO', 'VINCULO_ATIVO');
 
         // [NOME, SIGLA, TIPO, REGIME, FGTS, INSS, IRRF, ANUENIO_PCT]
         $vinculos = [
@@ -35,9 +36,10 @@ class VinculosPMSLzSeeder extends Seeder
         foreach ($vinculos as [$nome, $sigla, $tipo, $regime, $fgts, $inss, $irrf, $anuenio]) {
             $data = [
                 'VINCULO_SIGLA' => $sigla,
-                'VINCULO_ATIVO' => 1,
                 // VINCULO não tem timestamps nem VINCULO_DESCRICAO
             ];
+            if ($temAtivo)
+                $data['VINCULO_ATIVO'] = 1;
             if ($temTipo)
                 $data['VINCULO_TIPO'] = $tipo;
             if ($temRegime)

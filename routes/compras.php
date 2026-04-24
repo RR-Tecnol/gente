@@ -134,11 +134,14 @@ Route::post('/compras/pedidos', function () {
 Route::patch('/compras/pedidos/{id}/vincular', function (int $id) {
     try {
         $processoId = request('processo_id');
-        DB::table('PEDIDO_COMPRA')->where('PEDIDO_ID', $id)->update([
+        $updated = DB::table('PEDIDO_COMPRA')->where('PEDIDO_ID', $id)->update([
             'PROCESSO_ID'    => $processoId,
             'PEDIDO_STATUS'  => 'VINCULADO',
             'updated_at'     => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Pedido não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);

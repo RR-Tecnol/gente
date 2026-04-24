@@ -20,6 +20,9 @@ class DatabaseSeeder extends Seeder
             TabelaSalarialPMSLzSeeder::class,   // 9º: Tabela salarial 3 carreiras (Sprint 3)
             FuncionariosPMSLzSeeder::class,     // 10º: 18 funcionários de teste
             UsuariosPMSLzSeeder::class,         // 11º: 17 usuários de teste (gente@2026)
+            PcaspSeeder::class,                 // 12º: plano mínimo de contas contábeis
+            SagresDeParaSeeder::class,          // 13º: de/para SAGRES
+            SidebarCoverageSeeder::class,       // 14º: massa mínima para abas críticas do sidebar
         ]);
     }
 }

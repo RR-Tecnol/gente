@@ -1,6 +1,6 @@
 # GENTE v3 — Guia Técnico de Correção
 > Documento para o desenvolvedor responsável. Stack: Laravel 8, Vue 3/Vite, SQL Server, Docker.
-> Raiz do projeto: `X:\gente\sisgep-job-main` | Porta local: 8081
+> Raiz do projeto: conforme o clone local (ex.: `.../gente/gente`); portas típicas: backend **8081**, Vite **5173**. O caminho `X:\gente\...` no original é apenas referência de ambiente Windows.
 > Bugs classificados por autor: RR Tecnol (Sprint 0, commit eb6ba26, 2026-03-15) ou joao baluz (commits 2026-03-31).
 > Nenhum dos bugs abaixo foi introduzido por Davi.
 
@@ -11,6 +11,15 @@
 Para cada bug: leia **CAUSA**, entenda o **EFEITO** visível, aplique a **CORREÇÃO** exata.
 Os bugs estão ordenados do mais crítico (FASE 0, bloqueia uso) ao menor (FASE 2, melhoria).
 Corrija sempre na ordem apresentada — alguns bugs em FASE 0 são pré-requisito para testar os de FASE 1.
+
+---
+
+## Mapa de baterias e verificação (repositório atual)
+
+O texto abaixo ([FASE 0] … [FASE 2] … BUG-xxx) descreve **o defeito original e a correção sugerida** no momento em que o guia foi escrito. O repositório pode já ter incorporado parte disso.
+
+- **Verificação item a item (situação × código, por bateria A–L):** ver [`guia-baterias-verificacao-2026-04-22.md`](./guia-baterias-verificacao-2026-04-22.md).
+- **Síntese:** baterias **A–C** (FASE 0 inicial) estão em grande parte **atendidas** no código (rotas, `CAST` no ponto, autocadastro, afastamentos, escala, smoke API, build Vue, `lucide`, app ponto, auth duplicado removido). Itens que dependem **só de ambiente/DB** (migrations, seeds, ERP) permanecem **condicionais**. Itens de **UX/organograma “some no F5”** e **perfil silencioso** exigem **teste manual**.
 
 ---
 
@@ -83,9 +92,11 @@ ALTER TABLE CARGO ADD CARGO_CBO VARCHAR(10) NULL;
 
 **Arquivo:** `routes/web.php`
 
-**Causa:** O arquivo `routes/progressao_funcional.php` contém todas as rotas admin (`/lista-elegiveis`, `/admin`, `/impacto`, `/historico`, `/config`, `/receita`), mas **não há `require __DIR__ . '/progressao_funcional.php'`** dentro do grupo autenticado do `web.php`. Confirmado por `grep -n 'require.*progressao_funcional' routes/web.php` — retorna vazio.
+**Causa (histórico):** faltava `require __DIR__ . '/progressao_funcional.php'` no grupo `api/v3` autenticado.
 
-**Efeito:** Todas as 6 rotas admin de progressão retornam 404. O módulo "Gerir Progressões" está completamente inacessível.
+**Efeito (se ainda reproduzível):** 404 no módulo "Gerir Progressões".
+
+> **Atualização 2026-04-22 (código):** `require __DIR__ . '/progressao_funcional.php'` consta no `web.php` (há **mais de um** `require` do mesmo arquivo em blocos diferentes — possível duplicação de rotas; tratar em refator se necessário).
 
 **Correção — adicionar 1 linha no grupo autenticado do web.php (próximo dos outros require):**
 ```php
@@ -100,9 +111,11 @@ require __DIR__ . '/progressao_funcional.php';
 
 **Arquivo:** `routes/estagiarios.php`
 
-**Causa:** O arquivo define internamente um `Route::middleware(...)->group(function() { ... })` próprio. Como já é incluído dentro do grupo `api/v3 + auth` do `web.php`, o grupo interno redefine o contexto, quebrando o prefix. As rotas são registradas sem o prefix `api/v3`, gerando 404.
+**Causa (histórico):** o arquivo podia definir um `Route::middleware(...)->group` interno e quebrar o prefixo `api/v3`.
 
-**Efeito:** `GET /api/v3/estagiarios 404` e `POST /api/v3/estagiarios 404`.
+**Efeito (se ainda reproduzível):** 404 em `/api/v3/estagiarios`.
+
+> **Atualização 2026-04-22 (código):** `routes/estagiarios.php` **não** envolve as rotas em outro `middleware()->group` — o padrão “depois” abaixo já reflete a estrutura atual.
 
 **Correção:** Abrir `routes/estagiarios.php` e remover o wrapper `Route::middleware()->group()` — as rotas devem estar no nível raiz do arquivo, herdando o contexto do pai:
 ```php
@@ -123,9 +136,11 @@ Route::post('/estagiarios', function (Request $req) { ... });
 
 **Arquivo:** `routes/web.php` — ausência das rotas
 
-**Causa:** As rotas `/autocadastro/{token}` existem para o servidor preencher o próprio cadastro, mas as rotas de gestão (`GET /autocadastro/pendentes` e `POST /autocadastro/gerar-link`) **não existem em nenhum arquivo de rotas**.
+**Causa (histórico):** As rotas de gestão (`GET /autocadastro/pendentes` e `POST /autocadastro/gerar-link`) **não existiam** no `web.php` autenticado.
 
-**Efeito:** `GET /api/v3/autocadastro/pendentes 404` e `POST /api/v3/autocadastro/gerar-link 404`. A tela de gestão de autocadastro não carrega nenhum dado e não permite gerar links.
+**Efeito (se ainda reproduzível):** 404 na gestão de autocadastro.
+
+> **Atualização 2026-04-22 (código):** Essas rotas estão definidas em `routes/web.php` dentro do prefixo `api/v3` autenticado (por volta das linhas comentadas como “Autocadastro gestão”).
 
 **Correção — criar as rotas no grupo autenticado:**
 ```php
@@ -155,9 +170,11 @@ Route::post('/autocadastro/gerar-link', function (Request $request) {
 
 **Arquivo:** ausência em `routes/`
 
-**Causa:** `FeriasLicencasView.vue` chama `POST /api/v3/afastamentos`. Essa rota **não existe**. Há `POST /api/v3/atestados` (para atestados médicos, modelo diferente) e `Route::prefix('afastamento')` (singular, legacy), mas nenhum `POST /api/v3/afastamentos`.
+**Causa (histórico):** `FeriasLicencasView.vue` chama `POST /api/v3/afastamentos`, rota que **não existia** no repositório antigo.
 
-**Efeito:** `404 Not Found` ao clicar em "Enviar Solicitação" de afastamento/licença.
+**Efeito (se ainda reproduzível):** 404 ao enviar afastamento.
+
+> **Atualização 2026-04-22 (código):** `routes/afastamentos_v3.php` é carregado via `require` no `web.php` (há entradas duplicadas de `require` para o mesmo arquivo em blocos distintos — redundante, mas funcional). Validar com smoke/API real.
 
 **Correção — criar arquivo `routes/afastamentos_v3.php`** com o padrão dos outros módulos:
 ```php
@@ -195,9 +212,11 @@ Adicionar `require __DIR__ . '/afastamentos_v3.php';` no grupo autenticado do `w
 
 **Arquivo:** ausência em `routes/`
 
-**Causa:** `EscalaTrabalhoView.vue` chama `GET /api/v3/escala-trabalho`. Essa rota **não existe**. O sistema tem `GET /api/v3/escalas` (para escalas hospitalares/médicas), que é diferente.
+**Causa (histórico):** `EscalaTrabalhoView.vue` chama `GET /api/v3/escala-trabalho`, rota **inexistente** no repositório antigo (confundir com `GET /api/v3/escalas` médica).
 
-**Efeito:** `GET /api/v3/escala-trabalho?mes=4&ano=2026 404` ao entrar na tela.
+**Efeito (se ainda reproduzível):** 404 ao abrir a tela.
+
+> **Atualização 2026-04-22 (código):** `GET /api/v3/escala-trabalho` (e `POST` correspondente) está em `routes/web.php` com implementação completa. O snippet abaixo é a forma **mínima** de referência; a implementação atual pode divergir.
 
 **Correção — criar a rota no grupo autenticado:**
 ```php
@@ -259,6 +278,8 @@ Route::get('/escalas/{id}', function ($id) {
     $id = (int) $id;
 ```
 
+> **Atualização 2026-04-22 (código):** Em `MatrizEscalaView.vue`, `carregarEscala()` **não** chama `GET /api/v3/escalas/{id}` quando o ID é `MOCK*` (`startsWith('MOCK')`). O fallback com `ESCALA_ID: MOCK1/MOCK2` só entra se `GET /escalas` falhar; com API ok, use escalas reais. Ajuste o backend conforme o snippet acima se ainda houver rota com type-hint `int` que receba string.
+
 ---
 
 ## [FASE 0] Escala Médica — POST /escalas retorna 405 e GET /setores retorna 404
@@ -268,6 +289,8 @@ Route::get('/escalas/{id}', function ($id) {
 **Causa:** `POST /api/v3/escalas` não existe (só `GET /escalas` e `GET /escalas/{id}`). `GET /api/v3/setores` também não existe.
 
 **Efeito:** 405 ao criar nova escala, 404 no seletor de setores.
+
+> **Atualização 2026-04-22 (código):** `GET /api/v3/setores` e `POST /api/v3/escalas` existem no grupo autenticado; validação automática (smoke) retornou **2xx** com payloads de teste. O bloco abaixo permanece como **referência** do que foi necessário criar.
 
 **Correção:**
 ```php
@@ -463,26 +486,18 @@ $pessoa->save();
 
 ## [FASE 0] Holerites — Botão PDF chama URL inexistente
 
-**Arquivo:** `resources/gente-v3/src/views/folha/ContraChequeView.vue` linha 216
+**Arquivo:** `resources/gente-v3/src/views/folha/ContraChequeView.vue` (função `baixarHolerite`)
 
-**Causa:** Frontend chama `window.open('/api/v3/meus-holerites/${calculoId}/pdf')`. A rota do backend é `GET /contra-cheque/{funcionarioId}/{competencia}/pdf` — estrutura completamente diferente.
+**Causa (histórico):** o SPA chegou a chamar URL de PDF incompatível com o backend (ex. caminhos com `meus-holerites/.../pdf` em versões antigas).
 
-**Efeito:** 404 ao tentar baixar o PDF de qualquer holerite.
+**Efeito (se ainda reproduzível):** 404 ou HTML errado ao abrir o PDF.
 
-**Correção — alinhar o frontend à rota existente:**
+> **Atualização 2026-04-22 (código):** O `ContraChequeView.vue` chama `window.open(\`/api/v3/holerite-pdf/${detalheId}\`, '_blank')`, alinhado a `GET /api/v3/holerite-pdf/{detalheId}` no `web.php` (view Blade `v3.holerite-pdf`). Existe ainda `GET /api/v3/contra-cheque/{funcionarioId}/{competencia}/pdf` no controlador. O snippet abaixo é **referência** se a equipe preferir unificar tudo em `contra-cheque/.../pdf`:
+
+**Correção (referência — rota alternativa por competência):**
 ```js
-// ANTES:
-const baixarHolerite = (funcionarioId, competencia, holerite) => {
-  const calculoId = holerite?.calculo_id ?? holerite?.id ?? funcionarioId
-  window.open(`/api/v3/meus-holerites/${calculoId}/pdf`, '_blank')
-}
-
-// DEPOIS:
-const baixarHolerite = (funcionarioId, competencia, holerite) => {
-  // Usar a rota real: /contra-cheque/{funcionarioId}/{competencia}/pdf
-  const comp = competencia?.replace('-', '/') ?? competencia
-  window.open(`/api/v3/contra-cheque/${funcionarioId}/${comp}/pdf`, '_blank')
-}
+const comp = (competencia || '').toString()
+window.open(`/api/v3/contra-cheque/${funcionarioId}/${comp}/pdf`, '_blank')
 ```
 
 ---

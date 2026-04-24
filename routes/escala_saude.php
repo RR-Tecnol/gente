@@ -84,7 +84,9 @@ Route::get('/escala-saude/furos', function () {
                 ->whereRaw("date(ATESTADO_DATA, '+' || ATESTADO_DIAS || ' days') >= ?", [$periodoInicio])
                 ->select('FUNCIONARIO_ID', 'ATESTADO_DATA', 'ATESTADO_DIAS')
                 ->get();
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('escala-saude/furos: falha ao buscar atestados', ['erro' => $e->getMessage()]);
+        }
 
         // 3. Afastamentos no período (fallback)
         $afastamentos = collect();
@@ -96,7 +98,9 @@ Route::get('/escala-saude/furos', function () {
                 ->where('AFASTAMENTO_DATA_FIM', '>=', $periodoInicio)
                 ->select('FUNCIONARIO_ID', 'AFASTAMENTO_DATA_INICIO', 'AFASTAMENTO_DATA_FIM')
                 ->get();
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('escala-saude/furos: falha ao buscar afastamentos', ['erro' => $e->getMessage()]);
+        }
 
 
         // 4. Substituições registradas
@@ -107,7 +111,9 @@ Route::get('/escala-saude/furos', function () {
                 ->whereNotNull('SUBSTITUTO_ID')
                 ->pluck('DETALHE_ESCALA_ITEM_ID')
                 ->flip(); // usar como hash set
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('escala-saude/furos: falha ao buscar substituicoes', ['erro' => $e->getMessage()]);
+        }
 
         // 5. Cruzar: ausente SEM substituto = FURO
         $furos = [];
@@ -204,21 +210,104 @@ Route::get('/escala-saude/cobertura/{setor_id}/{data}', function (int $setorId, 
 });
 
 Route::post('/escalas', function (\Illuminate\Http\Request $request) {
-    $id = DB::table('ESCALA')->insertGetId([
-        'SETOR_ID'           => $request->setor_id,
-        'ESCALA_COMPETENCIA' => $request->competencia,
-        'ESCALA_SITUACAO'    => 'rascunho',
-        'created_at'         => now(),
-        'updated_at'         => now(),
-    ]);
-    return response()->json(['ok' => true, 'ESCALA_ID' => $id], 201);
+    try {
+        $mes = (int) ($request->mes ?? 0);
+        $ano = (int) ($request->ano ?? 0);
+        $competencia = $request->competencia;
+        if (!$competencia && $mes >= 1 && $mes <= 12 && $ano >= 2000) {
+            $competencia = sprintf('%04d-%02d', $ano, $mes);
+        }
+        if (!$competencia) {
+            return response()->json(['erro' => 'Competência inválida.'], 422);
+        }
+
+        $setorId = $request->setor_id ?: DB::table('SETOR')
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('SETOR', 'SETOR_ATIVO'),
+                fn($q) => $q->where('SETOR_ATIVO', 1)
+            )
+            ->value('SETOR_ID');
+        if (!$setorId) {
+            return response()->json(['erro' => 'Nenhum setor disponível para criar escala.'], 422);
+        }
+
+        $escalaInsert = [
+            'SETOR_ID' => $setorId,
+            'ESCALA_COMPETENCIA' => $competencia,
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_SITUACAO')) {
+            $escalaInsert['ESCALA_SITUACAO'] = 'rascunho';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_STATUS')) {
+            $escalaInsert['ESCALA_STATUS'] = 'rascunho';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_ATIVO')) {
+            $escalaInsert['ESCALA_ATIVO'] = 1;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_DESCRICAO')) {
+            $escalaInsert['ESCALA_DESCRICAO'] = "Escala {$competencia}";
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'created_at')) {
+            $escalaInsert['created_at'] = now();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'updated_at')) {
+            $escalaInsert['updated_at'] = now();
+        }
+
+        $id = DB::table('ESCALA')->insertGetId($escalaInsert);
+
+        $funcionariosSetor = DB::table('LOTACAO as l')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'l.FUNCIONARIO_ID')
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('LOTACAO', 'LOTACAO_DATA_FIM'),
+                fn($q) => $q->whereNull('l.LOTACAO_DATA_FIM')
+            )
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM'),
+                fn($q) => $q->whereNull('f.FUNCIONARIO_DATA_FIM')
+            )
+            ->where('l.SETOR_ID', $setorId)
+            ->select('f.FUNCIONARIO_ID')
+            ->distinct()
+            ->limit(40)
+            ->pluck('f.FUNCIONARIO_ID');
+
+        if ($funcionariosSetor->isEmpty()) {
+            $funcionariosSetor = DB::table('FUNCIONARIO as f')
+                ->when(
+                    \Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM'),
+                    fn($q) => $q->whereNull('f.FUNCIONARIO_DATA_FIM')
+                )
+                ->orderBy('f.FUNCIONARIO_ID')
+                ->limit(20)
+                ->pluck('f.FUNCIONARIO_ID');
+        }
+
+        foreach ($funcionariosSetor as $funcionarioId) {
+            DB::table('DETALHE_ESCALA')->updateOrInsert(
+                ['ESCALA_ID' => $id, 'FUNCIONARIO_ID' => $funcionarioId],
+                \Illuminate\Support\Facades\Schema::hasColumn('DETALHE_ESCALA', 'updated_at') ? ['updated_at' => now()] : []
+            );
+        }
+
+        return response()->json(['ok' => true, 'escala_id' => $id, 'competencia' => $competencia], 201);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
 });
 
 Route::get('/setores', function () {
-    $setores = DB::table('SETOR')
-        ->where('SETOR_ATIVO', 1)
-        ->orderBy('SETOR_NOME')
-        ->select('SETOR_ID as id', 'SETOR_NOME as nome')
-        ->get();
-    return response()->json(['setores' => $setores]);
+    try {
+        $setores = DB::table('SETOR')
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('SETOR', 'SETOR_ATIVO'),
+                fn($q) => $q->where('SETOR_ATIVO', 1)
+            )
+            ->orderBy('SETOR_NOME')
+            ->select('SETOR_ID as id', 'SETOR_NOME as nome')
+            ->get();
+        return response()->json(['setores' => $setores]);
+    } catch (\Throwable $e) {
+        return response()->json(['setores' => []]);
+    }
 });

@@ -363,7 +363,22 @@
               <div class="tl-chip-folha" v-if="tipoAfastFolha(a.tipo)">
                 <span class="mini-chip">{{ tipoAfastFolha(a.tipo) }}</span>
               </div>
+              <div v-if="tipoAfastImpacto(a.tipo)" class="tl-desc">{{ tipoAfastImpacto(a.tipo) }}</div>
               <div v-if="a.obs" class="tl-aquisitivo">{{ a.obs }}</div>
+              <div v-if="a.anexo" class="tl-anexo">
+                <button class="anexo-btn" @click="toggleAfastExpand(a.id)">
+                  {{ afastExpandido[a.id] ? '🔽 Ocultar anexo' : '🖼️ Ver anexo' }}
+                </button>
+                <a class="anexo-link" :href="a.anexo.download_url" target="_blank" rel="noopener">
+                  📎 {{ a.anexo.nome }}.{{ a.anexo.extensao }}
+                </a>
+              </div>
+              <div v-if="a.anexo && afastExpandido[a.id]" class="tl-anexo-preview">
+                <img v-if="a.anexo.eh_imagem" :src="a.anexo.download_url" alt="Anexo do afastamento" />
+                <div v-else class="tl-anexo-nao-imagem">
+                  Prévia indisponível para este tipo de arquivo. Use o link para abrir/baixar.
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -450,9 +465,21 @@ const fetchFerias = async () => {
   loading.value = true
   try {
     const { data } = await api.get('/api/v3/ferias')
-    solicitacoes.value = data.ferias ?? data.solicitacoes ?? []
-    saldo.value        = data.saldo  ?? 0
-    vencimento.value   = data.vencimento ?? ''
+    const listaBruta = Array.isArray(data)
+      ? data
+      : (data.ferias ?? data.solicitacoes ?? [])
+
+    solicitacoes.value = (listaBruta || []).map((f) => ({
+      FERIAS_ID: f.FERIAS_ID ?? f.ferias_id ?? f.id,
+      FERIAS_DATA_INICIO: f.FERIAS_DATA_INICIO ?? f.ferias_inicio ?? f.inicio ?? null,
+      FERIAS_DATA_FIM: f.FERIAS_DATA_FIM ?? f.ferias_fim ?? f.fim ?? null,
+      FERIAS_AQUISITIVO_INICIO: f.FERIAS_AQUISITIVO_INICIO ?? f.aquisitivo_inicio ?? null,
+      FERIAS_AQUISITIVO_FIM: f.FERIAS_AQUISITIVO_FIM ?? f.aquisitivo_fim ?? null,
+      status: f.status ?? 'PENDENTE',
+    }))
+
+    saldo.value = data?.saldo ?? 0
+    vencimento.value = data?.vencimento ?? ''
   } catch { solicitacoes.value = [] }
   finally { loading.value = false }
 }
@@ -486,12 +513,11 @@ const solicitar = async () => {
     if (editandoId.value) {
       await api.put(`/api/v3/ferias/${editandoId.value}`, payload)
       okForm.value = 'Frias atualizadas!'
-      const idx = solicitacoes.value.findIndex(s => (s.FERIAS_ID ?? s.id) === editandoId.value)
-      if (idx >= 0) solicitacoes.value[idx] = { ...solicitacoes.value[idx], ...payload }
+      await fetchFerias()
     } else {
       const { data } = await api.post('/api/v3/ferias', payload)
       okForm.value = 'Frias agendadas com sucesso!'
-      solicitacoes.value.unshift({ FERIAS_ID: data.ferias_id, ...payload })
+      await fetchFerias()
       // Upload do anexo se houver
       if (arquivoFerias.value && data.ferias_id) {
         const fd = new FormData()
@@ -521,11 +547,11 @@ const resetForm = () => {
   Object.assign(form, { FERIAS_DATA_INICIO: '', FERIAS_DATA_FIM: '', FERIAS_AQUISITIVO_INICIO: '', FERIAS_AQUISITIVO_FIM: '' })
 }
 const cancelarFerias = async (s) => {
-  const id = s.FERIAS_ID ?? s.id
+  const id = s.FERIAS_ID ?? s.id ?? s.ferias_id
   if (!confirm('Cancelar este período de frias?')) return
   try {
     if (id && !String(id).startsWith('mock')) await api.delete(`/api/v3/ferias/${id}`)
-    solicitacoes.value = solicitacoes.value.filter(f => (f.FERIAS_ID ?? f.id) !== id)
+    await fetchFerias()
   } catch (e) { alert(e.response?.data?.erro || 'Erro ao cancelar.') }
 }
 
@@ -594,6 +620,7 @@ const formAfastValido = computed(() => formAfast.tipo && formAfast.inicio)
 
 const arquivoAfast = ref(null)
 const inputAfast   = ref(null)
+const afastExpandido = reactive({})
 const onArquivoAfast = (e) => { arquivoAfast.value = e.target.files[0] ?? null }
 const onDropAfast    = (e) => { arquivoAfast.value = e.dataTransfer.files[0] ?? null }
 
@@ -611,12 +638,23 @@ const fetchAfastamentos = async () => {
   loadingAfast.value = true
   try {
     const { data } = await api.get('/api/v3/afastamentos')
-    // Filtra apenas os tipos administrativos (exclui atestados mdicos)
     const tiposAdmin = tiposAfastamento.map(t => t.val)
-    afastamentos.value = (data.afastamentos ?? []).filter(a => {
-      const tipo = (a.AFASTAMENTO_TIPO ?? a.tipo ?? '').toLowerCase().replace(/\s+/g, '_')
-      return tiposAdmin.some(t => tipo.includes(t) || t.includes(tipo))
-    })
+    afastamentos.value = (data.afastamentos ?? [])
+      .map((a) => {
+        const tipoRaw = String(a.tipo ?? a.AFASTAMENTO_TIPO ?? '').toLowerCase().replace(/\s+/g, '_')
+        const tipoDef = tiposAfastamento.find(t => tipoRaw.includes(t.val) || t.val.includes(tipoRaw))
+        return {
+          id: a.id ?? a.AFASTAMENTO_ID,
+          tipo: tipoRaw,
+          tipo_nome: a.tipo_nome ?? a.AFASTAMENTO_TIPO_NOME ?? tipoDef?.nome ?? tipoRaw,
+          inicio: a.inicio ?? a.AFASTAMENTO_DATA_INICIO ?? null,
+          fim: a.fim ?? a.AFASTAMENTO_DATA_FIM ?? null,
+          obs: a.obs ?? a.AFASTAMENTO_OBS ?? a.AFASTAMENTO_OBSERVACAO ?? null,
+          status: a.status ?? a.AFASTAMENTO_STATUS ?? 'pendente',
+          anexo: a.anexo ?? null,
+        }
+      })
+      .filter(a => tiposAdmin.some(t => a.tipo.includes(t) || t.includes(a.tipo)))
   } catch { afastamentos.value = [] }
   finally { loadingAfast.value = false }
 }
@@ -632,16 +670,13 @@ const solicitarAfast = async () => {
       obs:    formAfast.obs || null,
     })
     okAfast.value = `✅ Solicitação registrada! Protocolo: ${data.protocolo ?? data.id ?? ''}`
-    afastamentos.value.unshift({
-      id: data.id, tipo: formAfast.tipo, tipo_nome: tipoSelecionado.value?.nome,
-      inicio: formAfast.inicio, fim: formAfast.fim, obs: formAfast.obs, status: 'Pendente',
-    })
+    await fetchAfastamentos()
     // Upload do documento comprobatrio se houver
     if (arquivoAfast.value && data.id) {
       const fd = new FormData()
       fd.append('arquivo', arquivoAfast.value)
       fd.append('tipo', 'afastamento')
-      await api.post(`/api/v3/afastamentos/${data.id}/anexo`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).catch(() => {})
+      await api.post(`/api/v3/afastamentos/${data.id}/anexo`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       arquivoAfast.value = null
     }
     Object.assign(formAfast, { tipo: '', tipo_nome: '', inicio: '', fim: '', obs: '' })
@@ -712,6 +747,8 @@ const dotAfastClass = (a) => {
 }
 const tipoAfastIco  = (val) => tiposAfastamento.find(t => t.val === val)?.ico ?? '📋'
 const tipoAfastFolha = (val) => tiposAfastamento.find(t => t.val === val)?.folha ?? null
+const tipoAfastImpacto = (val) => tiposAfastamento.find(t => t.val === val)?.impacto ?? null
+const toggleAfastExpand = (id) => { afastExpandido[id] = !afastExpandido[id] }
 </script>
 
 <style scoped>
@@ -821,6 +858,14 @@ const tipoAfastFolha = (val) => tiposAfastamento.find(t => t.val === val)?.folha
 .tl-aquisitivo { font-size: 11px; color: #94a3b8; margin: 4px 0; }
 .tl-chip-folha { margin: 4px 0; }
 .mini-chip { font-size: 11px; font-weight: 600; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 2px 10px; color: #475569; }
+.tl-desc { margin-top: 6px; font-size: 12px; color: #475569; line-height: 1.45; }
+.tl-anexo { margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.anexo-btn { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 10px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.anexo-link { font-size: 12px; color: #0f766e; text-decoration: none; font-weight: 600; }
+.anexo-link:hover { text-decoration: underline; }
+.tl-anexo-preview { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: #f8fafc; }
+.tl-anexo-preview img { display: block; width: 100%; max-width: 420px; border-radius: 10px; border: 1px solid #cbd5e1; }
+.tl-anexo-nao-imagem { font-size: 12px; color: #475569; }
 .tl-actions { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f8fafc; }
 .tl-btn { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; color: #64748b; }
 .tl-edit:hover  { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }

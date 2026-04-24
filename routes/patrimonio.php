@@ -68,13 +68,16 @@ Route::post('/patrimonio/bens', function () {
 // Atualizar bem
 Route::put('/patrimonio/bens/{id}', function (int $id) {
     try {
-        DB::table('BEM_PATRIMONIAL')->where('BEM_ID', $id)->update([
+        $updated = DB::table('BEM_PATRIMONIAL')->where('BEM_ID', $id)->update([
             'BEM_DESCRICAO' => request('bem_descricao'),
             'BEM_ESTADO'    => strtoupper(request('bem_estado', 'BOM')),
             'UO_ID'         => request('uo_id'),
             'SERVIDOR_ID'   => request('servidor_id'),
             'updated_at'    => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Bem não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 422);

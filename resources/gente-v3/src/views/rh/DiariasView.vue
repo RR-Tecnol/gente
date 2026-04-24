@@ -225,9 +225,6 @@ const MOCKTabela = [
   { dest: 'EXTERIOR',     ico: '🌍', label: 'Exterior',             valor: 800 },
 ]
 
-const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-const hoje = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
-
 const MOCK = [
   { SOLICITACAO_ID: 1, nome: 'Maria Silva', matricula: '20250001', DESTINO: 'Brasília/DF', DESTINO_TIPO: 'FORA_MA', DATA_IDA: '2026-03-05', DATA_VOLTA: '2026-03-07', QTDE_DIARIAS: 3, VALOR_TOTAL: 1260, STATUS: 'APROVADA' },
   { SOLICITACAO_ID: 2, nome: 'João Costa', matricula: '20250002', DESTINO: 'Caxias/MA', DESTINO_TIPO: 'INTERIOR_MA', DATA_IDA: '2026-03-10', DATA_VOLTA: '2026-03-11', QTDE_DIARIAS: 2, VALOR_TOTAL: 360, STATUS: 'PENDENTE' },

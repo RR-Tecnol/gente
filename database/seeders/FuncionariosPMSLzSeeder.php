@@ -89,6 +89,18 @@ class FuncionariosPMSLzSeeder extends Seeder
         $total = 0;
         $atualizados = 0;
         foreach ($funcionarios as [$cpf, $nome, $sexo, $nasc, $admissao, $vinId, $regime, $matr, $uSigla, $classe, $referencia, $carrId]) {
+            if ($classe === 'PNM-II')
+                $classe = 'PNM2';
+            if ($classe === 'PNM-III')
+                $classe = 'PNM3';
+            if ($classe === 'PNM-I')
+                $classe = 'PNM1';
+            if ($classe === 'PNS-II')
+                $classe = 'PNS2';
+            if ($classe === 'PNS-III')
+                $classe = 'PNS3';
+            if ($classe === 'PNS-I')
+                $classe = 'PNS1';
 
             // Se já existe — atualizar CLASSE/REFERENCIA/CARREIRA
             $funcExiste = DB::table('FUNCIONARIO')->where('FUNCIONARIO_MATRICULA', $matr)->first();

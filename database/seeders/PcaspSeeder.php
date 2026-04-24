@@ -27,14 +27,14 @@ class PcaspSeeder extends Seeder
             ['2.1.3.3', 'Tributos a Recolher', 'CREDORA', 'PASSIVO', '2.1.3'],
             ['2.1.3.3.01', 'IRRF Folha a Recolher', 'CREDORA', 'PASSIVO', '2.1.3.3'],
             // Grupo 3 — Variações Patrimoniais Diminutivas
-            ['3', 'VARIAÇÕES PATRIMONIAIS DIMINUTIVAS', 'DEVEDORA', 'VARIACAO', null],
-            ['3.1', 'Pessoal e Encargos', 'DEVEDORA', 'VARIACAO', '3'],
-            ['3.1.1', 'Remuneração a Pessoal', 'DEVEDORA', 'VARIACAO', '3.1'],
-            ['3.1.1.1', 'Vencimentos e Vantagens', 'DEVEDORA', 'VARIACAO', '3.1.1'],
-            ['3.1.1.1.01', 'Vencimentos e Vantagens Fixas', 'DEVEDORA', 'VARIACAO', '3.1.1.1'],
-            ['3.1.2', 'Encargos Patronais', 'DEVEDORA', 'VARIACAO', '3.1'],
-            ['3.1.2.1', 'Contribuições Patronais', 'DEVEDORA', 'VARIACAO', '3.1.2'],
-            ['3.1.2.1.01', 'Contribuição Patronal IPAM', 'DEVEDORA', 'VARIACAO', '3.1.2.1'],
+            ['3', 'VARIAÇÕES PATRIMONIAIS DIMINUTIVAS', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', null],
+            ['3.1', 'Pessoal e Encargos', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', '3'],
+            ['3.1.1', 'Remuneração a Pessoal', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', '3.1'],
+            ['3.1.1.1', 'Vencimentos e Vantagens', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', '3.1.1'],
+            ['3.1.1.1.01', 'Vencimentos e Vantagens Fixas', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', '3.1.1.1'],
+            ['3.1.2', 'Encargos Patronais', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', '3.1'],
+            ['3.1.2.1', 'Contribuições Patronais', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', '3.1.2'],
+            ['3.1.2.1.01', 'Contribuição Patronal IPAM', 'DEVEDORA', 'VARIACAO_PATRIMONIAL_DIMINUTIVA', '3.1.2.1'],
         ];
 
         // Inserir sem pai primeiro, depois resolver FKs por código

@@ -125,7 +125,7 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
     // GET /api/auth/me â€” Retorna o usuÃ¡rio autenticado ou 401
     Route::get('/me', function (Request $request) {
         if (!Auth::check()) {
-            return response()->json(['error' => 'NÃ£o autenticado'], 401);
+            return response()->json(['error' => 'Não autenticado'], 401);
         }
         $user = Auth::user();
         $funcionario = $user->FUNCIONARIO_ID
@@ -204,7 +204,7 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
 
         if (!$user) {
             \Illuminate\Support\Facades\DB::table('LOGIN_ATTEMPTS')->insert(['IP' => $ip, 'LOGIN' => $login, 'SUCESSO' => false, 'TENTATIVA_EM' => now()]);
-            return response()->json(['error' => 'Credenciais invÃ¡lidas ou usuÃ¡rio inativo'], 401);
+            return response()->json(['error' => 'Credenciais inválidas ou usuário inativo'], 401);
         }
 
         // MigraÃ§Ã£o transparente MD5 â†’ bcrypt
@@ -228,6 +228,10 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         Auth::login($user, false);
         \Illuminate\Support\Facades\Log::channel('security')->info('login_sucesso', ['usuario' => $login, 'ip' => $request->ip()]);
         $request->session()->regenerate();
+        try {
+            app(\App\Http\Controllers\Api\SpaAuthController::class)->applyDevAdminFuncionarioVinculo($user);
+        } catch (\Throwable $e) {
+        }
         try {
             $user->USUARIO_ULTIMO_ACESSO = now();
             $user->save();
@@ -268,12 +272,12 @@ Route::prefix('api/auth')->middleware(['web', 'throttle:10,1'])->group(function 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return response()->json(['ok' => true]);
-    });
+    })->name('api.auth.logout');
 
     // POST /api/auth/change-password â€” Troca de senha
     Route::post('/change-password', function (Request $request) {
         if (!Auth::check()) {
-            return response()->json(['error' => 'NÃ£o autenticado'], 401);
+            return response()->json(['error' => 'Não autenticado'], 401);
         }
         $senhaAtual = $request->input('senha_atual');
         $senhaNova = $request->input('senha_nova');
@@ -379,7 +383,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ])->find($id);
 
                 if (!$func)
-                    return response()->json(['message' => 'FuncionÃ¡rio nÃ£o encontrado'], 404);
+                    return response()->json(['message' => 'Funcionário não encontrado'], 404);
 
                 $lotacaoAtiva = $func->lotacoes->where('LOTACAO_DATA_FIM', null)->last()
                     ?? $func->lotacoes->last();
@@ -399,12 +403,26 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                     ->get();
 
                 return response()->json([
-                    'funcionario' => array_merge($func->toArray(), [
+                    'funcionario' => [
+                        'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
+                        'PESSOA_ID' => $func->PESSOA_ID,
+                        'USUARIO_ID' => $func->USUARIO_ID,
+                        'FUNCIONARIO_MATRICULA' => $func->FUNCIONARIO_MATRICULA,
+                        'FUNCIONARIO_DATA_INICIO' => $func->FUNCIONARIO_DATA_INICIO,
+                        'FUNCIONARIO_DATA_FIM' => $func->FUNCIONARIO_DATA_FIM,
+                        'FUNCIONARIO_OBSERVACAO' => $func->FUNCIONARIO_OBSERVACAO,
+                        'pessoa' => $func->pessoa ? [
+                            'PESSOA_NOME' => $func->pessoa->PESSOA_NOME,
+                            'PESSOA_CPF_NUMERO' => $func->pessoa->PESSOA_CPF_NUMERO,
+                            'PESSOA_NASCIMENTO' => $func->pessoa->PESSOA_NASCIMENTO,
+                            'PESSOA_EMAIL' => $func->pessoa->PESSOA_EMAIL,
+                            'PESSOA_CELULAR' => $func->pessoa->PESSOA_CELULAR,
+                        ] : null,
                         'setor' => optional($lotacaoAtiva?->setor)->SETOR_NOME,
                         'unidade' => optional($lotacaoAtiva?->setor?->unidade)->UNIDADE_NOME,
                         'atribuicao' => optional($lotacaoAtiva?->atribuicaoLotacoes->last()?->atribuicao)->ATRIBUICAO_NOME,
                         'vinculo' => optional($lotacaoAtiva?->vinculo)->VINCULO_NOME,
-                    ]),
+                    ],
                     'holerites' => $holerites,
                 ]);
             });
@@ -413,7 +431,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
             Route::put('/funcionarios/{id}', function ($id, \Illuminate\Http\Request $request) {
                 $func = \App\Models\Funcionario::with('pessoa')->find($id);
                 if (!$func)
-                    return response()->json(['message' => 'FuncionÃ¡rio nÃ£o encontrado'], 404);
+                    return response()->json(['message' => 'Funcionário não encontrado'], 404);
 
                 // Dados do funcionÃ¡rio
                 $func->fill($request->only(['FUNCIONARIO_MATRICULA', 'FUNCIONARIO_DATA_INICIO', 'FUNCIONARIO_DATA_FIM', 'FUNCIONARIO_OBSERVACAO']));
@@ -503,7 +521,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ])->find($id);
 
                 if (!$func)
-                    return response()->json(['message' => 'NÃ£o encontrado'], 404);
+                    return response()->json(['message' => 'Não encontrado'], 404);
 
                 $lotacoes = $func->lotacoes->map(fn($l) => [
                     'tipo' => 'lotacao',
@@ -561,6 +579,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
 
             // â”€â”€ Listagem de funcionÃ¡rios com busca (para FuncionariosView) â”€â”€
             Route::get('/funcionarios', function (\Illuminate\Http\Request $request) {
+                $hoje = now()->toDateString();
                 $q = $request->input('q', '');
                 $per = min((int) $request->input('per_page', 12), 50);
 
@@ -588,7 +607,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                         'cargo' => optional($lot?->atribuicaoLotacoes->last()?->atribuicao)->ATRIBUICAO_NOME,
                         'vinculo' => optional($lot?->vinculo)->VINCULO_NOME,
                         'data_inicio' => $f->FUNCIONARIO_DATA_INICIO,
-                        'ativo' => $f->FUNCIONARIO_DATA_FIM === null,
+                        'ativo' => empty($f->FUNCIONARIO_DATA_FIM) || $f->FUNCIONARIO_DATA_FIM > $hoje,
                     ];
                 });
 
@@ -653,10 +672,13 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
 
             Route::delete('/funcionarios/{id}/dependentes/{depId}', function ($id, $depId) {
                 try {
-                    \Illuminate\Support\Facades\DB::table('PESSOA_DEPENDENTE')
+                    $deleted = \Illuminate\Support\Facades\DB::table('PESSOA_DEPENDENTE')
                         ->where('PESSOA_DEPENDENTE_ID', $depId)
                         ->where('FUNCIONARIO_ID', $id)
                         ->delete();
+                    if (!$deleted) {
+                        return response()->json(['erro' => 'Dependente não encontrado para este funcionário.'], 404);
+                    }
                     return response()->json(['ok' => true]);
                 } catch (\Throwable $e) {
                     return response()->json(['erro' => $e->getMessage()], 500);
@@ -723,7 +745,7 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
         Route::get('/seed-dados', function () {
             $user = App\Models\Usuario::where('USUARIO_LOGIN', 'admin')->first();
             if (!$user)
-                return response()->json(['erro' => 'UsuÃ¡rio admin nÃ£o encontrado. Acesse /dev/criar-admin primeiro.'], 400);
+                return response()->json(['erro' => 'Usuário admin não encontrado. Acesse /dev/criar-admin primeiro.'], 400);
 
             $pessoa = App\Models\Pessoa::where('USUARIO_ID', $user->USUARIO_ID)->first();
             if (!$pessoa) {
@@ -787,6 +809,11 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
     }); // fim if isLocal
 }
 
+// App mobile de ponto — JWT (login sem sessão Laravel; demais rotas com Bearer)
+Route::prefix('api/v3')->middleware(['web'])->group(function () {
+    require __DIR__ . '/ponto_app.php';
+});
+
 // â•?â•?â•? API V3 â€” Endpoints para o SPA Vue 3 â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
@@ -813,30 +840,300 @@ Route::post('/autocadastro/gerar-link', function (\Illuminate\Http\Request $requ
 });
 // Escala de trabalho
 Route::get('/escala-trabalho', function (\Illuminate\Http\Request $request) {
-    $user = \Illuminate\Support\Facades\Auth::user();
-    $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-    if (!$func) return response()->json(['escala' => []]);
-    $mes = $request->mes ?? now()->month;
-    $ano = $request->ano ?? now()->year;
-    $comp = sprintf('%04d-%02d', $ano, $mes);
     try {
-        $escala = \Illuminate\Support\Facades\DB::table('ESCALA as e')
+        $hoje = now()->toDateString();
+        $mes = (int) ($request->mes ?? now()->month);
+        $ano = (int) ($request->ano ?? now()->year);
+        $comp = sprintf('%04d-%02d', $ano, $mes);
+        $setorId = $request->filled('setor_id') ? (int) $request->setor_id : null;
+
+        $temLotacaoFim = \Illuminate\Support\Facades\Schema::hasColumn('LOTACAO', 'LOTACAO_DATA_FIM');
+        $temFuncionarioFim = \Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM');
+        $temObsItemEscala = \Illuminate\Support\Facades\Schema::hasColumn('DETALHE_ESCALA_ITEM', 'DETALHE_ESCALA_ITEM_OBS');
+
+        $setores = \Illuminate\Support\Facades\DB::table('SETOR as s')
+            ->select('s.SETOR_ID as id', 's.SETOR_NOME as nome')
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('SETOR', 'SETOR_ATIVO'),
+                fn($q) => $q->where('s.SETOR_ATIVO', 1)
+            )
+            ->orderBy('s.SETOR_NOME')
+            ->get();
+
+        $funcionarios = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('LOTACAO as l', function ($join) use ($temLotacaoFim) {
+                $join->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID');
+                if ($temLotacaoFim) {
+                    $join->whereNull('l.LOTACAO_DATA_FIM');
+                }
+            })
+            ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
+            ->when($temFuncionarioFim, fn($q) => $q->where(function ($w) use ($hoje) {
+                $w->whereNull('f.FUNCIONARIO_DATA_FIM')
+                    ->orWhere('f.FUNCIONARIO_DATA_FIM', '>', $hoje);
+            }))
+            ->when($setorId, fn($q) => $q->where('l.SETOR_ID', $setorId))
+            ->orderBy('p.PESSOA_NOME')
+            ->select(
+                'f.FUNCIONARIO_ID as id',
+                'p.PESSOA_NOME as nome',
+                \Illuminate\Support\Facades\DB::raw('MAX(s.SETOR_NOME) as setor')
+            )
+            ->groupBy('f.FUNCIONARIO_ID', 'p.PESSOA_NOME')
+            ->limit(300)
+            ->get();
+
+        $rows = \Illuminate\Support\Facades\DB::table('ESCALA as e')
             ->join('DETALHE_ESCALA as de', 'de.ESCALA_ID', '=', 'e.ESCALA_ID')
-            ->where('de.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'de.FUNCIONARIO_ID')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->leftJoin('LOTACAO as l', function ($join) use ($temLotacaoFim) {
+                $join->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID');
+                if ($temLotacaoFim) {
+                    $join->whereNull('l.LOTACAO_DATA_FIM');
+                }
+            })
+            ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
+            ->leftJoin('DETALHE_ESCALA_ITEM as dei', 'dei.DETALHE_ESCALA_ID', '=', 'de.DETALHE_ESCALA_ID')
+            ->leftJoin('TURNO as t', 't.TURNO_ID', '=', 'dei.TURNO_ID')
             ->where('e.ESCALA_COMPETENCIA', $comp)
-            ->select('e.*', 'de.*')->get();
-        return response()->json(['escala' => $escala, 'competencia' => $comp]);
-    } catch (\Throwable $e) { return response()->json(['escala' => [], 'competencia' => $comp]); }
+            ->when($setorId, fn($q) => $q->where('e.SETOR_ID', $setorId))
+            ->orderBy('p.PESSOA_NOME')
+            ->select(
+                'de.DETALHE_ESCALA_ID as detalhe_id',
+                'de.FUNCIONARIO_ID as funcionario_id',
+                'p.PESSOA_NOME as nome',
+                \Illuminate\Support\Facades\DB::raw('COALESCE(MAX(s.SETOR_NOME), \'Sem setor\') as setor_nome'),
+                'dei.DETALHE_ESCALA_ITEM_DATA as data_item',
+                't.TURNO_SIGLA as turno_sigla',
+                $temObsItemEscala
+                    ? \Illuminate\Support\Facades\DB::raw('MAX(dei.DETALHE_ESCALA_ITEM_OBS) as obs_item')
+                    : \Illuminate\Support\Facades\DB::raw('NULL as obs_item')
+            )
+            ->groupBy(
+                'de.DETALHE_ESCALA_ID',
+                'de.FUNCIONARIO_ID',
+                'p.PESSOA_NOME',
+                'dei.DETALHE_ESCALA_ITEM_DATA',
+                't.TURNO_SIGLA'
+            )
+            ->get();
+
+        $linhas = [];
+        foreach ($rows as $r) {
+            $funcId = (int) ($r->funcionario_id ?? 0);
+            if (!isset($linhas[$funcId])) {
+                $linhas[$funcId] = [
+                    'funcionario_id' => $funcId,
+                    'nome' => $r->nome ?? 'Funcionário',
+                    'setor' => $r->setor_nome ?? 'Sem setor',
+                    'dias' => [],
+                ];
+            }
+
+            if (!empty($r->data_item)) {
+                $dia = (int) date('d', strtotime($r->data_item));
+                if ($dia > 0) {
+                    $linhas[$funcId]['dias'][$dia] = [
+                        'turno' => $r->turno_sigla ?? '',
+                        'obs' => $r->obs_item ?? '',
+                    ];
+                }
+            }
+        }
+
+        return response()->json([
+            'competencia' => $comp,
+            'escala' => array_values($linhas),
+            'setores' => $setores,
+            'funcionarios' => $funcionarios,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'competencia' => sprintf('%04d-%02d', (int) ($request->ano ?? now()->year), (int) ($request->mes ?? now()->month)),
+            'escala' => [],
+            'setores' => [],
+            'funcionarios' => [],
+            'erro' => $e->getMessage(),
+        ]);
+    }
 });
-Route::post('/escala-trabalho', function () { return response()->json(['ok' => true]); });
+Route::post('/escala-trabalho', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'funcionario_id' => 'required|integer',
+        'data' => 'required|date',
+        'turno' => 'required|string|max:10',
+    ]);
+
+    try {
+        $payload = \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+            $dataEscala = \Carbon\Carbon::parse($request->data)->toDateString();
+            $competencia = \Carbon\Carbon::parse($dataEscala)->format('Y-m');
+            $funcionarioId = (int) $request->funcionario_id;
+            $turnoSigla = strtoupper(trim((string) $request->turno));
+
+            $setorId = \Illuminate\Support\Facades\DB::table('LOTACAO as l')
+                ->where('l.FUNCIONARIO_ID', $funcionarioId)
+                ->when(
+                    \Illuminate\Support\Facades\Schema::hasColumn('LOTACAO', 'LOTACAO_DATA_FIM'),
+                    fn($q) => $q->whereNull('l.LOTACAO_DATA_FIM')
+                )
+                ->value('l.SETOR_ID');
+
+            if (!$setorId) {
+                $setorId = \Illuminate\Support\Facades\DB::table('SETOR')->value('SETOR_ID');
+            }
+
+            $escala = \Illuminate\Support\Facades\DB::table('ESCALA')
+                ->where('ESCALA_COMPETENCIA', $competencia)
+                ->when($setorId, fn($q) => $q->where('SETOR_ID', $setorId))
+                ->first();
+
+            if (!$escala) {
+                $escalaInsert = [
+                    'ESCALA_COMPETENCIA' => $competencia,
+                    'SETOR_ID' => $setorId ?: 1,
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_ATIVO')) {
+                    $escalaInsert['ESCALA_ATIVO'] = 1;
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_OBSERVACAO')) {
+                    $escalaInsert['ESCALA_OBSERVACAO'] = 'Criada via Escala de Trabalho';
+                }
+                $escalaId = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId($escalaInsert);
+            } else {
+                $escalaId = $escala->ESCALA_ID;
+            }
+
+            $detalhe = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')
+                ->where('ESCALA_ID', $escalaId)
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->first();
+
+            if (!$detalhe) {
+                $detalheId = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')->insertGetId([
+                    'ESCALA_ID' => $escalaId,
+                    'FUNCIONARIO_ID' => $funcionarioId,
+                ]);
+            } else {
+                $detalheId = $detalhe->DETALHE_ESCALA_ID;
+            }
+
+            $turnoId = \Illuminate\Support\Facades\DB::table('TURNO')
+                ->where('TURNO_SIGLA', $turnoSigla)
+                ->value('TURNO_ID');
+
+            if (!$turnoId) {
+                throw new \RuntimeException("Turno '{$turnoSigla}' não encontrado.");
+            }
+
+            \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM')->updateOrInsert(
+                [
+                    'DETALHE_ESCALA_ID' => $detalheId,
+                    'DETALHE_ESCALA_ITEM_DATA' => $dataEscala,
+                ],
+                ['TURNO_ID' => $turnoId]
+            );
+
+            return ['escala_id' => $escalaId, 'detalhe_id' => $detalheId];
+        });
+
+        return response()->json(['ok' => true] + $payload, 201);
+    } catch (\Throwable $e) {
+        return response()->json(['ok' => false, 'erro' => $e->getMessage()], 422);
+    }
+});
 // Escalas médicas
 Route::post('/escalas', function (\Illuminate\Http\Request $request) {
     try {
-        $id = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId([
-            'SETOR_ID' => $request->setor_id, 'ESCALA_COMPETENCIA' => $request->competencia,
-            'ESCALA_SITUACAO' => 'rascunho', 'created_at' => now(), 'updated_at' => now(),
-        ]);
-        return response()->json(['ok' => true, 'ESCALA_ID' => $id], 201);
+        $hoje = now()->toDateString();
+        $mes = (int) ($request->mes ?? 0);
+        $ano = (int) ($request->ano ?? 0);
+        $competencia = $request->competencia;
+        if (!$competencia && $mes >= 1 && $mes <= 12 && $ano >= 2000) {
+            $competencia = sprintf('%04d-%02d', $ano, $mes);
+        }
+        if (!$competencia) {
+            return response()->json(['erro' => 'Competência inválida.'], 422);
+        }
+
+        $setorId = $request->setor_id ?: \Illuminate\Support\Facades\DB::table('SETOR')
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('SETOR', 'SETOR_ATIVO'),
+                fn($q) => $q->where('SETOR_ATIVO', 1)
+            )
+            ->value('SETOR_ID');
+        if (!$setorId) {
+            return response()->json(['erro' => 'Nenhum setor disponível para criar escala.'], 422);
+        }
+
+        $escalaInsert = [
+            'SETOR_ID' => $setorId,
+            'ESCALA_COMPETENCIA' => $competencia,
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_SITUACAO')) {
+            $escalaInsert['ESCALA_SITUACAO'] = 'rascunho';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_STATUS')) {
+            $escalaInsert['ESCALA_STATUS'] = 'rascunho';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_ATIVO')) {
+            $escalaInsert['ESCALA_ATIVO'] = 1;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_DESCRICAO')) {
+            $escalaInsert['ESCALA_DESCRICAO'] = "Escala {$competencia}";
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'created_at')) {
+            $escalaInsert['created_at'] = now();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'updated_at')) {
+            $escalaInsert['updated_at'] = now();
+        }
+
+        $id = \Illuminate\Support\Facades\DB::table('ESCALA')->insertGetId($escalaInsert);
+
+        $funcionariosSetor = \Illuminate\Support\Facades\DB::table('LOTACAO as l')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'l.FUNCIONARIO_ID')
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('LOTACAO', 'LOTACAO_DATA_FIM'),
+                fn($q) => $q->whereNull('l.LOTACAO_DATA_FIM')
+            )
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM'),
+                fn($q) => $q->where(function ($w) use ($hoje) {
+                    $w->whereNull('f.FUNCIONARIO_DATA_FIM')
+                        ->orWhere('f.FUNCIONARIO_DATA_FIM', '>', $hoje);
+                })
+            )
+            ->where('l.SETOR_ID', $setorId)
+            ->select('f.FUNCIONARIO_ID')
+            ->distinct()
+            ->limit(40)
+            ->pluck('f.FUNCIONARIO_ID');
+
+        if ($funcionariosSetor->isEmpty()) {
+            $funcionariosSetor = \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
+                ->when(
+                    \Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM'),
+                    fn($q) => $q->where(function ($w) use ($hoje) {
+                        $w->whereNull('f.FUNCIONARIO_DATA_FIM')
+                            ->orWhere('f.FUNCIONARIO_DATA_FIM', '>', $hoje);
+                    })
+                )
+                ->orderBy('f.FUNCIONARIO_ID')
+                ->limit(20)
+                ->pluck('f.FUNCIONARIO_ID');
+        }
+
+        foreach ($funcionariosSetor as $funcionarioId) {
+            \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA')->updateOrInsert(
+                ['ESCALA_ID' => $id, 'FUNCIONARIO_ID' => $funcionarioId],
+                \Illuminate\Support\Facades\Schema::hasColumn('DETALHE_ESCALA', 'updated_at') ? ['updated_at' => now()] : []
+            );
+        }
+
+        return response()->json(['ok' => true, 'escala_id' => $id, 'competencia' => $competencia], 201);
     } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
 });
 // Setores
@@ -976,8 +1273,6 @@ Route::get('/setores', function () {
     require __DIR__ . '/rais.php'; // GAP-RAS — RAIS MTE
     require __DIR__ . '/siconfi.php'; // GAP-SIC — SICONFI STN/LRF
     require __DIR__ . '/ponto_terceirizado.php'; // GAP-PONT — Ponto Terceirizados
-    require __DIR__ . '/progressao_funcional.php'; // Progressão Funcional
-    require __DIR__ . '/afastamentos_v3.php';       // Afastamentos/Licenças
     require __DIR__ . '/escala_trabalho.php';       // Escala de Trabalho
     require __DIR__ . '/autocadastro_admin.php';    // Autocadastro Gestão
     require __DIR__ . '/avaliacao_desempenho.php'; // Avaliação de Desempenho
@@ -996,23 +1291,77 @@ Route::get('/setores', function () {
 
 
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // GAP-01: NotificaÃ§Ãµes â€” stub para parar os 404 do polling
+    // Notificações (persistentes via tabela NOTIFICACAO quando disponível)
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/notificacoes', function () {
-        return response()->json(['notificacoes' => [], 'nao_lidas' => 0]);
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!\Illuminate\Support\Facades\Schema::hasTable('NOTIFICACAO')) {
+            return response()->json(['notificacoes' => [], 'nao_lidas' => 0]);
+        }
+        $rows = \Illuminate\Support\Facades\DB::table('NOTIFICACAO')
+            ->where('USUARIO_ID', $user->USUARIO_ID ?? 0)
+            ->orderByDesc('NOTIFICACAO_DT_CRIACAO')
+            ->limit(50)
+            ->get();
+        $notificacoes = $rows->map(fn($n) => [
+            'id' => $n->NOTIFICACAO_ID,
+            'titulo' => $n->NOTIFICACAO_TITULO,
+            'body' => $n->NOTIFICACAO_BODY,
+            'tipo' => $n->NOTIFICACAO_TIPO ?? 'info',
+            'icone' => $n->NOTIFICACAO_ICONE ?? '🔔',
+            'url' => $n->NOTIFICACAO_URL,
+            'lida' => (int) ($n->NOTIFICACAO_LIDA ?? 0) === 1,
+            'criada_em' => $n->NOTIFICACAO_DT_CRIACAO,
+        ]);
+        return response()->json([
+            'notificacoes' => $notificacoes,
+            'nao_lidas' => $notificacoes->where('lida', false)->count(),
+        ]);
     });
-    Route::post('/notificacoes/{id}/ler', function ($id) {
+    $marcarNotifLida = function ($id) {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!\Illuminate\Support\Facades\Schema::hasTable('NOTIFICACAO')) {
+            return response()->json(['ok' => true, 'id' => (int) $id, 'fallback' => true]);
+        }
+        $updated = \Illuminate\Support\Facades\DB::table('NOTIFICACAO')
+            ->where('NOTIFICACAO_ID', (int) $id)
+            ->where('USUARIO_ID', $user->USUARIO_ID ?? 0)
+            ->update([
+                'NOTIFICACAO_LIDA' => 1,
+                'NOTIFICACAO_DT_LEITURA' => now(),
+            ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Notificação não encontrada.'], 404);
+        }
+        return response()->json(['ok' => true, 'id' => (int) $id]);
+    };
+    $marcarNotifTodasLidas = function () {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!\Illuminate\Support\Facades\Schema::hasTable('NOTIFICACAO')) {
+            return response()->json(['ok' => true, 'fallback' => true]);
+        }
+        \Illuminate\Support\Facades\DB::table('NOTIFICACAO')
+            ->where('USUARIO_ID', $user->USUARIO_ID ?? 0)
+            ->where(function ($q) {
+                $q->whereNull('NOTIFICACAO_LIDA')->orWhere('NOTIFICACAO_LIDA', 0);
+            })
+            ->update([
+                'NOTIFICACAO_LIDA' => 1,
+                'NOTIFICACAO_DT_LEITURA' => now(),
+            ]);
         return response()->json(['ok' => true]);
-    });
-    Route::post('/notificacoes/ler-todas', function () {
-        return response()->json(['ok' => true]);
-    });
+    };
+    Route::post('/notificacoes/{id}/ler', $marcarNotifLida);
+    Route::put('/notificacoes/{id}/lida', $marcarNotifLida);
+    Route::post('/notificacoes/ler-todas', $marcarNotifTodasLidas);
+    Route::put('/notificacoes/lidas', $marcarNotifTodasLidas);
 
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // GAP-03: Endpoint centralizado de busca de servidor
     // Todas as views devem usar /servidores/buscar (nÃ£o /exoneracao/buscar)
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/servidores/buscar', function (\Illuminate\Http\Request $request) {
+        $hoje = now()->toDateString();
         $q = $request->q ?? '';
         return response()->json([
             'servidores' => \Illuminate\Support\Facades\DB::table('FUNCIONARIO as f')
@@ -1024,7 +1373,10 @@ Route::get('/setores', function () {
                 })
                 ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
                 ->leftJoin('UNIDADE as u', 'u.UNIDADE_ID', '=', 's.UNIDADE_ID')
-                ->whereNull('f.FUNCIONARIO_DATA_FIM')
+                ->where(function ($w) use ($hoje) {
+                    $w->whereNull('f.FUNCIONARIO_DATA_FIM')
+                        ->orWhere('f.FUNCIONARIO_DATA_FIM', '>', $hoje);
+                })
                 ->where(function ($w) use ($q) {
                     $w->where('p.PESSOA_NOME', 'like', "%$q%")
                         ->orWhere('f.FUNCIONARIO_MATRICULA', 'like', "%$q%");
@@ -1082,7 +1434,7 @@ Route::get('/setores', function () {
                     'df.*',
                     'fl.FOLHA_COMPETENCIA as competencia',
                     'p.PESSOA_NOME as nome',
-                    'p.PESSOA_CPF as cpf',
+                    'p.PESSOA_CPF_NUMERO as cpf',
                     'f.FUNCIONARIO_MATRICULA as matricula',
                     'f.FUNCIONARIO_REGIME_PREV as regime_prev',
                     'c.CARGO_NOME as cargo',
@@ -1092,14 +1444,14 @@ Route::get('/setores', function () {
                 ->first();
 
             if (!$detalhe) {
-                abort(404, 'Holerite nÃ£o encontrado.');
+                abort(404, 'Holerite não encontrado.');
             }
 
-            // SeguranÃ§a: servidor sÃ³ pode ver o prÃ³prio holerite
+            // Segurança: servidor só vê o próprio holerite, salvo acesso ampliado
             $user = Auth::user();
             $funcId = optional(DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID)->first())->FUNCIONARIO_ID;
             if ($funcId && $detalhe->FUNCIONARIO_ID !== $funcId) {
-                // Permite se for gestor/admin (sem USUARIO_UNIDADE_ACESSO, libera)
+                // Permite se tiver acesso a unidade (regra simplificada de gestor)
                 $isAdmin = false;
                 try {
                     $isAdmin = DB::table('USUARIO_UNIDADE_ACESSO')->where('USUARIO_ID', $user->USUARIO_ID)->exists();
@@ -1108,7 +1460,7 @@ Route::get('/setores', function () {
                 }
                 if (!$isAdmin) {
                     \Illuminate\Support\Facades\Log::channel('security')->warning('acesso_negado', ['usuario' => Auth::id(), 'rota' => request()->path(), 'ip' => request()->ip()]);
-                    abort(403, 'Acesso nÃ£o autorizado.');
+                    abort(403, 'Acesso não autorizado.');
                 }
             }
 
@@ -1120,20 +1472,20 @@ Route::get('/setores', function () {
             $servidor = [
                 'nome' => $detalhe->nome,
                 'matricula' => $detalhe->matricula,
-                'cpf' => $detalhe->cpf ? substr_replace(preg_replace('/\D/', '', $detalhe->cpf), '***', 3, 6) : 'â€”',
+                'cpf' => $detalhe->cpf ? substr_replace(preg_replace('/\D/', '', $detalhe->cpf), '***', 3, 6) : '—',
                 'cargo' => $detalhe->cargo,
                 'lotacao' => $detalhe->lotacao . ($detalhe->unidade ? ' / ' . $detalhe->unidade : ''),
                 'regime_prev' => $detalhe->regime_prev,
-                'banco' => 'â€”',
-                'agencia' => 'â€”',
-                'conta' => 'â€”',
+                'banco' => '—',
+                'agencia' => '—',
+                'conta' => '—',
             ];
 
             $totalProventos = floatval($detalhe->DETALHE_FOLHA_PROVENTOS ?? 0);
             $totalDescontos = floatval($detalhe->DETALHE_FOLHA_DESCONTOS ?? 0);
             $liquido = floatval($detalhe->DETALHE_FOLHA_LIQUIDO) ?: ($totalProventos - $totalDescontos);
 
-            // Rubricas â€” se houver tabela DETALHE_FOLHA_RUBRICA (opcional)
+            // Rubricas — se houver tabela DETALHE_FOLHA_RUBRICA (opcional)
             $rubricas = [];
             try {
                 $rubricas = DB::table('DETALHE_FOLHA_RUBRICA')
@@ -1147,7 +1499,7 @@ Route::get('/setores', function () {
                         'valor' => floatval($r->VALOR ?? 0),
                     ])->toArray();
             } catch (\Throwable $ex) {
-                // Fallback: linhas sintÃ©ticas com os totais
+                // Fallback: linhas sintéticas com os totais
                 if ($totalProventos > 0)
                     $rubricas[] = ['codigo' => '001', 'descricao' => 'Vencimento Base', 'referencia' => '', 'tipo' => 'P', 'valor' => $totalProventos];
                 if ($totalDescontos > 0)
@@ -1167,6 +1519,11 @@ Route::get('/setores', function () {
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
+    });
+
+    // Alias do endpoint usado no frontend Vue para download do contracheque em PDF
+    Route::get('/contra-cheque/{funcionarioId}/{competencia}/pdf', function (\Illuminate\Http\Request $request, $funcionarioId, $competencia) {
+        return app(\App\Http\Controllers\ContraChequeController::class)->emitirPdf($request, $funcionarioId, $competencia);
     });
 
     // â”€â”€ GAP-08: Totais da folha por secretaria (SEC-08 aware) â”€â”€â”€â”€â”€
@@ -1225,13 +1582,6 @@ Route::get('/setores', function () {
         }
     });
 
-});
-
-// Rotas de Auth dedicadas para o SPA Vue 3 (retornam sempre JSON, sem Redirects)
-Route::prefix('api/auth')->middleware('web')->group(function () {
-    Route::post('/login', [App\Http\Controllers\Api\SpaAuthController::class, 'login']);
-    Route::post('/logout', [App\Http\Controllers\Api\SpaAuthController::class, 'logout'])->name('api.auth.logout');
-    Route::get('/me', [App\Http\Controllers\Api\SpaAuthController::class, 'me']);
 });
 
 Route::get('/remessa/{folhaId}/download', [App\Http\Controllers\RemessaBancariaController::class, 'downloadRemessa']);
@@ -2109,15 +2459,33 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     // â”€â”€ Holerites do usuÃ¡rio logado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/meus-holerites', function () {
         $user = Auth::user();
-        if (!$user)
-            return response()->json(['erro' => 'NÃ£o autenticado'], 401);
+        if (!$user) {
+            return response()->json(['erro' => 'Não autenticado'], 401);
+        }
 
-        // Busca o funcionÃ¡rio vinculado ao usuÃ¡rio
+        // Busca o funcionário vinculado ao usuário
         $funcionario = optional($user)->funcionario
             ?? \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
 
+        // Fallback técnico para admin local/dev: vincula um funcionário disponível
+        if (
+            !$funcionario &&
+            !app()->isProduction() &&
+            strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin'
+        ) {
+            $livre = \App\Models\Funcionario::whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
+            if ($livre) {
+                \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                    ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
+                    ->update(['USUARIO_ID' => $user->USUARIO_ID]);
+                $funcionario = \App\Models\Funcionario::where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
+            } else {
+                $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+            }
+        }
+
         if (!$funcionario) {
-            return response()->json(['erro' => 'Nenhum funcionÃ¡rio vinculado a este usuÃ¡rio.'], 404);
+            return response()->json(['erro' => 'Nenhum funcionário vinculado a este usuário.'], 404);
         }
 
         // Busca detalhe das folhas do funcionÃ¡rio
@@ -2128,13 +2496,19 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ->get();
 
         $holerites = $detalhes->map(function ($d) {
+            $prov = (float) ($d->DETALHE_FOLHA_PROVENTOS ?? 0);
+            $desc = (float) ($d->DETALHE_FOLHA_DESCONTOS ?? 0);
+            $liq = $d->DETALHE_FOLHA_LIQUIDO;
+            $liq = $liq !== null && $liq !== '' ? (float) $liq : ($prov - $desc);
+
             return [
                 'funcionario_id' => $d->FUNCIONARIO_ID,
+                'detalhe_folha_id' => $d->DETALHE_FOLHA_ID,
                 'folha_id' => $d->FOLHA_ID,
                 'competencia' => optional($d->folha)->FOLHA_COMPETENCIA,
-                'proventos' => (float) ($d->DETALHE_FOLHA_PROVENTOS ?? 0),
-                'descontos' => (float) ($d->DETALHE_FOLHA_DESCONTOS ?? 0),
-                'liquido' => (float) ($d->DETALHE_FOLHA_LIQUIDO ?? 0),
+                'proventos' => $prov,
+                'descontos' => $desc,
+                'liquido' => $liq,
             ];
         })->values();
 
@@ -2175,6 +2549,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
     // â”€â”€ FuncionÃ¡rios (listagem paginada) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/funcionarios', function (\Illuminate\Http\Request $request) {
+        $hoje = now()->toDateString();
         $query = \App\Models\Funcionario::with(['pessoa', 'lotacoes.setor', 'lotacoes.vinculo'])
             ->when(
                 $request->q,
@@ -2184,9 +2559,13 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             );
 
         if ($request->funcionario_ativo === '1') {
-            $query->whereNull('FUNCIONARIO_DATA_FIM');
+            $query->where(function ($w) use ($hoje) {
+                $w->whereNull('FUNCIONARIO_DATA_FIM')
+                    ->orWhere('FUNCIONARIO_DATA_FIM', '>', $hoje);
+            });
         } elseif ($request->funcionario_ativo === '0') {
-            $query->whereNotNull('FUNCIONARIO_DATA_FIM');
+            $query->whereNotNull('FUNCIONARIO_DATA_FIM')
+                ->where('FUNCIONARIO_DATA_FIM', '<=', $hoje);
         }
 
         $paginado = $query->orderBy('FUNCIONARIO_ID')->paginate(15);
@@ -2212,18 +2591,38 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ->where('FUNCIONARIO_ID', $id)
             ->orderByDesc('FOLHA_ID')->take(6)->get()
             ->map(fn($d) => [
+                'detalhe_folha_id' => $d->DETALHE_FOLHA_ID,
                 'folha_id' => $d->FOLHA_ID,
+                'funcionario_id' => $d->FUNCIONARIO_ID,
                 'competencia' => optional($d->folha)->FOLHA_COMPETENCIA,
                 'proventos' => (float) ($d->DETALHE_FOLHA_PROVENTOS ?? 0),
                 'descontos' => (float) ($d->DETALHE_FOLHA_DESCONTOS ?? 0),
                 'liquido' => (float) ($d->DETALHE_FOLHA_LIQUIDO ?? 0),
             ]);
 
-        // Busca o e-mail do usuÃ¡rio vinculado ao funcionÃ¡rio
-        $usuario = \App\Models\Usuario::where('FUNCIONARIO_ID', $f->FUNCIONARIO_ID)->first();
+        // Busca o e-mail do usuário vinculado ao funcionário
+        $usuario = null;
+        if (!empty($f->USUARIO_ID)) {
+            $usuario = \App\Models\Usuario::find($f->USUARIO_ID);
+        } elseif (!empty(optional($f->pessoa)->PESSOA_CPF_NUMERO)) {
+            $usuario = \App\Models\Usuario::where('USUARIO_CPF', $f->pessoa->PESSOA_CPF_NUMERO)->first();
+        }
 
-        $funcionarioArray = $f->toArray();
-        $funcionarioArray['email'] = $usuario?->USUARIO_EMAIL ?? null;
+        $funcionarioArray = [
+            'FUNCIONARIO_ID' => $f->FUNCIONARIO_ID,
+            'PESSOA_ID' => $f->PESSOA_ID,
+            'USUARIO_ID' => $f->USUARIO_ID,
+            'FUNCIONARIO_MATRICULA' => $f->FUNCIONARIO_MATRICULA,
+            'FUNCIONARIO_DATA_INICIO' => $f->FUNCIONARIO_DATA_INICIO,
+            'FUNCIONARIO_DATA_FIM' => $f->FUNCIONARIO_DATA_FIM,
+            'FUNCIONARIO_OBSERVACAO' => $f->FUNCIONARIO_OBSERVACAO,
+            'email' => $usuario?->USUARIO_EMAIL ?? null,
+            'pessoa' => $f->pessoa ? [
+                'PESSOA_NOME' => $f->pessoa->PESSOA_NOME,
+                'PESSOA_CPF_NUMERO' => $f->pessoa->PESSOA_CPF_NUMERO,
+                'PESSOA_DATA_NASCIMENTO' => $f->pessoa->PESSOA_DATA_NASCIMENTO ?? null,
+            ] : null,
+        ];
 
         return response()->json([
             'funcionario' => $funcionarioArray,
@@ -2245,16 +2644,40 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         $vinculos = \App\Models\Vinculo::orderBy('VINCULO_NOME')->get()
             ->map(fn($v) => ['id' => $v->VINCULO_ID, 'nome' => $v->VINCULO_NOME]);
 
-        $atribuicoes = \App\Models\Atribuicao::orderBy('ATRIBUICAO_NOME')->get()
-            ->map(fn($a) => ['id' => $a->ATRIBUICAO_ID, 'nome' => $a->ATRIBUICAO_NOME]);
+        $atribuicoes = \Illuminate\Support\Facades\DB::table('ATRIBUICAO')
+            ->whereNull('ATRIBUICAO_DATA_EXCLUSAO')
+            ->where(function ($q) {
+                $q->whereNull('ATRIBUICAO_ATIVO')->orWhere('ATRIBUICAO_ATIVO', 1);
+            })
+            ->orderBy('ATRIBUICAO_NOME')
+            ->select('ATRIBUICAO_ID as id', 'ATRIBUICAO_NOME as nome')
+            ->get();
 
-        return response()->json(compact('setores', 'vinculos', 'atribuicoes'));
+        $cargos = \Illuminate\Support\Facades\DB::table('CARGO')
+            ->where(function ($q) {
+                $q->whereNull('CARGO_ATIVO')->orWhere('CARGO_ATIVO', 1);
+            })
+            ->orderBy('CARGO_NOME')
+            ->select('CARGO_ID as id', 'CARGO_NOME as nome', 'CARGO_SALARIO as salario', 'CARGO_CARGA_HORARIA as carga_horaria')
+            ->get();
+
+        return response()->json(compact('setores', 'vinculos', 'atribuicoes', 'cargos'));
     });
 
     // â”€â”€ Criar novo funcionÃ¡rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::post('/funcionarios', function (\Illuminate\Http\Request $request) {
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
+            if (!$request->filled('PESSOA_NOME')) {
+                return response()->json(['erro' => 'Nome é obrigatório.'], 422);
+            }
+            if (!$request->filled('FUNCIONARIO_DATA_INICIO')) {
+                return response()->json(['erro' => 'Data de admissão é obrigatória.'], 422);
+            }
+            if (!$request->filled('CARGO_ID')) {
+                return response()->json(['erro' => 'Cargo é obrigatório para cadastro completo.'], 422);
+            }
+
             // 1. Cria a Pessoa
             $pessoa = new \App\Models\Pessoa();
             $pessoa->fill($request->only([
@@ -2278,7 +2701,6 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 'PESSOA_RG_NUMERO',
                 'PESSOA_RG_EXPEDIDOR',
                 'PESSOA_RG_EXPEDICAO',
-                'UF_ID_RG',
                 'PESSOA_TITULO_NUMERO',
                 'PESSOA_TITULO_ZONA',
                 'PESSOA_TITULO_SECAO',
@@ -2291,13 +2713,24 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             $pessoa->PESSOA_DATA_CADASTRO = now()->toDateString();
             $pessoa->save();
 
-            // Campos que precisam ser salvos como texto (sigla UF e nome de municÃ­pio)
+            // Campos complementares com normalização para tipos numéricos
             $extraPessoa = [];
-            if ($request->filled('UF_ID_RG')) {
-                $extraPessoa['UF_ID_RG'] = $request->UF_ID_RG;
+            $ufRaw = $request->input('UF_ID_RG');
+            if ($ufRaw !== null && $ufRaw !== '') {
+                if (is_numeric($ufRaw)) {
+                    $extraPessoa['UF_ID_RG'] = (int) $ufRaw;
+                } else {
+                    $ufId = \Illuminate\Support\Facades\DB::table('UF')
+                        ->whereRaw('UPPER(UF_SIGLA) = ?', [strtoupper((string) $ufRaw)])
+                        ->value('UF_ID');
+                    if ($ufId) {
+                        $extraPessoa['UF_ID_RG'] = (int) $ufId;
+                    }
+                }
             }
-            if ($request->filled('CIDADE_ID_NATURAL')) {
-                $extraPessoa['CIDADE_ID_NATURAL'] = $request->CIDADE_ID_NATURAL;
+            $cidadeNaturalRaw = $request->input('CIDADE_ID_NATURAL');
+            if ($cidadeNaturalRaw !== null && $cidadeNaturalRaw !== '' && is_numeric($cidadeNaturalRaw)) {
+                $extraPessoa['CIDADE_ID_NATURAL'] = (int) $cidadeNaturalRaw;
             }
             if (!empty($extraPessoa)) {
                 \Illuminate\Support\Facades\DB::table('PESSOA')
@@ -2314,6 +2747,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 'FUNCIONARIO_DATA_FIM',
                 'FUNCIONARIO_TIPO_ENTRADA',
                 'FUNCIONARIO_OBSERVACAO',
+                'CARGO_ID',
             ]));
             $funcionario->FUNCIONARIO_DATA_INICIO = $request->FUNCIONARIO_DATA_INICIO ?? now()->toDateString();
             $funcionario->FUNCIONARIO_DATA_CADASTRO = now()->toDateString();
@@ -2346,13 +2780,32 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 'PESSOA_EMAIL' => 2, // E-mail
                 'PESSOA_CELULAR' => 3, // Celular
             ];
+            $contatoCols = \Illuminate\Support\Facades\Schema::hasTable('CONTATO')
+                ? \Illuminate\Support\Facades\Schema::getColumnListing('CONTATO')
+                : [];
             foreach ($tiposContato as $campo => $tipo) {
                 if ($request->filled($campo)) {
-                    \App\Models\Contato::create([
-                        'PESSOA_ID' => $pessoa->PESSOA_ID,
-                        'CONTATO_TIPO' => $tipo,
-                        'CONTATO_CONTEUDO' => $request->$campo,
-                    ]);
+                    $valorContato = (string) $request->$campo;
+                    if ($campo !== 'PESSOA_EMAIL') {
+                        $valorContato = preg_replace('/\D+/', '', $valorContato);
+                    }
+                    $payloadContato = [];
+                    if (in_array('PESSOA_ID', $contatoCols, true)) {
+                        $payloadContato['PESSOA_ID'] = $pessoa->PESSOA_ID;
+                    }
+                    if (in_array('CONTATO_TIPO', $contatoCols, true)) {
+                        $payloadContato['CONTATO_TIPO'] = $tipo;
+                    } elseif (in_array('TIPO_CONTATO_ID', $contatoCols, true)) {
+                        $payloadContato['TIPO_CONTATO_ID'] = $tipo;
+                    }
+                    if (in_array('CONTATO_CONTEUDO', $contatoCols, true)) {
+                        $payloadContato['CONTATO_CONTEUDO'] = $valorContato;
+                    } elseif (in_array('CONTATO_VALOR', $contatoCols, true)) {
+                        $payloadContato['CONTATO_VALOR'] = $valorContato;
+                    }
+                    if (!empty($payloadContato)) {
+                        \Illuminate\Support\Facades\DB::table('CONTATO')->insert($payloadContato);
+                    }
                 }
             }
 
@@ -2385,6 +2838,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 'FUNCIONARIO_TIPO_ENTRADA',
                 'FUNCIONARIO_TIPO_SAIDA',
                 'FUNCIONARIO_OBSERVACAO',
+                'CARGO_ID',
             ]));
             $f->FUNCIONARIO_DATA_ATUALIZACAO = now()->toDateString();
             $f->save();
@@ -2416,7 +2870,6 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                     'PESSOA_RG_NUMERO',
                     'PESSOA_RG_EXPEDIDOR',
                     'PESSOA_RG_EXPEDICAO',
-                    'UF_ID_RG',
                     'PESSOA_TITULO_NUMERO',
                     'PESSOA_TITULO_ZONA',
                     'PESSOA_TITULO_SECAO',
@@ -2446,10 +2899,19 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 $ufRg = $pessoaData['UF_ID_RG'] ?? $request->input('UF_ID_RG');
                 $cidadeNatural = $pessoaData['CIDADE_ID_NATURAL'] ?? $request->input('CIDADE_ID_NATURAL');
                 if (!empty($ufRg)) {
-                    $extraPessoa['UF_ID_RG'] = $ufRg;
+                    if (is_numeric($ufRg)) {
+                        $extraPessoa['UF_ID_RG'] = (int) $ufRg;
+                    } else {
+                        $ufId = \Illuminate\Support\Facades\DB::table('UF')
+                            ->whereRaw('UPPER(UF_SIGLA) = ?', [strtoupper((string) $ufRg)])
+                            ->value('UF_ID');
+                        if ($ufId) {
+                            $extraPessoa['UF_ID_RG'] = (int) $ufId;
+                        }
+                    }
                 }
-                if (!empty($cidadeNatural)) {
-                    $extraPessoa['CIDADE_ID_NATURAL'] = $cidadeNatural;
+                if (!empty($cidadeNatural) && is_numeric($cidadeNatural)) {
+                    $extraPessoa['CIDADE_ID_NATURAL'] = (int) $cidadeNatural;
                 }
                 if (!empty($extraPessoa)) {
                     \Illuminate\Support\Facades\DB::table('PESSOA')
@@ -2481,6 +2943,35 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                     ->update(['USUARIO_EMAIL' => $novoEmail]);
             }
 
+            // Atualiza contatos da pessoa (telefone/celular/email) com schema-aware
+            if ($f->pessoa && \Illuminate\Support\Facades\Schema::hasTable('CONTATO')) {
+                $contatoCols = \Illuminate\Support\Facades\Schema::getColumnListing('CONTATO');
+                $campoTipo = in_array('TIPO_CONTATO_ID', $contatoCols, true) ? 'TIPO_CONTATO_ID' : (in_array('CONTATO_TIPO', $contatoCols, true) ? 'CONTATO_TIPO' : null);
+                $campoValor = in_array('CONTATO_VALOR', $contatoCols, true) ? 'CONTATO_VALOR' : (in_array('CONTATO_CONTEUDO', $contatoCols, true) ? 'CONTATO_CONTEUDO' : null);
+                if ($campoTipo && $campoValor) {
+                    $tiposContato = [
+                        'PESSOA_TELEFONE' => 1,
+                        'PESSOA_EMAIL' => 2,
+                        'PESSOA_CELULAR' => 3,
+                    ];
+                    foreach ($tiposContato as $campoReq => $tipoContato) {
+                        if (!$request->filled($campoReq)) {
+                            continue;
+                        }
+                        $valorContato = (string) $request->input($campoReq);
+                        if ($campoReq !== 'PESSOA_EMAIL') {
+                            $valorContato = preg_replace('/\D+/', '', $valorContato);
+                        } else {
+                            $valorContato = strtolower(trim($valorContato));
+                        }
+                        \Illuminate\Support\Facades\DB::table('CONTATO')->updateOrInsert(
+                            ['PESSOA_ID' => $f->pessoa->PESSOA_ID, $campoTipo => $tipoContato],
+                            [$campoValor => $valorContato]
+                        );
+                    }
+                }
+            }
+
             \Illuminate\Support\Facades\DB::commit();
             return response()->json(['message' => 'Atualizado com sucesso.']);
         } catch (\Throwable $e) {
@@ -2501,7 +2992,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ->whereNull('LOTACAO_DATA_FIM')
             ->update(['LOTACAO_DATA_FIM' => $f->FUNCIONARIO_DATA_FIM]);
 
-        return response()->json(['message' => 'FuncionÃ¡rio inativado com sucesso.']);
+        return response()->json(['message' => 'Funcionário inativado com sucesso.']);
     });
 
     // â”€â”€ Documentos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -2689,7 +3180,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             [$ano, $mes] = explode('-', $comp);
 
             $inicio = sprintf('%04d-%02d-01', $ano, $mes);
-            $fim = sprintf('%04d-%02d-%02d', $ano, $mes, cal_days_in_month(CAL_GREGORIAN, $mes, $ano));
+            $fim = \Carbon\Carbon::createFromDate((int) $ano, (int) $mes, 1)->endOfMonth()->toDateString();
 
             $registrosPonto = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO')
                 ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
@@ -2794,14 +3285,34 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     Route::get('/plantoes-extras', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
+            $funcionario = resolveFuncionarioComFallbackDev($user);
             if (!$funcionario)
                 return response()->json(['fallback' => true, 'plantoes' => []]);
 
+            $cols = \Illuminate\Support\Facades\Schema::hasTable('PLANTAO_EXTRA')
+                ? \Illuminate\Support\Facades\Schema::getColumnListing('PLANTAO_EXTRA')
+                : [];
+            if (empty($cols)) {
+                return response()->json(['fallback' => true, 'plantoes' => []]);
+            }
+
+            $colData = in_array('PLANTAO_DATA', $cols, true) ? 'PLANTAO_DATA' : (in_array('DATA_PLANTAO', $cols, true) ? 'DATA_PLANTAO' : 'PLANTAO_ID');
             $rows = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')
                 ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->orderByDesc('PLANTAO_DATA')
-                ->take(50)->get();
+                ->orderByDesc($colData)
+                ->take(50)
+                ->get()
+                ->map(function ($p) use ($cols) {
+                    $arr = (array) $p;
+                    $arr['PLANTAO_DATA'] = $arr['PLANTAO_DATA'] ?? ($arr['DATA_PLANTAO'] ?? null);
+                    $arr['PLANTAO_HORA_INI'] = $arr['PLANTAO_HORA_INI'] ?? null;
+                    $arr['PLANTAO_HORA_FIM'] = $arr['PLANTAO_HORA_FIM'] ?? null;
+                    $arr['PLANTAO_HORAS'] = $arr['PLANTAO_HORAS'] ?? ($arr['TOTAL_HORAS'] ?? null);
+                    $arr['PLANTAO_SETOR'] = $arr['PLANTAO_SETOR'] ?? null;
+                    $arr['PLANTAO_TIPO'] = $arr['PLANTAO_TIPO'] ?? 'programado';
+                    $arr['PLANTAO_STATUS'] = $arr['PLANTAO_STATUS'] ?? ($arr['STATUS'] ?? 'PENDENTE');
+                    return $arr;
+                });
 
             return response()->json(['plantoes' => $rows, 'fallback' => $rows->isEmpty()]);
         } catch (\Throwable $e) {
@@ -2812,72 +3323,91 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
     Route::post('/plantoes-extras', function (\Illuminate\Http\Request $request) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')->insertGetId([
-                'FUNCIONARIO_ID' => $funcionario->FUNCIONARIO_ID ?? null,
-                'PLANTAO_DATA' => $request->data,
-                'PLANTAO_SETOR' => $request->setor,
-                'PLANTAO_HORA_INI' => $request->horaIni,
-                'PLANTAO_HORA_FIM' => $request->horaFim,
-                'PLANTAO_TIPO' => $request->tipo ?? 'programado',
-                'PLANTAO_STATUS' => 'pendente',
-                'PLANTAO_JUSTIFICATIVA' => $request->justificativa,
-            ]);
-            return response()->json(['id' => $id], 201);
+            $funcionario = resolveFuncionarioComFallbackDev($user);
+            if (!$funcionario) {
+                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
+            }
+            if (!\Illuminate\Support\Facades\Schema::hasTable('PLANTAO_EXTRA')) {
+                return response()->json(['erro' => 'Tabela PLANTAO_EXTRA não encontrada.'], 500);
+            }
+
+            $cols = \Illuminate\Support\Facades\Schema::getColumnListing('PLANTAO_EXTRA');
+            $horaIni = $request->horaIni ?? $request->hora_ini;
+            $horaFim = $request->horaFim ?? $request->hora_fim;
+            $minDuracao = 0;
+            if ($horaIni && $horaFim) {
+                [$h1, $m1] = array_map('intval', explode(':', $horaIni));
+                [$h2, $m2] = array_map('intval', explode(':', $horaFim));
+                $minDuracao = max(0, (($h2 * 60 + $m2) - ($h1 * 60 + $m1)));
+            }
+            $horasDuracao = $minDuracao > 0 ? round($minDuracao / 60, 2) : null;
+
+            $payload = [];
+            if (in_array('FUNCIONARIO_ID', $cols, true))
+                $payload['FUNCIONARIO_ID'] = $funcionario->FUNCIONARIO_ID;
+            if (in_array('PLANTAO_DATA', $cols, true))
+                $payload['PLANTAO_DATA'] = $request->data;
+            if (in_array('DATA_PLANTAO', $cols, true))
+                $payload['DATA_PLANTAO'] = $request->data;
+            if (in_array('PLANTAO_HORA_INI', $cols, true))
+                $payload['PLANTAO_HORA_INI'] = $horaIni;
+            if (in_array('PLANTAO_HORA_FIM', $cols, true))
+                $payload['PLANTAO_HORA_FIM'] = $horaFim;
+            if (in_array('PLANTAO_HORAS', $cols, true))
+                $payload['PLANTAO_HORAS'] = $horasDuracao;
+            if (in_array('TOTAL_HORAS', $cols, true))
+                $payload['TOTAL_HORAS'] = $horasDuracao;
+            if (in_array('PLANTAO_SETOR', $cols, true))
+                $payload['PLANTAO_SETOR'] = $request->setor;
+            if (in_array('SETOR_ID', $cols, true)) {
+                $setorNome = trim((string) $request->setor);
+                $setorId = null;
+                if ($setorNome !== '' && \Illuminate\Support\Facades\Schema::hasTable('SETOR')) {
+                    $setorId = \Illuminate\Support\Facades\DB::table('SETOR')
+                        ->where('SETOR_NOME', $setorNome)
+                        ->orWhere('SETOR_SIGLA', $setorNome)
+                        ->value('SETOR_ID');
+                }
+                $payload['SETOR_ID'] = $setorId;
+            }
+            if (in_array('PLANTAO_TIPO', $cols, true))
+                $payload['PLANTAO_TIPO'] = $request->tipo ?? 'programado';
+            if (in_array('PLANTAO_TURNO', $cols, true))
+                $payload['PLANTAO_TURNO'] = $request->turno ?? (($request->tipo ?? '') === 'urgencia' ? 'U' : 'D');
+            if (in_array('PLANTAO_JUSTIFICATIVA', $cols, true))
+                $payload['PLANTAO_JUSTIFICATIVA'] = $request->justificativa;
+            if (in_array('PLANTAO_MOTIVO', $cols, true))
+                $payload['PLANTAO_MOTIVO'] = $request->justificativa;
+            if (in_array('PLANTAO_STATUS', $cols, true))
+                $payload['PLANTAO_STATUS'] = 'PENDENTE';
+            if (in_array('STATUS', $cols, true))
+                $payload['STATUS'] = 'PENDENTE';
+            if (in_array('created_at', $cols, true))
+                $payload['created_at'] = now();
+            if (in_array('updated_at', $cols, true))
+                $payload['updated_at'] = now();
+
+            $id = \Illuminate\Support\Facades\DB::table('PLANTAO_EXTRA')->insertGetId($payload);
+            return response()->json([
+                'id' => $id,
+                'plantao' => [
+                    'PLANTAO_ID' => $id,
+                    'PLANTAO_DATA' => $request->data,
+                    'PLANTAO_SETOR' => $request->setor,
+                    'PLANTAO_HORA_INI' => $horaIni,
+                    'PLANTAO_HORA_FIM' => $horaFim,
+                    'PLANTAO_HORAS' => $horasDuracao,
+                    'PLANTAO_TIPO' => $request->tipo ?? 'programado',
+                    'PLANTAO_STATUS' => 'PENDENTE',
+                ],
+            ], 201);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
     });
 
-    // â”€â”€ Escala de Sobreaviso â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    Route::get('/sobreaviso', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            if (!$funcionario)
-                return response()->json(['fallback' => true, 'sobreaviso' => [], 'acionamentos' => []]);
-
-            $comp = $request->competencia ?? now()->format('Y-m');
-            [$ano, $mes] = explode('-', $comp);
-            $inicio = sprintf('%04d-%02d-01', $ano, $mes);
-            $fim = sprintf('%04d-%02d-%02d', $ano, $mes, cal_days_in_month(CAL_GREGORIAN, $mes, $ano));
-
-            $sob = \Illuminate\Support\Facades\DB::table('SOBREAVISO')
-                ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->where(function ($q) use ($inicio, $fim) {
-                    $q->whereBetween('SOBREAVISO_INICIO', [$inicio, $fim])
-                        ->orWhereBetween('SOBREAVISO_FIM', [$inicio, $fim]);
-                })->get();
-
-            $acion = \Illuminate\Support\Facades\DB::table('ACIONAMENTO')
-                ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
-                ->whereBetween('ACIONAMENTO_DATA', [$inicio, $fim])
-                ->orderByDesc('ACIONAMENTO_DATA')->get();
-
-            $fallback = $sob->isEmpty() && $acion->isEmpty();
-            return response()->json(['sobreaviso' => $sob, 'acionamentos' => $acion, 'fallback' => $fallback]);
-        } catch (\Throwable $e) {
-            return response()->json(['fallback' => true, 'sobreaviso' => [], 'acionamentos' => [], 'erro' => $e->getMessage()]);
-        }
-    });
-
-    Route::post('/sobreaviso/acionamento', function (\Illuminate\Http\Request $request) {
-        try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            $id = \Illuminate\Support\Facades\DB::table('ACIONAMENTO')->insertGetId([
-                'FUNCIONARIO_ID' => $funcionario->FUNCIONARIO_ID ?? null,
-                'ACIONAMENTO_DATA' => $request->data,
-                'ACIONAMENTO_MOTIVO' => $request->motivo,
-                'ACIONAMENTO_LOCAL' => $request->local,
-                'ACIONAMENTO_HORA_INI' => $request->horaIni,
-                'ACIONAMENTO_HORA_FIM' => $request->horaFim,
-            ]);
-            return response()->json(['id' => $id], 201);
-        } catch (\Throwable $e) {
-            return response()->json(['erro' => $e->getMessage()], 500);
-        }
-    });
+    // Rotas de sobreaviso ficam exclusivamente no módulo routes/plantoes_sobreaviso.php
+    // para evitar conflitos de definição duplicada.
 
     // â”€â”€ RelatÃ³rios â€” stats do hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/relatorios/stats', function () {
@@ -2948,7 +3478,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             $funcionario = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
             $id = \Illuminate\Support\Facades\DB::table('AGENDAMENTO_EXAME')->insertGetId([
                 'FUNCIONARIO_ID' => $funcionario->FUNCIONARIO_ID ?? null,
-                'AGENDAMENTO_TIPO' => $request->tipo,
+                'AGENDAMENTO_TIPO' => $request->tipo_exame ?? $request->tipo ?? 'Admissional',
                 'AGENDAMENTO_DATA' => $request->data,
                 'AGENDAMENTO_OBS' => $request->obs,
                 'AGENDAMENTO_STATUS' => 'pendente',
@@ -2971,7 +3501,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 'SOLICITACAO_STATUS' => 'pendente',
                 'SOLICITACAO_OBS' => $request->nome,
             ]);
-            return response()->json(['message' => 'SolicitaÃ§Ã£o registrada.'], 201);
+            return response()->json(['message' => 'Solicitação registrada.'], 201);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
@@ -2987,7 +3517,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             $comp = $request->competencia ?? now()->format('Y-m');
             [$ano, $mes] = explode('-', $comp);
             $inicio = sprintf('%04d-%02d-01', $ano, $mes);
-            $fim = sprintf('%04d-%02d-%02d', $ano, $mes, cal_days_in_month(CAL_GREGORIAN, $mes, $ano));
+            $fim = \Carbon\Carbon::createFromDate((int) $ano, (int) $mes, 1)->endOfMonth()->toDateString();
 
             // Setor atual do funcionÃ¡rio (lotaÃ§Ã£o sem data_fim)
             $lotacao = \Illuminate\Support\Facades\DB::table('LOTACAO')
@@ -3130,7 +3660,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                 ->leftJoin('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
                 ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
                 ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'f.SETOR_ID')
-                ->select('f.*', 'p.PESSOA_NOME', 'p.PESSOA_CPF', 'p.PESSOA_PIS', 'c.CARGO_NOME', 's.SETOR_NOME')
+                ->select('f.*', 'p.PESSOA_NOME', 'p.PESSOA_CPF_NUMERO', 'p.PESSOA_PIS', 'c.CARGO_NOME', 's.SETOR_NOME')
                 ->where('f.FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
                 ->first();
 
@@ -3159,7 +3689,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                     'admissao' => $f->FUNCIONARIO_DATA_ADMISSAO ?? null,
                     'matricula' => $f->FUNCIONARIO_MATRICULA ?? 'â€”',
                     'vinculo' => $f->FUNCIONARIO_VINCULO ?? 'Servidor',
-                    'cpf' => $f->PESSOA_CPF ?? null,
+                    'cpf' => $f->PESSOA_CPF_NUMERO ?? null,
                     'pis' => $f->PESSOA_PIS ?? null,
                 ],
                 'historico' => $historico,
@@ -3276,12 +3806,15 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
     Route::put('/ouvidoria/{id}', function (\Illuminate\Http\Request $request, $id) {
         try {
-            \Illuminate\Support\Facades\DB::table('OUVIDORIA')
+            $updated = \Illuminate\Support\Facades\DB::table('OUVIDORIA')
                 ->where('OUVIDORIA_ID', $id)
                 ->update([
                     'OUVIDORIA_STATUS' => $request->status ?? 'recebida',
                     'OUVIDORIA_RESPOSTA' => $request->resposta,
                 ]);
+            if (!$updated) {
+                return response()->json(['erro' => 'Manifestação não encontrada.'], 404);
+            }
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
@@ -3449,7 +3982,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ?? \App\Models\Funcionario::where('FUNCIONARIO_ID', $user->FUNCIONARIO_ID ?? 0)->first();
 
         if (!$funcionario)
-            return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o encontrado.'], 404);
+            return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
 
         $nomeArquivo = null;
         if ($request->hasFile('comprovante') && $request->file('comprovante')->isValid()) {
@@ -3496,7 +4029,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         \Illuminate\Support\Facades\DB::table('ABONO_FALTA')
             ->where('ABONO_FALTA_ID', $id)
             ->delete();
-        return response()->json(['message' => 'ExcluÃ­do com sucesso.']);
+            return response()->json(['message' => 'Excluído com sucesso.']);
     });
 
     // â”€â”€ FÃ©rias e LicenÃ§as do usuÃ¡rio logado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -3506,13 +4039,18 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
             ?? \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
 
         if (!$funcionario) {
-            return response()->json([]);
+            return response()->json(['ferias' => [], 'solicitacoes' => [], 'saldo' => 0, 'vencimento' => '']);
         }
 
         $ferias = \App\Models\Ferias::where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
             ->orderBy('FERIAS_DATA_INICIO', 'desc')
             ->get()
             ->map(fn($f) => [
+                'FERIAS_ID' => $f->FERIAS_ID,
+                'FERIAS_DATA_INICIO' => $f->FERIAS_DATA_INICIO,
+                'FERIAS_DATA_FIM' => $f->FERIAS_DATA_FIM,
+                'FERIAS_AQUISITIVO_INICIO' => $f->FERIAS_AQUISITIVO_INICIO,
+                'FERIAS_AQUISITIVO_FIM' => $f->FERIAS_AQUISITIVO_FIM,
                 'ferias_id' => $f->FERIAS_ID,
                 'ferias_inicio' => $f->FERIAS_DATA_INICIO,
                 'ferias_fim' => $f->FERIAS_DATA_FIM,
@@ -3523,13 +4061,25 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
                     : null,
                 'status' => $f->FERIAS_DATA_FIM && \Carbon\Carbon::parse($f->FERIAS_DATA_FIM)->isPast()
                     ? 'GOZADA' : ($f->FERIAS_DATA_INICIO ? 'PROGRAMADA' : 'PENDENTE'),
-            ]);
+            ])
+            ->values();
 
-        return response()->json($ferias);
+        $saldo = 30 - $ferias->sum(fn($f) => (int) ($f['dias'] ?? 0));
+        if ($saldo < 0) {
+            $saldo = 0;
+        }
+
+        return response()->json([
+            'ferias' => $ferias,
+            'solicitacoes' => $ferias,
+            'saldo' => $saldo,
+            'vencimento' => now()->addMonths(6)->format('m/Y'),
+        ]);
     });
 
     // BUG-EST-14: GET /ferias/sobreposicao
     Route::get('/ferias/sobreposicao', function (\Illuminate\Http\Request $request) {
+        $hoje = now()->toDateString();
         $inicio = $request->inicio;
         $fim    = $request->fim;
         if (!$inicio || !$fim) {
@@ -3540,7 +4090,7 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
         if (!$func) return response()->json(['sobreposicao' => false, 'membros' => [], 'pct' => 0]);
         $setorId = DB::table('LOTACAO')->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)->whereNull('LOTACAO_DATA_FIM')->value('SETOR_ID');
         if (!$setorId) return response()->json(['sobreposicao' => false, 'membros' => [], 'pct' => 0]);
-        $totalSetor = DB::table('LOTACAO as l')->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'l.FUNCIONARIO_ID')->where('l.SETOR_ID', $setorId)->whereNull('l.LOTACAO_DATA_FIM')->whereNull('f.FUNCIONARIO_DATA_FIM')->count();
+        $totalSetor = DB::table('LOTACAO as l')->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'l.FUNCIONARIO_ID')->where('l.SETOR_ID', $setorId)->whereNull('l.LOTACAO_DATA_FIM')->where(function ($w) use ($hoje) { $w->whereNull('f.FUNCIONARIO_DATA_FIM')->orWhere('f.FUNCIONARIO_DATA_FIM', '>', $hoje); })->count();
         $emFerias = DB::table('FERIAS as frs')
             ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'frs.FUNCIONARIO_ID')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
@@ -3656,92 +4206,473 @@ Route::prefix('api/v3')->middleware(['web', 'auth'])->group(function () {
 
     // â”€â”€ SubstituiÃ§Ãµes de escala â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/substituicoes', function (\Illuminate\Http\Request $request) {
-        $subs = \App\Models\SubstituicaoEscala::with([
-            'funcionario.pessoa',
-            'detalheEscalaItem.detalheEscala.escala.setor',
-        ])
-            ->orderBy('SUBSTITUICAO_ESCALA_DATA', 'desc')
-            ->take(50)
-            ->get()
-            ->map(fn($s) => [
-                'id' => $s->SUBSTITUICAO_ESCALA_ID,
-                'data' => $s->SUBSTITUICAO_ESCALA_DATA,
-                'justificativa' => $s->SUBSTITUICAO_ESCALA_JUSTIFICATIVA,
-                'funcionario' => optional(optional($s->funcionario)->pessoa)->PESSOA_NOME,
-                'escala_descricao' => optional(optional(optional(optional($s->detalheEscalaItem)->detalheEscala)->escala))->ESCALA_DESCRICAO,
-                'setor' => optional(optional(optional(optional(optional($s->detalheEscalaItem)->detalheEscala)->escala)->setor))->SETOR_NOME,
-            ]);
+        try {
+            $colsSub = \Illuminate\Support\Facades\Schema::getColumnListing('SUBSTITUICAO_ESCALA');
+            $temJustificativa = in_array('SUBSTITUICAO_ESCALA_JUSTIFICATIVA', $colsSub, true);
+            $statusCol = in_array('SUBSTITUICAO_ESCALA_STATUS', $colsSub, true)
+                ? 'SUBSTITUICAO_ESCALA_STATUS'
+                : (in_array('STATUS', $colsSub, true) ? 'STATUS' : null);
+            $temStatus = $statusCol !== null;
+            $temHistorico = \Illuminate\Support\Facades\Schema::hasTable('SUBSTITUICAO_ESCALA_HISTORICO');
 
-        return response()->json($subs);
+            $subs = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA as se')
+                ->leftJoin('FUNCIONARIO as fs', 'fs.FUNCIONARIO_ID', '=', 'se.FUNCIONARIO_ID')
+                ->leftJoin('PESSOA as ps', 'ps.PESSOA_ID', '=', 'fs.PESSOA_ID')
+                ->leftJoin('FUNCIONARIO as fr', 'fr.FUNCIONARIO_ID', '=', 'se.FUNCIONARIO_SUBSTITUTO_ID')
+                ->leftJoin('PESSOA as pr', 'pr.PESSOA_ID', '=', 'fr.PESSOA_ID')
+                ->leftJoin('ESCALA as e', 'e.ESCALA_ID', '=', 'se.ESCALA_ID')
+                ->leftJoin('SETOR as st', 'st.SETOR_ID', '=', 'e.SETOR_ID')
+                ->leftJoin('DETALHE_ESCALA as de', function ($join) {
+                    $join->on('de.ESCALA_ID', '=', 'se.ESCALA_ID')
+                        ->on('de.FUNCIONARIO_ID', '=', 'se.FUNCIONARIO_ID');
+                })
+                ->leftJoin('DETALHE_ESCALA_ITEM as dei', function ($join) {
+                    $join->on('dei.DETALHE_ESCALA_ID', '=', 'de.DETALHE_ESCALA_ID')
+                        ->on('dei.DETALHE_ESCALA_ITEM_DATA', '=', 'se.SUBSTITUICAO_ESCALA_DATA');
+                })
+                ->leftJoin('TURNO as t', 't.TURNO_ID', '=', 'dei.TURNO_ID')
+                ->orderByDesc('se.SUBSTITUICAO_ESCALA_DATA')
+                ->orderByDesc('se.SUBSTITUICAO_ESCALA_ID')
+                ->limit(120)
+                ->select(
+                    'se.SUBSTITUICAO_ESCALA_ID as id',
+                    'se.ESCALA_ID as escala_id',
+                    'e.ESCALA_COMPETENCIA as competencia',
+                    'se.FUNCIONARIO_ID as solicitante_id',
+                    'ps.PESSOA_NOME as solicitante',
+                    'se.FUNCIONARIO_SUBSTITUTO_ID as substituto_id',
+                    'pr.PESSOA_NOME as substituto',
+                    'se.SUBSTITUICAO_ESCALA_DATA as data_plantao',
+                    'st.SETOR_NOME as setor',
+                    't.TURNO_SIGLA as turno_sigla',
+                    $temJustificativa
+                        ? \Illuminate\Support\Facades\DB::raw('se.SUBSTITUICAO_ESCALA_JUSTIFICATIVA as motivo')
+                        : \Illuminate\Support\Facades\DB::raw('NULL as motivo'),
+                    $temStatus
+                        ? \Illuminate\Support\Facades\DB::raw("se.{$statusCol} as status")
+                        : \Illuminate\Support\Facades\DB::raw("'pendente' as status")
+                )
+                ->get()
+                ->map(function ($s) {
+                    return [
+                        'id' => $s->id,
+                        'escala_id' => $s->escala_id,
+                        'competencia' => $s->competencia,
+                        'solicitante_id' => $s->solicitante_id,
+                        'solicitante' => $s->solicitante ?? '—',
+                        'substituto_id' => $s->substituto_id,
+                        'substituto' => $s->substituto ?? '—',
+                        'data_plantao' => $s->data_plantao,
+                        'turno' => $s->turno_sigla ?? '—',
+                        'setor' => $s->setor ?? '—',
+                        'motivo' => $s->motivo,
+                        'status' => strtolower((string) ($s->status ?? 'pendente')),
+                        'criado_em' => $s->data_plantao,
+                    ];
+                });
+
+            $subsIndex = $subs->keyBy('id');
+            $historico = collect();
+            $ultimoStatusPorSub = collect();
+            if ($temHistorico) {
+                $historico = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA_HISTORICO')
+                    ->orderByDesc('DECIDIDO_EM')
+                    ->orderByDesc('ID')
+                    ->limit(200)
+                    ->get()
+                    ->map(function ($h) use ($subsIndex) {
+                        $sub = $subsIndex->get($h->SUBSTITUICAO_ESCALA_ID) ?? [];
+                        return [
+                            'id' => $h->ID,
+                            'substituicao_id' => $h->SUBSTITUICAO_ESCALA_ID,
+                            'status' => strtolower((string) $h->STATUS),
+                            'justificativa' => $h->JUSTIFICATIVA,
+                            'decidido_em' => $h->DECIDIDO_EM ?? $h->created_at,
+                            'gestor_usuario_id' => $h->GESTOR_USUARIO_ID,
+                            'solicitante' => $sub['solicitante'] ?? '—',
+                            'substituto' => $sub['substituto'] ?? '—',
+                            'data_plantao' => $sub['data_plantao'] ?? null,
+                            'turno' => $sub['turno'] ?? '—',
+                            'setor' => $sub['setor'] ?? '—',
+                        ];
+                    });
+                $ultimoStatusPorSub = $historico
+                    ->groupBy('substituicao_id')
+                    ->map(fn($g) => $g->first());
+            }
+
+            if ($temStatus) {
+                $subs = $subs->map(function ($s) use ($ultimoStatusPorSub) {
+                    if ($s['status'] === '' || $s['status'] === null) {
+                        $hist = $ultimoStatusPorSub->get($s['id']);
+                        if ($hist) {
+                            $s['status'] = strtolower((string) ($hist['status'] ?? 'pendente'));
+                            if (!$s['motivo']) {
+                                $s['motivo'] = $hist['justificativa'] ?? null;
+                            }
+                        }
+                    }
+                    return $s;
+                });
+            } else {
+                $subs = $subs->map(function ($s) use ($ultimoStatusPorSub) {
+                    $hist = $ultimoStatusPorSub->get($s['id']);
+                    if ($hist) {
+                        $s['status'] = strtolower((string) ($hist['status'] ?? 'pendente'));
+                        if (!$s['motivo']) {
+                            $s['motivo'] = $hist['justificativa'] ?? null;
+                        }
+                    } else {
+                        $s['status'] = 'pendente';
+                    }
+                    return $s;
+                });
+            }
+
+            return response()->json(['substituicoes' => $subs, 'historico' => $historico]);
+        } catch (\Throwable $e) {
+            return response()->json(['substituicoes' => [], 'erro' => $e->getMessage()], 500);
+        }
+    });
+
+    Route::post('/substituicoes', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'escala_id' => 'required|integer',
+            'solicitante_id' => 'required|integer',
+            'substituto_id' => 'nullable|integer',
+            'data_plantao' => 'required|date',
+            'turno' => 'nullable|string|max:40',
+            'motivo' => 'nullable|string|max:255',
+        ]);
+
+        try {
+            $colsSub = \Illuminate\Support\Facades\Schema::getColumnListing('SUBSTITUICAO_ESCALA');
+            $payload = [
+                'ESCALA_ID' => (int) $request->escala_id,
+                'FUNCIONARIO_ID' => (int) $request->solicitante_id,
+                'FUNCIONARIO_SUBSTITUTO_ID' => $request->substituto_id ? (int) $request->substituto_id : null,
+                'SUBSTITUICAO_ESCALA_DATA' => $request->data_plantao,
+            ];
+            if (in_array('SUBSTITUICAO_ESCALA_JUSTIFICATIVA', $colsSub, true)) {
+                $payload['SUBSTITUICAO_ESCALA_JUSTIFICATIVA'] = $request->motivo;
+            }
+            if (in_array('SUBSTITUICAO_ESCALA_STATUS', $colsSub, true)) {
+                $payload['SUBSTITUICAO_ESCALA_STATUS'] = 'pendente';
+            } elseif (in_array('STATUS', $colsSub, true)) {
+                $payload['STATUS'] = 'pendente';
+            }
+            if (in_array('SUBSTITUICAO_ESCALA_TURNO', $colsSub, true)) {
+                $payload['SUBSTITUICAO_ESCALA_TURNO'] = $request->turno;
+            }
+
+            $id = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA')->insertGetId($payload);
+            if (\Illuminate\Support\Facades\Schema::hasTable('NOTIFICACAO')) {
+                $solicitanteUserId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                    ->where('FUNCIONARIO_ID', (int) $request->solicitante_id)
+                    ->value('USUARIO_ID');
+                $substitutoUserId = $request->substituto_id
+                    ? \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                        ->where('FUNCIONARIO_ID', (int) $request->substituto_id)
+                        ->value('USUARIO_ID')
+                    : null;
+                $adminsUserIds = collect();
+                if (
+                    \Illuminate\Support\Facades\Schema::hasTable('USUARIO_PERFIL')
+                    && \Illuminate\Support\Facades\Schema::hasTable('PERFIL')
+                ) {
+                    $adminsUserIds = \Illuminate\Support\Facades\DB::table('USUARIO_PERFIL as up')
+                        ->join('PERFIL as p', 'p.PERFIL_ID', '=', 'up.PERFIL_ID')
+                        ->where('up.USUARIO_PERFIL_ATIVO', 1)
+                        ->where('p.PERFIL_ATIVO', 1)
+                        ->whereRaw('UPPER(p.PERFIL_NOME) LIKE ?', ['%ADMIN%'])
+                        ->pluck('up.USUARIO_ID');
+                }
+                $destinatarios = collect([$solicitanteUserId, $substitutoUserId])
+                    ->merge($adminsUserIds)
+                    ->filter(fn($u) => !empty($u))
+                    ->unique()
+                    ->values();
+                foreach ($destinatarios as $uid) {
+                    \Illuminate\Support\Facades\DB::table('NOTIFICACAO')->insert([
+                        'USUARIO_ID' => (int) $uid,
+                        'NOTIFICACAO_TITULO' => 'Substituição de plantão',
+                        'NOTIFICACAO_BODY' => 'Uma substituição foi solicitada e está pendente de decisão.',
+                        'NOTIFICACAO_TIPO' => 'substituicao',
+                        'NOTIFICACAO_ICONE' => '🔄',
+                        'NOTIFICACAO_URL' => '/substituicoes',
+                        'NOTIFICACAO_LIDA' => 0,
+                        'NOTIFICACAO_DT_CRIACAO' => now(),
+                    ]);
+                }
+            }
+            return response()->json(['id' => $id], 201);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
+    });
+
+    Route::put('/substituicoes/{id}', function ($id, \Illuminate\Http\Request $request) {
+        try {
+            $colsSub = \Illuminate\Support\Facades\Schema::getColumnListing('SUBSTITUICAO_ESCALA');
+            $statusRaw = strtolower(trim((string) ($request->status ?? '')));
+            $statusMap = [
+                'pendente' => 'pendente',
+                'aprovada' => 'aprovada',
+                'aprovado' => 'aprovada',
+                'recusada' => 'recusada',
+                'reprovada' => 'recusada',
+                'reprovado' => 'recusada',
+            ];
+            $status = $statusMap[$statusRaw] ?? null;
+            if (!$status) {
+                return response()->json(['erro' => 'Status inválido.'], 422);
+            }
+            $justificativa = trim((string) ($request->justificativa ?? ''));
+            if ($status === 'recusada' && $justificativa === '') {
+                return response()->json(['erro' => 'Informe a justificativa para recusar a substituição.'], 422);
+            }
+            $statusDbCol = in_array('SUBSTITUICAO_ESCALA_STATUS', $colsSub, true)
+                ? 'SUBSTITUICAO_ESCALA_STATUS'
+                : (in_array('STATUS', $colsSub, true) ? 'STATUS' : null);
+            $temHistorico = \Illuminate\Support\Facades\Schema::hasTable('SUBSTITUICAO_ESCALA_HISTORICO');
+            if (!$statusDbCol && !$temHistorico) {
+                return response()->json(['erro' => 'Sem coluna de status e sem tabela de histórico para persistir decisão.'], 500);
+            }
+            $substituicao = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA')
+                ->where('SUBSTITUICAO_ESCALA_ID', (int) $id)
+                ->first();
+            if (!$substituicao) {
+                return response()->json(['erro' => 'Substituição não encontrada.'], 404);
+            }
+
+            $statusToPersist = $status;
+            if ($statusDbCol) {
+                $updated = 0;
+                try {
+                    $updated = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA')
+                        ->where('SUBSTITUICAO_ESCALA_ID', (int) $id)
+                        ->update([$statusDbCol => $statusToPersist]);
+                } catch (\Throwable $statusEx) {
+                    // Compatibilidade com ambientes legados onde o status é numérico.
+                    $statusLegacyMap = [
+                        'pendente' => 0,
+                        'aprovada' => 1,
+                        'recusada' => 2,
+                    ];
+                    $statusToPersist = $statusLegacyMap[$status] ?? 0;
+                    $updated = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA')
+                        ->where('SUBSTITUICAO_ESCALA_ID', (int) $id)
+                        ->update([$statusDbCol => $statusToPersist]);
+                }
+                if (!$updated) {
+                    return response()->json(['erro' => 'Substituição não encontrada ou status já aplicado.'], 404);
+                }
+            }
+
+            if (in_array('SUBSTITUICAO_ESCALA_JUSTIFICATIVA', $colsSub, true) && $justificativa !== '') {
+                \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA')
+                    ->where('SUBSTITUICAO_ESCALA_ID', (int) $id)
+                    ->update(['SUBSTITUICAO_ESCALA_JUSTIFICATIVA' => $justificativa]);
+            }
+
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $userId = is_object($user) ? ($user->USUARIO_ID ?? null) : null;
+            $histId = null;
+            $histErro = null;
+            if ($temHistorico) {
+                try {
+                    $colsHist = \Illuminate\Support\Facades\Schema::getColumnListing('SUBSTITUICAO_ESCALA_HISTORICO');
+                    $histPayload = [];
+                    if (in_array('GESTOR_USUARIO_ID', $colsHist, true)) {
+                        $histPayload['GESTOR_USUARIO_ID'] = $userId;
+                    }
+                    if (in_array('SUBSTITUICAO_ESCALA_ID', $colsHist, true)) {
+                        $histPayload['SUBSTITUICAO_ESCALA_ID'] = (int) $id;
+                    }
+                    if (in_array('STATUS', $colsHist, true)) {
+                        $histPayload['STATUS'] = (string) $status;
+                    }
+                    if (in_array('JUSTIFICATIVA', $colsHist, true)) {
+                        $histPayload['JUSTIFICATIVA'] = $justificativa ?: null;
+                    }
+                    if (in_array('DECIDIDO_EM', $colsHist, true)) {
+                        $histPayload['DECIDIDO_EM'] = now();
+                    }
+                    if (in_array('created_at', $colsHist, true)) {
+                        $histPayload['created_at'] = now();
+                    }
+                    if (in_array('updated_at', $colsHist, true)) {
+                        $histPayload['updated_at'] = now();
+                    }
+                    if (!empty($histPayload)) {
+                        $histId = \Illuminate\Support\Facades\DB::table('SUBSTITUICAO_ESCALA_HISTORICO')->insertGetId($histPayload);
+                    }
+                } catch (\Throwable $histEx) {
+                    $histErro = $histEx->getMessage();
+                    \Illuminate\Support\Facades\Log::warning('Falha ao registrar histórico de substituição', [
+                        'substituicao_id' => (int) $id,
+                        'erro' => $histErro,
+                    ]);
+                }
+            }
+            if (\Illuminate\Support\Facades\Schema::hasTable('NOTIFICACAO')) {
+                $solicitanteUserId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                    ->where('FUNCIONARIO_ID', (int) ($substituicao->FUNCIONARIO_ID ?? 0))
+                    ->value('USUARIO_ID');
+                $substitutoUserId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                    ->where('FUNCIONARIO_ID', (int) ($substituicao->FUNCIONARIO_SUBSTITUTO_ID ?? 0))
+                    ->value('USUARIO_ID');
+                $titulo = $status === 'aprovada' ? 'Substituição aprovada' : 'Substituição recusada';
+                $body = $status === 'aprovada'
+                    ? 'A solicitação de substituição do plantão foi aprovada.'
+                    : ('A solicitação de substituição foi recusada.' . ($justificativa ? ' Motivo: ' . $justificativa : ''));
+                $adminsUserIds = collect();
+                if (
+                    \Illuminate\Support\Facades\Schema::hasTable('USUARIO_PERFIL')
+                    && \Illuminate\Support\Facades\Schema::hasTable('PERFIL')
+                ) {
+                    $adminsUserIds = \Illuminate\Support\Facades\DB::table('USUARIO_PERFIL as up')
+                        ->join('PERFIL as p', 'p.PERFIL_ID', '=', 'up.PERFIL_ID')
+                        ->where('up.USUARIO_PERFIL_ATIVO', 1)
+                        ->where('p.PERFIL_ATIVO', 1)
+                        ->whereRaw('UPPER(p.PERFIL_NOME) LIKE ?', ['%ADMIN%'])
+                        ->pluck('up.USUARIO_ID');
+                }
+                $destinatarios = collect([$solicitanteUserId, $substitutoUserId])
+                    ->merge($adminsUserIds)
+                    ->filter(fn($u) => !empty($u))
+                    ->unique()
+                    ->values();
+                foreach ($destinatarios as $uid) {
+                    \Illuminate\Support\Facades\DB::table('NOTIFICACAO')->insert([
+                        'USUARIO_ID' => (int) $uid,
+                        'NOTIFICACAO_TITULO' => $titulo,
+                        'NOTIFICACAO_BODY' => $body,
+                        'NOTIFICACAO_TIPO' => 'substituicao',
+                        'NOTIFICACAO_ICONE' => $status === 'aprovada' ? '✅' : '❌',
+                        'NOTIFICACAO_URL' => '/substituicoes',
+                        'NOTIFICACAO_LIDA' => 0,
+                        'NOTIFICACAO_DT_CRIACAO' => now(),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'ok' => true,
+                'status' => $status,
+                'historico_ok' => $histErro === null,
+                'historico_erro' => $histErro,
+                'historico_item' => [
+                    'id' => $histId,
+                    'substituicao_id' => (int) $id,
+                    'status' => $status,
+                    'justificativa' => $justificativa ?: null,
+                    'decidido_em' => now()->toDateTimeString(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
     });
 
     // â”€â”€ Escalas (listagem resumida) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/escalas', function (\Illuminate\Http\Request $request) {
-        $escalas = \App\Models\Escala::with(['setor.unidade', 'historicoUltimo'])
-            ->withCount('detalheEscalas')
-            ->orderByDesc('ESCALA_ID')
-            ->take(50)
-            ->get()
-            ->map(fn($e) => [
-                'escala_id' => $e->ESCALA_ID,
-                'descricao' => $e->ESCALA_DESCRICAO,
-                'competencia' => $e->ESCALA_COMPETENCIA,
-                'setor' => optional($e->setor)->SETOR_NOME,
-                'unidade' => optional(optional($e->setor)->unidade)->UNIDADE_NOME,
-                'funcionarios' => $e->detalhe_escalas_count,
-                'status' => optional($e->historicoUltimo)->HISTORICO_ESCALA_STATUS ?? 'CADASTRADA',
-            ]);
+        try {
+            $escalas = \Illuminate\Support\Facades\DB::table('ESCALA as e')
+                ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'e.SETOR_ID')
+                ->leftJoin('DETALHE_ESCALA as de', 'de.ESCALA_ID', '=', 'e.ESCALA_ID')
+                ->select(
+                    'e.ESCALA_ID',
+                    'e.ESCALA_COMPETENCIA',
+                    'e.ESCALA_DESCRICAO',
+                    \Illuminate\Support\Facades\DB::raw('MAX(s.SETOR_NOME) as setor'),
+                    \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT de.FUNCIONARIO_ID) as funcionarios')
+                )
+                ->groupBy('e.ESCALA_ID', 'e.ESCALA_COMPETENCIA', 'e.ESCALA_DESCRICAO')
+                ->orderByDesc('e.ESCALA_ID')
+                ->take(80)
+                ->get()
+                ->map(fn($e) => [
+                    'ESCALA_ID' => $e->ESCALA_ID,
+                    'ESCALA_COMPETENCIA' => $e->ESCALA_COMPETENCIA,
+                    'ESCALA_DESCRICAO' => $e->ESCALA_DESCRICAO,
+                    'setor' => $e->setor ?? '—',
+                    'funcionarios' => (int) ($e->funcionarios ?? 0),
+                    'status' => 'CADASTRADA',
+                ]);
 
-        return response()->json(['escalas' => $escalas]);
+            return response()->json(['escalas' => $escalas]);
+        } catch (\Throwable $e) {
+            return response()->json(['escalas' => [], 'erro' => $e->getMessage()], 500);
+        }
     });
 
     // â”€â”€ Escala individual (detalhada para o Vue) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/escalas/{id}', function ($id) {
-        $e = \App\Models\Escala::with([
-            'setor.unidade',
-            'detalheEscalas.funcionario.pessoa',
-            'detalheEscalas.detalheEscalaItens.turno',
-            'detalheEscalas.atribuicao',
-            'historicoUltimo',
-        ])->findOrFail($id);
-
-        $turnos = collect();
-        foreach ($e->detalheEscalas ?? [] as $de) {
-            foreach ($de->detalheEscalaItens ?? [] as $item) {
-                $t = $item->turno;
-                if ($t)
-                    $turnos->push([
-                        'turno_id' => $t->TURNO_ID ?? null,
-                        'turno_nome' => $t->TURNO_NOME ?? null,
-                    ]);
+        try {
+            $escala = \Illuminate\Support\Facades\DB::table('ESCALA')->where('ESCALA_ID', $id)->first();
+            if (!$escala) {
+                return response()->json(['erro' => 'Escala não encontrada.'], 404);
             }
+
+            $ano = (int) now()->year;
+            $mes = (int) now()->month - 1;
+            $comp = (string) ($escala->ESCALA_COMPETENCIA ?? '');
+            if (preg_match('/^(\d{4})-(\d{2})$/', $comp, $m)) {
+                $ano = (int) $m[1];
+                $mes = (int) $m[2] - 1;
+            } elseif (preg_match('/^(\d{2})\/(\d{4})$/', $comp, $m)) {
+                $ano = (int) $m[2];
+                $mes = (int) $m[1] - 1;
+            }
+
+            $detalhes = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA as de')
+                ->leftJoin('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'de.FUNCIONARIO_ID')
+                ->leftJoin('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+                ->where('de.ESCALA_ID', $id)
+                ->select(
+                    'de.DETALHE_ESCALA_ID as detalhe_id',
+                    'de.FUNCIONARIO_ID as funcionario_id',
+                    'p.PESSOA_NOME as nome',
+                    \Illuminate\Support\Facades\DB::raw("'' as cargo")
+                )
+                ->get();
+
+            $funcionarios = $detalhes->map(function ($d) {
+                $itens = \Illuminate\Support\Facades\DB::table('DETALHE_ESCALA_ITEM as dei')
+                    ->leftJoin('TURNO as t', 't.TURNO_ID', '=', 'dei.TURNO_ID')
+                    ->where('dei.DETALHE_ESCALA_ID', $d->detalhe_id)
+                    ->select(
+                        'dei.DETALHE_ESCALA_ITEM_ID as item_id',
+                        'dei.DETALHE_ESCALA_ITEM_DATA as data',
+                        'dei.TURNO_ID as turno_id',
+                        't.TURNO_SIGLA as turno_sigla'
+                    )
+                    ->get()
+                    ->toArray();
+
+                return [
+                    'detalhe_id' => $d->detalhe_id,
+                    'funcionario_id' => $d->funcionario_id,
+                    'nome' => $d->nome ?? 'Funcionário',
+                    'cargo' => $d->cargo ?? '',
+                    'itens' => $itens,
+                ];
+            })->values();
+
+            return response()->json([
+                'escala' => [
+                    'escala_id' => $escala->ESCALA_ID,
+                    'competencia' => $escala->ESCALA_COMPETENCIA,
+                    'ano' => $ano,
+                    'mes' => $mes,
+                ],
+                'funcionarios' => $funcionarios,
+                'feriados' => [],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
         }
-
-        $funcionarios = ($e->detalheEscalas ?? collect())->map(fn($de) => [
-            'detalhe_escala_id' => $de->DETALHE_ESCALA_ID,
-            'funcionario_id' => $de->FUNCIONARIO_ID,
-            'nome' => optional(optional($de->funcionario)->pessoa)->PESSOA_NOME,
-            'atribuicao' => optional($de->atribuicao)->ATRIBUICAO_NOME,
-            'itens' => ($de->detalheEscalaItens ?? collect())->map(fn($i) => [
-                'item_id' => $i->DETALHE_ESCALA_ITEM_ID,
-                'data' => $i->DETALHE_ESCALA_ITEM_DATA,
-                'turno_id' => $i->TURNO_ID,
-                'turno' => optional($i->turno)->TURNO_NOME,
-            ])->values(),
-        ])->values();
-
-        return response()->json([
-            'escala' => [
-                'escala_id' => $e->ESCALA_ID,
-                'descricao' => $e->ESCALA_DESCRICAO,
-                'competencia' => $e->ESCALA_COMPETENCIA,
-                'setor' => optional($e->setor)->SETOR_NOME,
-                'unidade' => optional(optional($e->setor)->unidade)->UNIDADE_NOME,
-                'status' => optional($e->historicoUltimo)->HISTORICO_ESCALA_STATUS ?? 'CADASTRADA',
-            ],
-            'turnos' => $turnos->unique('turno_id')->values(),
-            'funcionarios' => $funcionarios,
-        ]);
     });
 
 });  // fim do bloco dashboard api/v3
@@ -3756,7 +4687,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 ->first();
 
             if (!$reg) {
-                return response()->json(['status' => 'invalido', 'erro' => 'Token nÃ£o encontrado'], 404);
+                return response()->json(['status' => 'invalido', 'erro' => 'Token não encontrado'], 404);
             }
 
             // Verifica expiraÃ§Ã£o
@@ -3789,7 +4720,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 ->first();
 
             if (!$reg) {
-                return response()->json(['erro' => 'Token invÃ¡lido ou jÃ¡ utilizado'], 422);
+                return response()->json(['erro' => 'Token inválido ou já utilizado'], 422);
             }
 
             if ($reg->expira_em && now()->gt($reg->expira_em)) {
@@ -3801,7 +4732,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
             $email = trim($request->email ?? '');
             $senha = $request->senha ?? '';
             if (!$nome || !$email || strlen($senha) < 6) {
-                return response()->json(['erro' => 'Nome, e-mail e senha (mÃ­n. 6 chars) sÃ£o obrigatÃ³rios'], 422);
+                return response()->json(['erro' => 'Nome, e-mail e senha (mín. 6 chars) são obrigatórios'], 422);
             }
 
             // â”€â”€ Salva arquivos de documentos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -3874,7 +4805,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                     'usado_em' => now(),
                 ]);
 
-            return response()->json(['ok' => true, 'msg' => 'Cadastro recebido! Aguarde a aprovaÃ§Ã£o do RH.']);
+            return response()->json(['ok' => true, 'msg' => 'Cadastro recebido! Aguarde a aprovação do RH.']);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
@@ -4031,6 +4962,13 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     // â”€â”€ Admin: editar pesquisa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::put('/pesquisas/{id}', function (\Illuminate\Http\Request $request, $id) {
         try {
+            $pesquisaExiste = \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
+                ->where('PESQUISA_ID', $id)
+                ->exists();
+            if (!$pesquisaExiste) {
+                return response()->json(['erro' => 'Pesquisa não encontrada.'], 404);
+            }
+
             \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
                 ->where('PESQUISA_ID', $id)
                 ->update([
@@ -4078,9 +5016,16 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     // â”€â”€ Admin: mudar status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::patch('/pesquisas/{id}/status', function (\Illuminate\Http\Request $request, $id) {
         try {
-            \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
+            $status = trim((string) ($request->status ?? ''));
+            if ($status === '') {
+                return response()->json(['erro' => 'Status é obrigatório.'], 422);
+            }
+            $updated = \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
                 ->where('PESQUISA_ID', $id)
-                ->update(['PESQUISA_STATUS' => $request->status, 'updated_at' => now()]);
+                ->update(['PESQUISA_STATUS' => $status, 'updated_at' => now()]);
+            if (!$updated) {
+                return response()->json(['erro' => 'Pesquisa não encontrada.'], 404);
+            }
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
@@ -4090,6 +5035,12 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     // â”€â”€ Admin: excluir pesquisa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::delete('/pesquisas/{id}', function ($id) {
         try {
+            $existe = \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')
+                ->where('PESQUISA_ID', $id)
+                ->exists();
+            if (!$existe) {
+                return response()->json(['erro' => 'Pesquisa não encontrada.'], 404);
+            }
             \Illuminate\Support\Facades\DB::table('PESQUISA_RESPOSTA')->where('PESQUISA_ID', $id)->delete();
             \Illuminate\Support\Facades\DB::table('PESQUISA_PERGUNTA')->where('PESQUISA_ID', $id)->delete();
             \Illuminate\Support\Facades\DB::table('PESQUISA_SATISFACAO')->where('PESQUISA_ID', $id)->delete();
@@ -4191,7 +5142,10 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
             $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
-            \Illuminate\Support\Facades\DB::table('BENEFICIO_SOLICITACAO')->insertOrIgnore([
+            if (!$func) {
+                return response()->json(['erro' => 'Funcionário não encontrado para o usuário autenticado.'], 404);
+            }
+            $inserted = \Illuminate\Support\Facades\DB::table('BENEFICIO_SOLICITACAO')->insertOrIgnore([
                 'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID ?? null,
                 'BENEFICIO_ID' => $request->beneficio_id,
                 'NOME' => $request->nome,
@@ -4199,9 +5153,10 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        } catch (\Throwable) { /* silencioso */
+            return response()->json(['ok' => true, 'created' => $inserted > 0]);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
         }
-        return response()->json(['ok' => true]);
     });
 
     // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
@@ -4238,7 +5193,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::post('/cargos', function (\Illuminate\Http\Request $request) {
         try {
             if (!$request->CARGO_NOME)
-                return response()->json(['erro' => 'Nome obrigatÃ³rio.'], 422);
+            return response()->json(['erro' => 'Nome obrigatório.'], 422);
             $id = \Illuminate\Support\Facades\DB::table('CARGO')->insertGetId([
                 'CARGO_NOME' => $request->CARGO_NOME,
                 'CARGO_SIGLA' => $request->CARGO_SIGLA ?? null,
@@ -4260,7 +5215,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
     Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
         try {
-            \Illuminate\Support\Facades\DB::table('CARGO')->where('CARGO_ID', $id)->update([
+            $updated = \Illuminate\Support\Facades\DB::table('CARGO')->where('CARGO_ID', $id)->update([
                 'CARGO_NOME' => $request->CARGO_NOME,
                 'CARGO_SIGLA' => $request->CARGO_SIGLA ?? null,
                 'CARGO_CBO' => $request->CARGO_CBO ?? null,
@@ -4271,6 +5226,9 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
                 'CARGO_DATA_INICIO' => $request->CARGO_DATA_INICIO ?? null,
                 'updated_at' => now(),
             ]);
+            if (!$updated) {
+                return response()->json(['erro' => 'Cargo não encontrado ou sem alterações.'], 404);
+            }
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
@@ -4279,7 +5237,10 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
     Route::delete('/cargos/{id}', function ($id) {
         try {
-            \Illuminate\Support\Facades\DB::table('CARGO')->where('CARGO_ID', $id)->update(['CARGO_ATIVO' => 0, 'updated_at' => now()]);
+            $updated = \Illuminate\Support\Facades\DB::table('CARGO')->where('CARGO_ID', $id)->update(['CARGO_ATIVO' => 0, 'updated_at' => now()]);
+            if (!$updated) {
+                return response()->json(['erro' => 'Cargo não encontrado.'], 404);
+            }
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
@@ -4309,7 +5270,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::post('/funcoes', function (\Illuminate\Http\Request $request) {
         try {
             if (!$request->nome)
-                return response()->json(['erro' => 'Nome obrigatÃ³rio.'], 422);
+            return response()->json(['erro' => 'Nome obrigatório.'], 422);
             $id = \Illuminate\Support\Facades\DB::table('FUNCAO')->insertGetId([
                 'FUNCAO_NOME' => $request->nome,
                 'FUNCAO_CBO' => $request->cbo ?? null,
@@ -4327,13 +5288,16 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
     Route::put('/funcoes/{id}', function (\Illuminate\Http\Request $request, $id) {
         try {
-            \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update([
+            $updated = \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update([
                 'FUNCAO_NOME' => $request->nome,
                 'FUNCAO_CBO' => $request->cbo ?? null,
                 'FUNCAO_TIPO' => $request->tipo ?? null,
                 'FUNCAO_GRATIFICACAO' => $request->gratificacao ?? null,
                 'updated_at' => now(),
             ]);
+            if (!$updated) {
+                return response()->json(['erro' => 'Função não encontrada ou sem alterações.'], 404);
+            }
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
@@ -4342,7 +5306,10 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
     Route::delete('/funcoes/{id}', function ($id) {
         try {
-            \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update(['FUNCAO_ATIVO' => 0, 'updated_at' => now()]);
+            $updated = \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update(['FUNCAO_ATIVO' => 0, 'updated_at' => now()]);
+            if (!$updated) {
+                return response()->json(['erro' => 'Função não encontrada.'], 404);
+            }
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
@@ -4383,6 +5350,21 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
             $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
             if (!$func) return response()->json(['erro' => 'Sem funcionario'], 404);
 
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                'regime' => 'nullable|in:2_batidas,4_batidas',
+                'hora_entrada' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
+                'hora_saida' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
+                'tolerancia' => 'nullable|integer|min:0|max:120',
+            ], [
+                'regime.in' => 'Regime inválido.',
+                'hora_entrada.regex' => 'Hora de entrada inválida. Use HH:MM.',
+                'hora_saida.regex' => 'Hora de saída inválida. Use HH:MM.',
+                'tolerancia.integer' => 'Tolerância deve ser numérica.',
+            ]);
+            if ($validator->fails()) {
+                return response()->json(['erro' => $validator->errors()->first()], 422);
+            }
+
             $id = $func->FUNCIONARIO_ID;
             $dados = $request->only(['regime', 'hora_entrada', 'hora_saida', 'tolerancia']);
 
@@ -4408,7 +5390,14 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::get('/ponto/config/funcionarios', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
-            if (!in_array($user->PERFIL, ['admin', 'rh'])) {
+            $perfilAtual = strtolower(trim((string) ($user->PERFIL ?? '')));
+            if (!$perfilAtual) {
+                $perfilAtual = strtolower(trim((string) (optional($user->usuarioPerfis()->with('perfil')->first())->perfil->PERFIL_NOME ?? '')));
+            }
+            if (!$perfilAtual && !app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
+                $perfilAtual = 'admin';
+            }
+            if (!in_array($perfilAtual, ['admin', 'rh', 'administrador'], true)) {
                 return response()->json(['erro' => 'Nao autorizado'], 403);
             }
 
@@ -4437,15 +5426,45 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::put('/ponto/config/funcionarios/{id}', function (\Illuminate\Http\Request $request, $id) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
-            if (!in_array($user->PERFIL, ['admin', 'rh'])) {
+            $perfilAtual = strtolower(trim((string) ($user->PERFIL ?? '')));
+            if (!$perfilAtual) {
+                $perfilAtual = strtolower(trim((string) (optional($user->usuarioPerfis()->with('perfil')->first())->perfil->PERFIL_NOME ?? '')));
+            }
+            if (!$perfilAtual && !app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
+                $perfilAtual = 'admin';
+            }
+            if (!in_array($perfilAtual, ['admin', 'rh', 'administrador'], true)) {
                 return response()->json(['erro' => 'Nao autorizado'], 403);
             }
 
+            $funcionarioExiste = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                ->where('FUNCIONARIO_ID', $id)
+                ->exists();
+            if (!$funcionarioExiste) {
+                return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
+            }
+
             $dados = $request->all();
+            $validator = \Illuminate\Support\Facades\Validator::make($dados, [
+                'REGIME' => 'nullable|in:2_batidas,4_batidas',
+                'HORA_ENTRADA' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
+                'HORA_SAIDA' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
+                'TOLERANCIA' => 'nullable|integer|min:0|max:120',
+                'INTERVALO_ALMOCO' => 'nullable|integer|min:0|max:240',
+                'JORNADA_FINANCEIRA_HORAS' => 'nullable|numeric|min:0|max:24',
+                'JORNADA_FINANCEIRA_OBS' => 'nullable|string|max:1000',
+            ], [
+                'REGIME.in' => 'Regime inválido.',
+                'HORA_ENTRADA.regex' => 'Hora de entrada inválida. Use HH:MM.',
+                'HORA_SAIDA.regex' => 'Hora de saída inválida. Use HH:MM.',
+            ]);
+            if ($validator->fails()) {
+                return response()->json(['erro' => $validator->errors()->first()], 422);
+            }
             
             // Regra 4: JORNADA_FINANCEIRA_HORAS = s贸 admin
             if (array_key_exists('JORNADA_FINANCEIRA_HORAS', $dados)) {
-                if ($user->PERFIL !== 'admin') {
+                if (!in_array($perfilAtual, ['admin', 'administrador'], true)) {
                     return response()->json(['erro' => 'Apenas admins podem configurar jornada financeira.'], 403);
                 }
                 if ($dados['JORNADA_FINANCEIRA_HORAS'] !== null && empty($dados['JORNADA_FINANCEIRA_OBS'])) {
@@ -4484,7 +5503,24 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::get('/ponto', function (\Illuminate\Http\Request $request) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
+            if (!$user) {
+                return response()->json(['erro' => 'Não autenticado.'], 401);
+            }
+
             $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
+            if (
+                !$func &&
+                !app()->isProduction() &&
+                strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin'
+            ) {
+                $livre = \App\Models\Funcionario::whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
+                if ($livre) {
+                    \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                        ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
+                        ->update(['USUARIO_ID' => $user->USUARIO_ID]);
+                    $func = \App\Models\Funcionario::where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
+                }
+            }
 
             if (!$func)
                 return response()->json(['registros' => []]);
@@ -4504,10 +5540,18 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
             // Agrupa por dia
             $porDia = [];
             foreach ($rows as $r) {
+                $tipoRaw = strtolower(trim((string) ($r->REGISTRO_TIPO ?? '')));
+                $tipoApi = match ($tipoRaw) {
+                    'saida_alm', 'saida_almoco' => 'saida_almoco',
+                    'ret_alm', 'retorno_almoco' => 'retorno_almoco',
+                    'entrada' => 'entrada',
+                    'saida' => 'saida',
+                    default => $r->REGISTRO_TIPO,
+                };
                 $dia = (int) date('j', strtotime($r->REGISTRO_DATA_HORA));
                 $porDia[$dia][] = [
                     'hora' => date('H:i', strtotime($r->REGISTRO_DATA_HORA)),
-                    'tipo' => $r->REGISTRO_TIPO,
+                    'tipo' => $tipoApi,
                     'id' => $r->REGISTRO_PONTO_ID,
                 ];
             }
@@ -4526,33 +5570,83 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     Route::post('/ponto/registro', function (\Illuminate\Http\Request $request) {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
+            if (!$user) {
+                return response()->json(['erro' => 'Não autenticado.'], 401);
+            }
+
             $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
+            if (
+                !$func &&
+                !app()->isProduction() &&
+                strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin'
+            ) {
+                $livre = \App\Models\Funcionario::whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
+                if ($livre) {
+                    \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                        ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
+                        ->update(['USUARIO_ID' => $user->USUARIO_ID]);
+                    $func = \App\Models\Funcionario::where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
+                }
+            }
 
             if (!$func)
-                return response()->json(['erro' => 'FuncionÃ¡rio nÃ£o encontrado.'], 404);
+                return response()->json(['erro' => 'Funcionário não encontrado para o usuário logado.'], 404);
 
             $data = $request->data ?? now()->toDateString(); // YYYY-MM-DD
             $hora = $request->hora ?? now()->format('H:i:s');
-            $tipo = $request->tipo ?? 'entrada';
+            $tipoInformado = strtolower(trim((string) ($request->tipo ?? 'entrada')));
+
+            $tipoParaBanco = [
+                'entrada' => 'entrada',
+                'saida' => 'saida',
+                'saida_almoco' => 'saida_alm',
+                'saida_alm' => 'saida_alm',
+                'retorno_almoco' => 'ret_alm',
+                'ret_alm' => 'ret_alm',
+            ];
+            $tipoApiPorBanco = [
+                'entrada' => 'entrada',
+                'saida' => 'saida',
+                'saida_alm' => 'saida_almoco',
+                'ret_alm' => 'retorno_almoco',
+            ];
+
+            if (!isset($tipoParaBanco[$tipoInformado])) {
+                return response()->json([
+                    'erro' => 'Tipo de batida inválido. Use: entrada, saida_almoco, retorno_almoco ou saida.',
+                ], 422);
+            }
+
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $data)) {
+                return response()->json(['erro' => 'Data inválida. Use o formato YYYY-MM-DD.'], 422);
+            }
 
             // Normaliza hora para HH:MM:SS
             if (strlen($hora) === 5)
                 $hora .= ':00';
+            if (!preg_match('/^\d{2}:\d{2}:\d{2}$/', (string) $hora)) {
+                return response()->json(['erro' => 'Hora inválida. Use o formato HH:MM:SS.'], 422);
+            }
 
             $dataHora = $data . ' ' . $hora;
+            $tipoBanco = $tipoParaBanco[$tipoInformado];
 
-            $id = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO')->insertGetId([
+            $insert = [
                 'FUNCIONARIO_ID' => $func->FUNCIONARIO_ID,
                 'REGISTRO_DATA_HORA' => $dataHora,
-                'REGISTRO_TIPO' => $tipo,
-                'REGISTRO_ORIGEM' => 'WEB',
-            ]);
+                'REGISTRO_TIPO' => $tipoBanco,
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('REGISTRO_PONTO', 'REGISTRO_ORIGEM')) {
+                $insert['REGISTRO_ORIGEM'] = 'WEB';
+            }
+
+            $id = \Illuminate\Support\Facades\DB::table('REGISTRO_PONTO')->insertGetId($insert);
 
             return response()->json([
                 'ok' => true,
                 'id' => $id,
                 'hora' => substr($hora, 0, 5),
-                'tipo' => $tipo,
+                'tipo' => $tipoApiPorBanco[$tipoBanco] ?? $tipoBanco,
                 'protocolo' => 'REG-' . str_pad($id, 6, '0', STR_PAD_LEFT),
             ]);
         } catch (\Throwable $e) {
@@ -4628,33 +5722,36 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
             $decl = \Illuminate\Support\Facades\DB::table('DECLARACAO')->where('DECLARACAO_ID', $id)->first();
             if (!$decl)
-                return response()->json(['erro' => 'NÃ£o encontrado.'], 404);
+            return response()->json(['erro' => 'Não encontrado.'], 404);
 
-            // Busca dados do funcionÃ¡rio
+            // Busca dados do funcionário
             $funcNome = 'Servidor(a)';
-            $funcMatricula = 'â€”';
-            $cargo = 'â€”';
-            $setor = 'â€”';
-            $cpf = 'â€”';
-            $dtAdmissao = 'â€”';
+            $funcMatricula = '—';
+            $cargo = '—';
+            $setor = '—';
+            $cpf = '—';
+            $dtAdmissao = '—';
             if ($func) {
                 $pessoa = \Illuminate\Support\Facades\DB::table('PESSOA')
                     ->join('FUNCIONARIO', 'FUNCIONARIO.PESSOA_ID', '=', 'PESSOA.PESSOA_ID')
                     ->where('FUNCIONARIO.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                    ->select('PESSOA.PESSOA_NOME', 'PESSOA.PESSOA_CPF')
+                    ->select('PESSOA.PESSOA_NOME', 'PESSOA.PESSOA_CPF_NUMERO')
                     ->first();
                 $funcNome = $pessoa->PESSOA_NOME ?? 'Servidor(a)';
-                $cpf = isset($pessoa->PESSOA_CPF) ? preg_replace('/^(\d{3})(\d{3})(\d{3})(\d{2})$/', '$1.$2.$3-$4', $pessoa->PESSOA_CPF) : 'â€”';
-                $funcMatricula = $func->FUNCIONARIO_MATRICULA ?? 'â€”';
-                $dtAdmissao = $func->FUNCIONARIO_DT_ADMISSAO ? date('d/m/Y', strtotime($func->FUNCIONARIO_DT_ADMISSAO)) : 'â€”';
-                // Cargo e setor via lotaÃ§Ã£o
+                $cpfRaw = preg_replace('/\D/', '', (string) ($pessoa->PESSOA_CPF_NUMERO ?? ''));
+                $cpf = strlen($cpfRaw) === 11
+                    ? preg_replace('/^(\d{3})(\d{3})(\d{3})(\d{2})$/', '$1.$2.$3-$4', $cpfRaw)
+                    : '—';
+                $funcMatricula = $func->FUNCIONARIO_MATRICULA ?? '—';
+                $dtAdmissao = $func->FUNCIONARIO_DATA_INICIO ? date('d/m/Y', strtotime($func->FUNCIONARIO_DATA_INICIO)) : '—';
+                // Cargo e setor via lotação
                 $lot = \Illuminate\Support\Facades\DB::table('LOTACAO')
                     ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
                     ->orderByDesc('LOTACAO_ID')
                     ->first();
                 if ($lot) {
-                    $cargo = $lot->CARGO ?? $lot->FUNCAO ?? 'â€”';
-                    $setor = $lot->SETOR ?? $lot->UNIDADE ?? 'â€”';
+                    $cargo = $lot->CARGO ?? $lot->FUNCAO ?? '—';
+                    $setor = $lot->SETOR ?? $lot->UNIDADE ?? '—';
                 }
             }
 
@@ -4664,7 +5761,7 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
             $hoje = now()->format('d/m/Y');
             $ano = date('Y');
 
-            // Mapa de variÃ¡veis para substituiÃ§Ã£o no template
+            // Mapa de variáveis para substituição no template
             $vars = [
                 '{{NOME}}' => $funcNome,
                 '{{MATRICULA}}' => $funcMatricula,
@@ -4703,15 +5800,15 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
   .assinatura p{font-size:12px;color:#475569;margin:3px 0}
   .rodape{margin-top:36px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px}
 </style></head><body>
-<div class="topo"><h1>TRIBUNAL DE JUSTIÃ‡A DO MARANHÃƒO</h1><p>Departamento de GestÃ£o de Pessoas Â· Sistema GENTE v3</p></div>
+<div class="topo"><h1>PREFEITURA MUNICIPAL — GENTE</h1><p>Departamento de Gestão de Pessoas · Sistema GENTE v3</p></div>
 <div class="titulo">{$tipo}</div>
 <div class="corpo">
-<p>Declaramos, para os devidos fins de direito, que <strong>{$funcNome}</strong>, servidor(a) com matrÃ­cula <strong>{$funcMatricula}</strong>, encontra-se regularmente vinculado(a) ao quadro de pessoal desta instituiÃ§Ã£o, na forma da legislaÃ§Ã£o vigente.</p>
-<p>Esta declaraÃ§Ã£o Ã© emitida a pedido do(a) interessado(a) e tem validade de <strong>90 (noventa) dias</strong> a contar da data de emissÃ£o.</p>
+<p>Declaramos, para os devidos fins de direito, que <strong>{$funcNome}</strong>, servidor(a) com matrícula <strong>{$funcMatricula}</strong>, encontra-se regularmente vinculado(a) ao quadro de pessoal desta instituição, na forma da legislação vigente.</p>
+<p>Esta declaração é emitida a pedido do(a) interessado(a) e tem validade de <strong>90 (noventa) dias</strong> a contar da data de emissão.</p>
 </div>
 <div class="tabela"><table>
 <tr><td>Servidor(a):</td><td>{$funcNome}</td></tr>
-<tr><td>MatrÃ­cula:</td><td>{$funcMatricula}</td></tr>
+<tr><td>Matrícula:</td><td>{$funcMatricula}</td></tr>
 <tr><td>CPF:</td><td>{$cpf}</td></tr>
 <tr><td>Cargo:</td><td>{$cargo}</td></tr>
 <tr><td>Setor:</td><td>{$setor}</td></tr>
@@ -4721,17 +5818,15 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 <tr><td>Emitido em:</td><td>{$hoje}</td></tr>
 </table></div>
 <div class="assinatura"><div class="linha"></div>
-<p><strong>Departamento de GestÃ£o de Pessoas</strong></p>
-<p>Assinado digitalmente Â· {$hoje}</p></div>
-<div class="rodape">Documento gerado eletronicamente Â· Protocolo {$proto} Â· Sistema GENTE v3 Â· {$hoje}</div>
+<p><strong>Departamento de Gestão de Pessoas</strong></p>
+<p>Assinado digitalmente · {$hoje}</p></div>
+<div class="rodape">Documento gerado eletronicamente · Protocolo {$proto} · Sistema GENTE v3 · {$hoje}</div>
 </body></html>
 HTML;
             }
 
-            return response($html, 200, [
-                'Content-Type' => 'text/html; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="declaracao-' . $proto . '.html"',
-            ]);
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
+            return $pdf->download('declaracao-' . $proto . '.pdf');
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);
         }
@@ -4784,7 +5879,7 @@ HTML;
             $obs = $request->obs ?? null;
 
             if (!in_array($status, ['pronto', 'indeferido', 'andamento', 'pendente'])) {
-                return response()->json(['erro' => 'Status invÃ¡lido.'], 422);
+            return response()->json(['erro' => 'Status inválido.'], 422);
             }
 
             \Illuminate\Support\Facades\DB::table('DECLARACAO')
@@ -4862,7 +5957,7 @@ HTML;
             $tipo = $request->tipo;
             $html = $request->html ?? '';
             if (!$tipo || !$html)
-                return response()->json(['erro' => 'tipo e html sÃ£o obrigatÃ³rios'], 422);
+            return response()->json(['erro' => 'tipo e html são obrigatórios'], 422);
 
             $agora = now()->toDateTimeString();
             $existe = \Illuminate\Support\Facades\DB::table('DECLARACAO_MODELO')
@@ -4889,7 +5984,10 @@ HTML;
     Route::delete('/rh/modelos/{tipo}', function ($tipo) {
         try {
             $tipo = urldecode($tipo);
-            \Illuminate\Support\Facades\DB::table('DECLARACAO_MODELO')->where('MODELO_TIPO', $tipo)->delete();
+            $deleted = \Illuminate\Support\Facades\DB::table('DECLARACAO_MODELO')->where('MODELO_TIPO', $tipo)->delete();
+            if (!$deleted) {
+                return response()->json(['erro' => 'Modelo não encontrado.'], 404);
+            }
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
             return response()->json(['erro' => $e->getMessage()], 500);

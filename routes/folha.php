@@ -124,7 +124,10 @@ Route::get('/folhas/{id}/detalhes', function (int $id) {
 // POST /api/v3/folhas/{id}/confirmar — Fechar a folha
 Route::post('/folhas/{id}/confirmar', function (int $id) {
     try {
-        DB::table('FOLHA')->where('FOLHA_ID', $id)->update(['FOLHA_STATUS' => 'Fechada', 'FOLHA_SITUACAO' => 'F', 'updated_at' => now()]);
+        $updated = DB::table('FOLHA')->where('FOLHA_ID', $id)->update(['FOLHA_STATUS' => 'Fechada', 'FOLHA_SITUACAO' => 'F', 'updated_at' => now()]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Folha não encontrada.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
@@ -356,7 +359,10 @@ Route::delete('/folhas/{id}/lancamentos/{lancId}', function (int $id, int $lancI
         if ($folha && in_array($folha->FOLHA_STATUS ?? '', ['Fechada', 'F'])) {
             return response()->json(['erro' => 'Folha fechada — lançamentos não podem ser removidos.'], 403);
         }
-        DB::table('LANCAMENTO_FOLHA')->where('LANCAMENTO_ID', $lancId)->delete();
+        $deleted = DB::table('LANCAMENTO_FOLHA')->where('LANCAMENTO_ID', $lancId)->delete();
+        if (!$deleted) {
+            return response()->json(['erro' => 'Lançamento não encontrado.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);

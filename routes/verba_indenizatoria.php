@@ -32,7 +32,10 @@ Route::post('/verba-indenizatoria/tipos', function (Request $request) {
         ];
 
         if ($id) {
-            DB::table('VERBA_TIPO')->where('VERBA_TIPO_ID', $id)->update($payload);
+            $updated = DB::table('VERBA_TIPO')->where('VERBA_TIPO_ID', $id)->update($payload);
+            if (!$updated) {
+                return response()->json(['erro' => 'Tipo de verba não encontrado ou sem alterações.'], 404);
+            }
         } else {
             $payload['created_at'] = now();
             $id = DB::table('VERBA_TIPO')->insertGetId($payload);
@@ -183,10 +186,13 @@ Route::post('/verba-indenizatoria/lote', function (Request $request) {
 // ── PATCH: aprovar / rejeitar lançamento ──────────────────────────
 Route::patch('/verba-indenizatoria/{id}/status', function (Request $request, $id) {
     try {
-        DB::table('VERBA_LANCAMENTO')->where('VERBA_LANCAMENTO_ID', $id)->update([
+        $updated = DB::table('VERBA_LANCAMENTO')->where('VERBA_LANCAMENTO_ID', $id)->update([
             'STATUS' => $request->status,
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Lançamento não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
@@ -199,7 +205,10 @@ Route::delete('/verba-indenizatoria/{id}', function ($id) {
         $vl = DB::table('VERBA_LANCAMENTO')->where('VERBA_LANCAMENTO_ID', $id)->first();
         if (!$vl || $vl->STATUS !== 'PENDENTE')
             return response()->json(['erro' => 'Só é possível cancelar lançamentos PENDENTES.'], 422);
-        DB::table('VERBA_LANCAMENTO')->where('VERBA_LANCAMENTO_ID', $id)->delete();
+        $deleted = DB::table('VERBA_LANCAMENTO')->where('VERBA_LANCAMENTO_ID', $id)->delete();
+        if (!$deleted) {
+            return response()->json(['erro' => 'Lançamento não encontrado.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);

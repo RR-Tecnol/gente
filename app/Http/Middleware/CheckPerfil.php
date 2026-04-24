@@ -8,6 +8,22 @@ use Illuminate\Support\Facades\Auth;
 
 class CheckPerfil
 {
+    private function normalizePerfil(string $perfil): string
+    {
+        $perfil = trim($perfil);
+        $perfil = mb_strtolower($perfil, 'UTF-8');
+        $perfil = strtr($perfil, [
+            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a',
+            'é' => 'e', 'ê' => 'e',
+            'í' => 'i',
+            'ó' => 'o', 'ô' => 'o', 'õ' => 'o',
+            'ú' => 'u',
+            'ç' => 'c',
+        ]);
+
+        return $perfil;
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -23,15 +39,24 @@ class CheckPerfil
         }
 
         $user = Auth::user();
+
+        // Em ambiente não-produtivo, libera o admin local para teste total de rotas.
+        if (!app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
+            return $next($request);
+        }
+
         $user->load('usuarioPerfis.perfil');
 
         $temAcesso = false;
+        $perfisPermitidos = array_map(fn($p) => $this->normalizePerfil((string) $p), $perfis);
 
         foreach ($user->usuarioPerfis as $usuarioPerfil) {
             // Verifica se o vínculo do perfil está ativo para o usuário
             if ($usuarioPerfil->USUARIO_PERFIL_ATIVO == 1 && $usuarioPerfil->perfil) {
+                $perfilUsuario = $this->normalizePerfil((string) $usuarioPerfil->perfil->PERFIL_NOME);
+
                 // Checa se o nome do perfil está na lista de perfis permitidos
-                if (in_array($usuarioPerfil->perfil->PERFIL_NOME, $perfis)) {
+                if (in_array($perfilUsuario, $perfisPermitidos, true)) {
                     $temAcesso = true;
                     break;
                 }

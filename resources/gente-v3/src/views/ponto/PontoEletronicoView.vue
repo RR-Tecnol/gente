@@ -293,7 +293,11 @@ const baterPonto = async () => {
     const idx = registros.value.findIndex(r => r.dia === hoje.getDate())
     if (idx >= 0) registros.value[idx].batidas.push({ hora, tipo })
     else registros.value.push({ dia: hoje.getDate(), batidas: [{ hora, tipo }] })
-  } catch { baterMsg.value = '❌ Erro ao registrar.'; baterMsgClass.value = 'err' }
+  } catch (e) {
+    const msg = e?.response?.data?.erro || e?.response?.data?.error || 'Erro ao registrar.'
+    baterMsg.value = `❌ ${msg}`
+    baterMsgClass.value = 'err'
+  }
   finally { baterPontoLoading.value = false; setTimeout(() => { baterMsg.value = '' }, 4000) }
 }
 

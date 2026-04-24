@@ -263,14 +263,39 @@ const submitChangePassword = async () => {
 }
 
 const authStore = useAuthStore()
+const recaptchaReady = ref(false)
+const recaptchaScriptInjected = ref(false)
+const recaptchaSiteKey = (import.meta.env.VITE_RECAPTCHA_SITE_KEY || '').trim()
+const isDevLikeEnv = ['development', 'local', 'test'].includes((import.meta.env.MODE || '').toLowerCase())
+const shouldUseRecaptcha = !!recaptchaSiteKey && !isDevLikeEnv
 
 onMounted(() => {
   if (route.query.sessao_expirada) {
     errorMessage.value = 'Sessão expirada. Por favor, faça login novamente.'
   }
-  const script = document.createElement('script')
-  script.src = `https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`
-  document.head.appendChild(script)
+
+  // Em dev/local sem chave, o login segue sem reCAPTCHA para não bloquear testes.
+  if (!shouldUseRecaptcha) return
+
+  if (window.grecaptcha) {
+    recaptchaReady.value = true
+    return
+  }
+
+  if (!recaptchaScriptInjected.value) {
+    const script = document.createElement('script')
+    script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      recaptchaReady.value = true
+    }
+    script.onerror = () => {
+      recaptchaReady.value = false
+    }
+    document.head.appendChild(script)
+    recaptchaScriptInjected.value = true
+  }
 })
 
 const handleLogin = async () => {
@@ -278,19 +303,31 @@ const handleLogin = async () => {
   loading.value = true
   errorMessage.value = ''
   try {
-    const token = await new Promise(resolve =>
-      window.grecaptcha.ready(() =>
-        window.grecaptcha.execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'login' })
-          .then(resolve)
-      )
-    )
+    let token = null
+
+    if (shouldUseRecaptcha) {
+      if (!recaptchaReady.value || !window.grecaptcha) {
+        throw new Error('recaptcha_unavailable')
+      }
+
+      token = await new Promise((resolve, reject) => {
+        window.grecaptcha.ready(() => {
+          window.grecaptcha
+            .execute(recaptchaSiteKey, { action: 'login' })
+            .then(resolve)
+            .catch(reject)
+        })
+      })
+    }
 
     await api.get('/csrf-cookie')
-    const resp = await api.post('/api/auth/login', {
+    const payload = {
       USUARIO_LOGIN: credentials.cpf,
-      USUARIO_SENHA: credentials.password,
-      recaptcha_token: token
-    })
+      USUARIO_SENHA: credentials.password
+    }
+    if (token) payload.recaptcha_token = token
+
+    const resp = await api.post('/api/auth/login', payload)
 
     if (resp.data.user?.alterar_senha) {
       newPasswordForm.current = credentials.password
@@ -301,6 +338,10 @@ const handleLogin = async () => {
     authStore.clearCache() // BUG-03: invalida cache para forçar fetchUser no guard
     router.push('/dashboard')
   } catch (err) {
+    if (err?.message === 'recaptcha_unavailable') {
+      errorMessage.value = 'reCAPTCHA indisponível. Verifique a chave no ambiente.'
+      return
+    }
     if (err.response?.status === 422 || err.response?.status === 401) {
       errorMessage.value = 'Credenciais incorretas ou conta inativa.'
     } else {

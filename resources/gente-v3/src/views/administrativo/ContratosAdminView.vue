@@ -370,7 +370,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch, nextTick } from 'vue'
 import api from '@/plugins/axios'
-import lucide from 'lucide'
+import { createIcons, icons } from 'lucide'
 
 const tabs = [
   { id: 'ativos', name: 'Contratos Ativos', icon: 'check-circle' },
@@ -429,7 +429,7 @@ watch(activeTab, (newVal) => {
   if (newVal === 'encerrados') fetchEncerrados()
   if (newVal === 'fiscalizacao' && selectedFiscalContractId.value) carregarFiscalizacoes()
   
-  nextTick(() => lucide.createIcons())
+  nextTick(() => createIcons({ icons }))
 })
 
 // Helpers
@@ -481,7 +481,7 @@ const abrirDetalhes = async (c) => {
     const res = await api.get(`/api/v3/contratos-admin/${c.CONTRATO_ID}`)
     selectedContratoDetails.value = res.data
     detalhesModal.value = true
-    nextTick(() => lucide.createIcons())
+    nextTick(() => createIcons({ icons }))
   } catch (err) {
     errorMsg.value = 'Falha ao carregar detalhes.'
   }

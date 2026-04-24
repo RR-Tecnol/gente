@@ -129,6 +129,9 @@
                   </div>
                 </div>
                 <div v-else class="np-empty">Nenhuma notificação 🎉</div>
+                <div v-if="notifErro" class="np-empty" style="color:#b91c1c;border-top:1px solid #fee2e2;background:#fef2f2;">
+                  {{ notifErro }}
+                </div>
 
                 <div class="np-footer">
                   <router-link to="/notificacoes" class="np-ver-todas" @click="notifPanelOpen = false">Ver todas →</router-link>
@@ -198,6 +201,7 @@ const notifPanelOpen = ref(false)
 const notifWrap = ref(null)
 const notificacoes = ref([])
 const naoLidas = ref(0)
+const notifErro = ref('')
 let notifInterval = null
 
 const fetchNotif = async () => {
@@ -205,7 +209,10 @@ const fetchNotif = async () => {
     const { data } = await api.get('/api/v3/notificacoes')
     notificacoes.value = data.notificacoes ?? []
     naoLidas.value = data.nao_lidas ?? 0
-  } catch { /* silencia falhas de polling */ }
+    notifErro.value = ''
+  } catch (e) {
+    notifErro.value = e?.response?.data?.erro || 'Falha ao atualizar notificações.'
+  }
 }
 
 const toggleNotifPanel = async () => {
@@ -215,7 +222,14 @@ const toggleNotifPanel = async () => {
 
 const abrirNotif = async (n) => {
   if (!n.lida) {
-    try { await api.put(`/api/v3/notificacoes/${n.id}/lida`); n.lida = true; naoLidas.value = Math.max(0, naoLidas.value - 1) } catch {}
+    try {
+      await api.put(`/api/v3/notificacoes/${n.id}/lida`)
+      n.lida = true
+      naoLidas.value = Math.max(0, naoLidas.value - 1)
+      notifErro.value = ''
+    } catch (e) {
+      notifErro.value = e?.response?.data?.erro || 'Falha ao marcar notificação como lida.'
+    }
   }
   if (n.url) { notifPanelOpen.value = false; router.push(n.url) }
 }
@@ -225,7 +239,10 @@ const marcarTodasLidas = async () => {
     await api.put('/api/v3/notificacoes/lidas')
     notificacoes.value.forEach(n => n.lida = true)
     naoLidas.value = 0
-  } catch {}
+    notifErro.value = ''
+  } catch (e) {
+    notifErro.value = e?.response?.data?.erro || 'Falha ao marcar todas as notificações.'
+  }
 }
 
 const tempoRelativo = (iso) => {
@@ -387,9 +404,6 @@ const ALL_NAV_ITEMS = [
   { type: 'item', to: '/atestados-medicos',
     label: 'Atestados Médicos', icon: 'hospital',
     roles: ['admin', 'rh'] },
-  { type: 'item', to: '/frequencia',
-    label: 'Controle de Frequência', icon: 'clipboard-check',
-    roles: ['admin', 'rh', 'gestor'] },
 
   // ── Saúde Ocupacional ───────────────────────────────────────────
   { type: 'section', label: 'Saúde Ocupacional',
@@ -498,6 +512,8 @@ const ALL_NAV_ITEMS = [
     label: 'Agenda', icon: 'agenda', roles: [] },
   { type: 'item', to: '/comunicados',
     label: 'Comunicados', icon: 'megaphone', roles: [] },
+  { type: 'item', to: '/notificacoes',
+    label: 'Notificações', icon: 'bell', roles: [] },
   { type: 'item', to: '/ouvidoria',
     label: 'Ouvidoria', icon: 'comment', roles: [] },
   { type: 'item', to: '/ouvidoria-admin',

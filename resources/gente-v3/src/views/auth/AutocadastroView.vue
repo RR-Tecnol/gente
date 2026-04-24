@@ -156,6 +156,7 @@
             <div class="form-field">
               <label>CEP</label>
               <input v-model="form.cep" type="text" placeholder="00000-000" @input="mascararCep" @blur="buscarCep" maxlength="9" />
+              <span v-if="cepErro" class="campo-aviso" style="color:#b91c1c;">{{ cepErro }}</span>
             </div>
           </div>
           <div class="form-row2">
@@ -417,6 +418,7 @@ const tokenStatus = ref(null)
 const carregando   = ref(true)
 const enviando     = ref(false)
 const erro         = ref('')
+const cepErro      = ref('')
 
 const form = ref({
   nome: '', nome_social: '', cpf: '', data_nasc: '', sexo: '',
@@ -523,8 +525,13 @@ const buscarCep = async () => {
       form.value.bairro     = data.bairro     || ''
       form.value.cidade     = data.localidade || ''
       form.value.uf         = data.uf         || ''
+      cepErro.value = ''
+    } else {
+      cepErro.value = 'CEP não encontrado. Confira o número informado.'
     }
-  } catch {}
+  } catch {
+    cepErro.value = 'Não foi possível consultar o CEP agora. Preencha o endereço manualmente.'
+  }
 }
 
 const mascararCpf = () => {

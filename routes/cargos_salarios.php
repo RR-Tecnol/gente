@@ -160,9 +160,9 @@ Route::post('/funcoes', function (\Illuminate\Http\Request $request) {
         } catch (\Throwable $e) {
         }
         $funcao->save();
-        return response()->json(['message' => 'FunÃ§Ã£o criada com sucesso.', 'funcao_id' => $funcao->ATRIBUICAO_ID], 201);
+        return response()->json(['message' => 'Função criada com sucesso.', 'funcao_id' => $funcao->ATRIBUICAO_ID], 201);
     } catch (\Throwable $e) {
-        return response()->json(['erro' => 'Erro ao criar funÃ§Ã£o: ' . $e->getMessage()], 500);
+        return response()->json(['erro' => 'Erro ao criar função: ' . $e->getMessage()], 500);
     }
 });
 
@@ -187,7 +187,7 @@ Route::put('/funcoes/{id}', function ($id, \Illuminate\Http\Request $request) {
         } catch (\Throwable $e) {
         }
         $funcao->save();
-        return response()->json(['message' => 'FunÃ§Ã£o atualizada com sucesso.']);
+        return response()->json(['message' => 'Função atualizada com sucesso.']);
     } catch (\Throwable $e) {
         return response()->json(['erro' => 'Erro ao atualizar: ' . $e->getMessage()], 500);
     }
@@ -201,9 +201,9 @@ Route::delete('/funcoes/{id}', function ($id) {
             $funcao->ATRIBUICAO_ATIVO = 0;
             $funcao->save();
         } catch (\Throwable $e) {
-            return response()->json(['message' => 'Soft delete nÃ£o suportado nesta tabela.']);
+            return response()->json(['message' => 'Soft delete não suportado nesta tabela.']);
         }
-        return response()->json(['message' => 'FunÃ§Ã£o inativada com sucesso.']);
+        return response()->json(['message' => 'Função inativada com sucesso.']);
     } catch (\Throwable $e) {
         return response()->json(['erro' => 'Erro ao inativar: ' . $e->getMessage()], 500);
     }

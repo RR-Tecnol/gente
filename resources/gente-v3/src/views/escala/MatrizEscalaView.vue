@@ -401,9 +401,13 @@ const enviarSubModal = async () => {
       turno:          modalSub.turno,
       motivo:         modalSub.motivo,
     })
-  } catch { /* fallback: ignora erro de rede */ }
-  modalSub.aberto = false
-  mostrarToast('success', '🔄', `Substituição de ${modalSub.func?.nome} → ${subObj?.nome ?? '?'} solicitada!`)
+    modalSub.aberto = false
+    mostrarToast('success', '🔄', `Substituição de ${modalSub.func?.nome} → ${subObj?.nome ?? '?'} solicitada!`)
+  } catch (e) {
+    modalSub.erro = e?.response?.data?.erro || 'Falha ao solicitar substituição. Tente novamente.'
+  } finally {
+    modalSub.enviando = false
+  }
 }
 
 // ── Modal Nova Escala ────────────────────────────────────────
@@ -417,7 +421,12 @@ const novaEscala = reactive({ mes: new Date().getMonth() + 1, ano: new Date().ge
 const carregarSetores = async () => {
   try {
     const { data } = await api.get('/api/v3/setores')
-    setoresDisponiveis.value = (data.setores ?? data).map(s => ({ id: s.SETOR_ID, nome: s.SETOR_NOME }))
+    setoresDisponiveis.value = (data.setores ?? data ?? [])
+      .map((s) => ({
+        id: s?.id ?? s?.SETOR_ID ?? null,
+        nome: s?.nome ?? s?.SETOR_NOME ?? '',
+      }))
+      .filter((s) => s.id && s.nome)
   } catch {
     // Extrai setores únicos das escalas já carregadas como fallback
     setoresDisponiveis.value = [...new Set(escalas.value.map(e => e.setor).filter(Boolean))]
