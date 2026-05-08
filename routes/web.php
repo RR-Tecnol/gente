@@ -1621,6 +1621,11 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
     // Editor SQL ad-hoc legado — vetor de SQL injection sem ACL nova.
     // Decisão de segurança: remover endpoint mesmo mantendo ScriptController.
 
+    /*
+     * FASE-4-COMENTADO 08/05/2026 (decisão 7.e do MAPA): rotas termo legadas comentadas.
+     * View Blade zumbi resources/views/termo/termo_view.blade.php DELETADA nesta mesma fase.
+     * TermoController preservado em app/Http/Controllers/ para reaproveitamento futuro.
+     *
     Route::prefix('termo')->group(function () {
         Route::get('/', [TermoController::class, 'view'])->name('view.termo');
         ;
@@ -1630,10 +1635,15 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::get('download', [TermoController::class, "download"])->name('download.termo');
         Route::get('download/{id}', [TermoController::class, "download"]);
     });
+    */
 
+    /*
+     * FASE-4-COMENTADO 08/05/2026 (decisão 7.e do MAPA): rota termo_usuario legada comentada.
+     *
     Route::prefix('termo_usuario')->group(function () {
         Route::post('inserir', [TermoUsuarioController::class, "inserir"])->name('inserir.termo_usuario');
     });
+    */
 
     // FASE-4-COMENTADO 08/05/2026 (decisão 6 do MAPA): rota CEP legada removida.
     // SPA Vue 3 (AutocadastroView) consome viacep.com.br diretamente.
