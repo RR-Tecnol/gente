@@ -48,7 +48,7 @@ class Folha extends Model
         'VINCULO_ID' => 'integer',
         'FOLHA_COMPETENCIA' => Periodo::class,
         'FOLHA_QTD_SERVIDORES' => 'integer',
-        'FOLHA_VALOR_TOTAL' => 'integer',
+        'FOLHA_VALOR_TOTAL' => 'decimal:2',
     ];
 
     public function historicosFolhas()
