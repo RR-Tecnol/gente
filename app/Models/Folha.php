@@ -141,6 +141,11 @@ class Folha extends Model
             ->find($id);
     }
 
+    /**
+     * @deprecated Fase 3 (08/05/2026). Substituído por MotorFolhaService::despacharProcessamentoAssincrono().
+     *             Stored procedure T-SQL sp_gera_folha NÃO é mais o motor canônico do GENTE v3.
+     *             Mantido apenas para compatibilidade com código legado que possa chamar diretamente.
+     */
     public function salvaFolha($lista_id_setores)
     {
         $retorno = '';
@@ -156,6 +161,11 @@ class Folha extends Model
         ));
     }
 
+    /**
+     * @deprecated Fase 3 (08/05/2026). Substituído por MotorFolhaService::despacharProcessamentoAssincrono().
+     *             Stored procedure T-SQL sp_gera_folha NÃO é mais o motor canônico.
+     *             Mantido apenas como API legada — não chamar em código novo.
+     */
     public static function processarFolha($request, $userId)
     {
         $periodo = explode('/', $request["FOLHA_COMPETENCIA"]);
@@ -183,6 +193,11 @@ class Folha extends Model
         );
     }
 
+    /**
+     * @deprecated Fase 3 (08/05/2026). Substituído por ProcessarFolhaJob (que internamente chama MotorFolhaService).
+     *             Stored procedure T-SQL sp_gera_folha NÃO é mais o motor canônico.
+     *             FolhaController::alterar agora despacha o Job no lugar de chamar este método.
+     */
     public static function reprocessarFolha($folhaId, $userId)
     {
         DB::statement(
