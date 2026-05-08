@@ -417,90 +417,133 @@ XML;
     }
 
     /**
-     * S-2206 - Alteração de Contrato de Trabalho/Vínculo
+     * S-2206 — Alteração de Contrato de Trabalho/Vínculo.
+     *
+     * Correções Fase 5:
+     *   - R53: tpAmb via config.
+     *   - R55: removido <perApur> (S-2206 não usa); <dtAlteracao> recebe ?string $dtAlteracao parâmetro.
+     *   - R59: CNPJ via config.
+     *   - R60: indRetif via parâmetro ou config.
+     *
+     * @param  int          $funcionarioId
+     * @param  string|null  $dtAlteracao  AAAA-MM-DD (default: hoje, fallback: FUNCIONARIO_DATA_INICIO)
+     * @param  int          $indRetif     1=original, 2=retificação, 3=exclusão
      */
-    public function gerarS2206(int $funcionarioId): string
+    public function gerarS2206(int $funcionarioId, ?string $dtAlteracao = null, int $indRetif = 0): string
     {
         $func = $this->getFuncionarioDados($funcionarioId);
-        
-        $cnpj = '06205244000149';
-        $idEvento = $this->gerarIdEvento('1', $cnpj, $funcionarioId);
+
+        // R59: CNPJ via config
+        $cnpj = (string) config('esocial.cnpj_empregador');
+        $tpInsc = (string) config('esocial.tipo_inscricao', '1');
+        $idEvento = $this->gerarIdEvento($tpInsc, $cnpj, $funcionarioId);
+
+        // R53: ambiente via config
+        $tpAmb = (int) config('esocial.ambiente', 2);
+        // R60: indRetif via parâmetro ou config
+        $indRetif = $indRetif > 0 ? $indRetif : (int) config('esocial.ind_retif_default', 1);
+        $verProc = (string) config('esocial.versao_proc', 'GENTE-v3');
+
         $cpfLimpo = preg_replace('/\D/', '', $func->PESSOA_CPF_NUMERO ?? '00000000000');
-        
+        $matricula = htmlspecialchars((string) ($func->FUNCIONARIO_MATRICULA ?? ''), ENT_XML1, 'UTF-8');
+
+        // R55: dtAlteracao parâmetro com fallback (não recebe FUNCIONARIO_DATA_INICIO automaticamente)
+        $dtAlt = $dtAlteracao ?: ($func->FUNCIONARIO_DATA_INICIO ?? now()->format('Y-m-d'));
+        $codCargo = (int) ($func->CARGO_ID ?? 0);
+
         $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtAltContratual/v02_01_00">
   <evtAltContratual Id="{$idEvento}">
     <ideEvento>
-      <indRetif>1</indRetif>
-      <perApur>{$func->FUNCIONARIO_DATA_INICIO}</perApur>
-      <indApuracao>1</indApuracao>
-      <indGuia>1</indGuia>
-      <tpAmb>1</tpAmb>
+      <indRetif>{$indRetif}</indRetif>
+      <tpAmb>{$tpAmb}</tpAmb>
       <procEmi>1</procEmi>
-      <verProc>GENTE-v3</verProc>
+      <verProc>{$verProc}</verProc>
     </ideEvento>
     <ideEmpregador>
-      <tpInsc>1</tpInsc>
+      <tpInsc>{$tpInsc}</tpInsc>
       <nrInsc>{$cnpj}</nrInsc>
     </ideEmpregador>
     <ideVinculo>
       <cpfTrab>{$cpfLimpo}</cpfTrab>
-      <matricula>{$func->FUNCIONARIO_MATRICULA}</matricula>
+      <matricula>{$matricula}</matricula>
     </ideVinculo>
     <altContratual>
-      <dtAlteracao>{$func->FUNCIONARIO_DATA_INICIO}</dtAlteracao>
+      <dtAlteracao>{$dtAlt}</dtAlteracao>
       <infoCargo>
-        <codCargo>{$func->CARGO_ID}</codCargo>
+        <codCargo>{$codCargo}</codCargo>
       </infoCargo>
     </altContratual>
   </evtAltContratual>
 </eSocial>
 XML;
+
         return $xml;
     }
 
     /**
-     * S-2299 - Desligamento
+     * S-2299 — Desligamento.
+     *
+     * Correções Fase 5:
+     *   - R53: tpAmb via config.
+     *   - R55: removido <perApur> (S-2299 não usa); <dtDeslig> formato AAAA-MM-DD.
+     *   - R59: CNPJ via config.
+     *   - R60: indRetif via parâmetro ou config.
+     *
+     * @param  int          $funcionarioId
+     * @param  string|null  $dataDesligamento  AAAA-MM-DD (default: FUNCIONARIO_DATA_FIM ou hoje)
+     * @param  string       $mtvDeslig         Motivo do desligamento (default 02 = exoneração)
+     * @param  int          $indRetif          1=original, 2=retificação, 3=exclusão
      */
-    public function gerarS2299(int $funcionarioId, string $dataDesligamento = null): string
+    public function gerarS2299(int $funcionarioId, ?string $dataDesligamento = null, string $mtvDeslig = '02', int $indRetif = 0): string
     {
         $func = $this->getFuncionarioDados($funcionarioId);
         $dtDesligamento = $dataDesligamento ?? $func->FUNCIONARIO_DATA_FIM ?? now()->format('Y-m-d');
-        
-        $cnpj = '06205244000149';
-        $idEvento = $this->gerarIdEvento('1', $cnpj, $funcionarioId);
+
+        // R59: CNPJ via config
+        $cnpj = (string) config('esocial.cnpj_empregador');
+        $tpInsc = (string) config('esocial.tipo_inscricao', '1');
+        $idEvento = $this->gerarIdEvento($tpInsc, $cnpj, $funcionarioId);
+
+        // R53: ambiente via config
+        $tpAmb = (int) config('esocial.ambiente', 2);
+        // R60: indRetif via parâmetro ou config
+        $indRetif = $indRetif > 0 ? $indRetif : (int) config('esocial.ind_retif_default', 1);
+        $verProc = (string) config('esocial.versao_proc', 'GENTE-v3');
+
         $cpfLimpo = preg_replace('/\D/', '', $func->PESSOA_CPF_NUMERO ?? '00000000000');
-        
+        $matricula = htmlspecialchars((string) ($func->FUNCIONARIO_MATRICULA ?? ''), ENT_XML1, 'UTF-8');
+        $mtvLimpo = preg_replace('/\D/', '', $mtvDeslig);
+        $mtvLimpo = str_pad(substr($mtvLimpo, 0, 2), 2, '0', STR_PAD_LEFT);
+
         $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtDeslig/v02_01_00">
   <evtDeslig Id="{$idEvento}">
     <ideEvento>
-      <indRetif>1</indRetif>
-      <perApur>{$dtDesligamento}</perApur>
-      <indApuracao>1</indApuracao>
-      <indGuia>1</indGuia>
-      <tpAmb>1</tpAmb>
+      <indRetif>{$indRetif}</indRetif>
+      <tpAmb>{$tpAmb}</tpAmb>
       <procEmi>1</procEmi>
-      <verProc>GENTE-v3</verProc>
+      <verProc>{$verProc}</verProc>
     </ideEvento>
     <ideEmpregador>
-      <tpInsc>1</tpInsc>
+      <tpInsc>{$tpInsc}</tpInsc>
       <nrInsc>{$cnpj}</nrInsc>
     </ideEmpregador>
     <ideVinculo>
       <cpfTrab>{$cpfLimpo}</cpfTrab>
-      <matricula>{$func->FUNCIONARIO_MATRICULA}</matricula>
+      <matricula>{$matricula}</matricula>
     </ideVinculo>
     <infoDeslig>
-      <mtvDeslig>02</mtvDeslig>
+      <mtvDeslig>{$mtvLimpo}</mtvDeslig>
       <dtDeslig>{$dtDesligamento}</dtDeslig>
       <indPagtoAPI>N</indPagtoAPI>
     </infoDeslig>
   </evtDeslig>
 </eSocial>
 XML;
+
         return $xml;
     }
 }
