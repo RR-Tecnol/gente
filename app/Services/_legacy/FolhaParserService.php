@@ -1,6 +1,17 @@
 <?php
 
-namespace App\Services;
+/**
+ * @deprecated Aposentado em 08/05/2026 (Fase 3). Substituído por App\Services\MotorFolhaService.
+ *             Mantido em app/Services/_legacy/ apenas para auditoria comparativa TCE-MA.
+ *
+ * NÃO USAR EM CÓDIGO NOVO. Esta classe usa colunas DETALHE_ESCALA_ITEM_FALTA / ATRASO
+ * que NÃO existem no schema oficial das migrations 2026_03_05_210000_create_escala_tables.php.
+ * Funciona em SQLite legado pelo create-on-the-fly do Eloquent, mas pode quebrar em SQL Server.
+ *
+ * Para reativar (não recomendado), restaurar `app/Services/_legacy/FolhaParserService.php`
+ * para `app/Services/FolhaParserService.php` e atualizar namespace de volta.
+ */
+namespace App\Services\_Legacy;
 
 use App\Models\AtribuicaoLotacao;
 use App\Models\DetalheEscala;
