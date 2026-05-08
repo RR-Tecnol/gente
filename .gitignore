@@ -30,3 +30,5 @@ commit.txt
 resources/gente-v3/build_log*.txt
 resources/gente-v3/vite_log.txt
 resources/gente-v3/dist/
+
+/public/build-v3/
