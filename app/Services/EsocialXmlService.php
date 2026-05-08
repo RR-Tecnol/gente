@@ -122,58 +122,81 @@ class EsocialXmlService
     }
 
     /**
-     * S-1200 - Remuneração de Trabalhador
+     * S-1200 — Remuneração de Trabalhador.
+     *
+     * Correções Fase 5:
+     *   - R52: query corrigida para JOIN DETALHE_FOLHA + FOLHA por FUNCIONARIO_ID + competência,
+     *          campo correto DETALHE_FOLHA_PROVENTOS (não FOLHA_BRUTO).
+     *   - R53: tpAmb via config('esocial.ambiente') (default 2=homologação).
+     *   - R55: perApur normalizado para AAAA-MM via Carbon (não recebe AAAA-MM-DD).
+     *   - R59: CNPJ via config('esocial.cnpj_empregador').
+     *   - R60: indRetif via config('esocial.ind_retif_default'), permitindo retificação.
+     *
+     * @param  int     $funcionarioId
+     * @param  string  $competencia      AAAA-MM, AAAAMM ou AAAA-MM-DD (será normalizado)
+     * @param  int     $indRetif         1=original, 2=retificação, 3=exclusão
+     * @param  string  $codCateg         Código de categoria do trabalhador no eSocial (default 301)
      */
-    public function gerarS1200(int $funcionarioId, string $competencia): string
+    public function gerarS1200(int $funcionarioId, string $competencia, int $indRetif = 0, string $codCateg = '301'): string
     {
         $func = $this->getFuncionarioDados($funcionarioId);
-        
-        // Formata competência de 'Ym' ou 'Y-m' para 'YYYY-MM' (o schema de S-1200 permite YYYY-MM)
-        if (strlen($competencia) === 6) {
-            $perApur = substr($competencia, 0, 4) . '-' . substr($competencia, 4, 2);
-        } else {
-            $perApur = date('Y-m', strtotime($competencia));
-        }
 
-        // Calcula total de remuneração da competência baseada na FOLHA gerada
-        $remuneracaoTotal = DB::table('FOLHA')
-            ->where('FUNCIONARIO_ID', $funcionarioId)
-            ->where('FOLHA_COMPETENCIA', str_replace('-', '', $perApur))
-            ->sum('FOLHA_BRUTO') ?? '0.00';
+        // R55: normalizar competência para AAAA-MM (qualquer entrada → formato fixo)
+        $perApur = $this->normalizarCompetenciaYm($competencia);
 
-        $cnpj = '06205244000149';
-        $idEvento = $this->gerarIdEvento('1', $cnpj, $funcionarioId);
+        // R52: query correta — DETALHE_FOLHA tem FUNCIONARIO_ID; FOLHA tem FOLHA_COMPETENCIA.
+        // Soma DETALHE_FOLHA_PROVENTOS (não FOLHA_BRUTO, que não existe).
+        // Schema FOLHA_COMPETENCIA é string sem hífen (AAAAMM); convertemos.
+        $compSemHifen = str_replace('-', '', $perApur);
+        $remuneracaoTotal = (float) DB::table('DETALHE_FOLHA as df')
+            ->join('FOLHA as f', 'f.FOLHA_ID', '=', 'df.FOLHA_ID')
+            ->where('df.FUNCIONARIO_ID', $funcionarioId)
+            ->where('f.FOLHA_COMPETENCIA', $compSemHifen)
+            ->whereNull('df.DETALHE_FOLHA_ERRO')
+            ->sum('df.DETALHE_FOLHA_PROVENTOS');
+
+        // R59: CNPJ via config
+        $cnpj = (string) config('esocial.cnpj_empregador');
+        $tpInsc = (string) config('esocial.tipo_inscricao', '1');
+        $idEvento = $this->gerarIdEvento($tpInsc, $cnpj, $funcionarioId);
         $cpfLimpo = preg_replace('/\D/', '', $func->PESSOA_CPF_NUMERO ?? '00000000000');
-        
-        $codCateg = '301'; // Servidor Público Temporário/Estatutário
+
+        // R53: ambiente via config (default 2=homologação)
+        $tpAmb = (int) config('esocial.ambiente', 2);
+        // R60: indRetif via parâmetro ou config (default 1=original)
+        $indRetif = $indRetif > 0 ? $indRetif : (int) config('esocial.ind_retif_default', 1);
+        $verProc = (string) config('esocial.versao_proc', 'GENTE-v3');
+
+        $valorFmt = number_format($remuneracaoTotal, 2, '.', '');
+        $matricula = htmlspecialchars((string) ($func->FUNCIONARIO_MATRICULA ?? ''), ENT_XML1, 'UTF-8');
 
         $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtRemun/v02_01_00">
   <evtRemun Id="{$idEvento}">
     <ideEvento>
-      <indRetif>1</indRetif>
+      <indRetif>{$indRetif}</indRetif>
       <perApur>{$perApur}</perApur>
       <indApuracao>1</indApuracao>
       <indGuia>1</indGuia>
-      <tpAmb>1</tpAmb>
+      <tpAmb>{$tpAmb}</tpAmb>
       <procEmi>1</procEmi>
-      <verProc>GENTE-v3</verProc>
+      <verProc>{$verProc}</verProc>
     </ideEvento>
     <ideEmpregador>
-      <tpInsc>1</tpInsc>
+      <tpInsc>{$tpInsc}</tpInsc>
       <nrInsc>{$cnpj}</nrInsc>
     </ideEmpregador>
     <ideVinculo>
       <cpfTrab>{$cpfLimpo}</cpfTrab>
-      <matricula>{$func->FUNCIONARIO_MATRICULA}</matricula>
+      <matricula>{$matricula}</matricula>
     </ideVinculo>
     <dmDev>
       <codCateg>{$codCateg}</codCateg>
       <infoPerApur>
         <ideEstabLot>
           <remunPerApur>
-            <vrTotCont>{$remuneracaoTotal}</vrTotCont>
+            <vrTotCont>{$valorFmt}</vrTotCont>
           </remunPerApur>
         </ideEstabLot>
       </infoPerApur>
@@ -181,7 +204,29 @@ class EsocialXmlService
   </evtRemun>
 </eSocial>
 XML;
+
         return $xml;
+    }
+
+    /**
+     * Normaliza competência para AAAA-MM independente do input (R55).
+     * Aceita: 'AAAA-MM', 'AAAAMM', 'AAAA-MM-DD', timestamp.
+     */
+    private function normalizarCompetenciaYm(string $entrada): string
+    {
+        $limpa = preg_replace('/\D/', '', $entrada);
+
+        // Se tem 6+ dígitos, primeiros 4 são ano e próximos 2 são mês
+        if (strlen($limpa) >= 6) {
+            return substr($limpa, 0, 4) . '-' . substr($limpa, 4, 2);
+        }
+
+        // Fallback: tentar parsear via Carbon
+        try {
+            return \Carbon\Carbon::parse($entrada)->format('Y-m');
+        } catch (\Throwable $e) {
+            return now()->format('Y-m');
+        }
     }
 
     /**
