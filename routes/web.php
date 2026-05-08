@@ -1481,6 +1481,11 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::post("imprimir_unidade", [RelatorioController::class, "imprimirUnidade"])->name('imprimir_unidade');
     });
 
+    /*
+     * FASE-4-COMENTADO 08/05/2026 (decisão 7.b do MAPA): rotas aplicacao legadas comentadas.
+     * Cadastro de Aplicação RBAC v1 (Vue 2). Substituído por /api/v3/admin/* (RBAC v3).
+     * AplicacaoController preservado em app/Http/Controllers/ para reaproveitamento futuro.
+     *
     Route::prefix('aplicacao')->middleware('perfil:ADMINISTRADOR,Administrador')->group(function () {
         Route::get('/', [AplicacaoController::class, "view"]);
         Route::get('view', [AplicacaoController::class, "view"])->name('aplicacao.view');
@@ -1490,6 +1495,7 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::put('update', [AplicacaoController::class, "update"]);
         Route::match(['get', 'post'], 'list', [AplicacaoController::class, "list"]);
     });
+    */
 
     Route::prefix('evento')->group(function () {
         Route::get('/', [EventoController::class, "view"]);
