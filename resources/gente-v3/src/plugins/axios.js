@@ -110,8 +110,14 @@ api.interceptors.response.use(
             }).catch(() => { })
 
             // Só redireciona se não estamos já na tela de login
+            // Usa router push em vez de location.href para evitar reload do SPA
             if (!window.location.pathname.includes('/login')) {
-                window.location.href = '/login?sessao_expirada=1'
+                import('@/router').then(({ default: router }) => {
+                    router.push({ name: 'Login', query: { sessao_expirada: '1' } })
+                }).catch(() => {
+                    // Fallback se import dinâmico falhar
+                    window.location.href = '/login?sessao_expirada=1'
+                })
             }
         }
         return Promise.reject(error)
