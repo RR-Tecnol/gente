@@ -32,6 +32,8 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            \App\Http\Middleware\BlockBlacklistedIp::class,
+            \App\Http\Middleware\RequestTarpit::class,
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
@@ -42,6 +44,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \App\Http\Middleware\RequestTarpit::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
@@ -71,5 +74,10 @@ class Kernel extends HttpKernel
         'perfil' => \App\Http\Middleware\CheckPerfil::class,
         'audit' => \App\Http\Middleware\AuditLog::class,   // SEC-04
         'upload.safe' => \App\Http\Middleware\ValidateFileUpload::class,
+        'tenant.resolve' => \App\Http\Middleware\ResolveTenantContext::class,
+        'verify.request.signature' => \App\Http\Middleware\VerifyRequestSignature::class,
+        'honey.tripwire' => \App\Http\Middleware\HoneytokenTripwire::class,
+        'semad.escala.readonly' => \App\Http\Middleware\SemadEscalaReadOnly::class,
+        'tenant.scope' => \App\Http\Middleware\EnsureTenantScope::class,
     ];
 }

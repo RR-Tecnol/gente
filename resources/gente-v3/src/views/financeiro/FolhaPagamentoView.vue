@@ -45,7 +45,50 @@
       <p>Carregando folhas...</p>
     </div>
 
+    <!-- Fase 13.5 — observabilidade Bus::batch (polling) -->
+    <div v-if="batchUi.visible" class="batch-panel" :class="'batch-' + batchUi.status">
+      <div class="batch-panel-hdr">
+        <span class="batch-title">Processamento assíncrono</span>
+        <span class="batch-comp">{{ formatCompetencia(batchUi.competencia) }}</span>
+        <button type="button" class="batch-dismiss" @click="fecharPainelBatch" aria-label="Fechar">✕</button>
+      </div>
+      <div class="batch-bar-track" role="progressbar" :aria-valuenow="batchUi.progress" aria-valuemin="0" aria-valuemax="100">
+        <div class="batch-bar-fill" :style="{ width: Math.min(100, Math.max(0, batchUi.progress)) + '%' }"></div>
+      </div>
+      <div class="batch-meta">
+        <span v-if="batchUi.status === 'processing'">Em processamento… {{ batchUi.progress }}%</span>
+        <span v-else-if="batchUi.status === 'done'" class="batch-ok">Concluído (100%)</span>
+        <span v-else-if="batchUi.status === 'cancelled'" class="batch-warn">Cancelado</span>
+        <span v-else-if="batchUi.status === 'error'" class="batch-err">
+          <template v-if="(batchUi.failed_jobs ?? 0) > 0">Falha no motor: {{ batchUi.failed_jobs }} job(s) com erro.</template>
+          <template v-else>{{ batchUi.message || 'Não foi possível acompanhar o batch (rede ou permissão). Com QUEUE_CONNECTION=database é obrigatório ter php artisan queue:work a correr.' }}</template>
+        </span>
+        <span v-else>{{ batchUi.message }}</span>
+      </div>
+      <p v-if="batchUi.batchId" class="batch-id">Batch: <code>{{ batchUi.batchId }}</code></p>
+    </div>
+
     <template v-else>
+
+      <div class="section-card" :class="{ loaded }">
+        <h2 class="section-title">🧪 Painel de Consistência (Folha x Consignação x RPPS)</h2>
+        <div v-if="consistenciaLoading" class="state-box" style="padding:20px"><p>Validando consistência...</p></div>
+        <div v-else-if="!consistencia" class="empty-td">Sem dados de consistência para esta competência.</div>
+        <div v-else class="cons-wrap">
+          <div class="cons-head">
+            <span class="cons-status" :class="consistencia.status === 'coerente' ? 'sit-green' : 'sit-red'">
+              {{ consistencia.status === 'coerente' ? 'Coerente' : 'Inconsistente' }}
+            </span>
+            <span class="cons-meta">{{ consistencia.resumo?.regras_ok ?? 0 }}/{{ consistencia.resumo?.total_regras ?? 0 }} regras ok</span>
+          </div>
+          <div class="cons-list">
+            <div v-for="r in (consistencia.regras || [])" :key="r.codigo" class="cons-item">
+              <span class="cons-item-title">{{ r.mensagem }}</span>
+              <span class="cons-item-action">{{ r.acao }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- EVOLUÇÃO MENSAL ──────────────────────────────────────── -->
       <div class="section-card evolucao-card" :class="{ loaded }">
@@ -134,6 +177,9 @@
                     <button class="act-btn act-purple" title="Calcular Proventos (Motor)" @click="calcularProventos(f)">
                       ⚙️
                     </button>
+                    <button class="act-btn act-stream" title="Processar folha em segundo plano (batch + barra de progresso)" @click="processarFolhaAssincrono(f)">
+                      ⚡
+                    </button>
                     <button class="act-btn act-green" title="Confirmar/Fechar Folha" @click="confirmarFolha(f.FOLHA_ID)">
                       💾
                     </button>
@@ -163,7 +209,7 @@
           <button class="modal-close" @click="modalCalc = false">✕</button>
         </div>
         <div class="modal-body">
-          <p class="calc-hint">Selecione a competência (mês/ano) da folha já criada no banco para consolidar os totais.</p>
+          <p class="calc-hint">Selecione a competência (mês/ano). O cabeçalho da folha é criado automaticamente, se ainda não existir, e em seguida são consolidados os totais e as consignações.</p>
           <div class="cal-row">
             <div class="form-group">
               <label>Mês</label>
@@ -336,8 +382,108 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
+
+const POLL_MS = 2500
+
+const batchUi = ref({
+  visible: false,
+  folhaId: null,
+  competencia: '',
+  batchId: '',
+  progress: 0,
+  status: 'idle',
+  failed_jobs: 0,
+  message: '',
+})
+let batchPollTimer = null
+
+const limparPollBatch = () => {
+  if (batchPollTimer != null) {
+    clearInterval(batchPollTimer)
+    batchPollTimer = null
+  }
+}
+
+const fecharPainelBatch = () => {
+  limparPollBatch()
+  batchUi.value = { ...batchUi.value, visible: false, status: 'idle' }
+}
+
+const recarregarFolhas = async () => {
+  try {
+    const resp = await api.get('/api/v3/folhas')
+    folhas.value = Array.isArray(resp.data) ? resp.data : (resp.data.folhas ?? [])
+  } catch { /* ignora */ }
+}
+
+const processarFolhaAssincrono = async (folha) => {
+  if (!confirm(`Despachar o motor da folha em segundo plano (${formatCompetencia(folha.FOLHA_COMPETENCIA)})?`)) return
+  limparPollBatch()
+  batchUi.value = {
+    visible: true,
+    folhaId: folha.FOLHA_ID,
+    competencia: folha.FOLHA_COMPETENCIA,
+    batchId: '',
+    progress: 0,
+    status: 'processing',
+    failed_jobs: 0,
+    message: 'A despachar…',
+  }
+  try {
+    const { data, status } = await api.post('/api/v3/folha/processar', { folha_id: folha.FOLHA_ID })
+    if (status !== 202 || !data.batch_id) {
+      batchUi.value.status = 'error'
+      batchUi.value.message = data.erro || 'Resposta inesperada do servidor.'
+      return
+    }
+    batchUi.value.batchId = data.batch_id
+    batchUi.value.message = data.message || 'Em fila…'
+    await recarregarFolhas()
+
+    const batchId = data.batch_id
+    const tick = async () => {
+      try {
+        const { data: b } = await api.get(`/api/v3/folha/batch/${encodeURIComponent(batchId)}`)
+        batchUi.value.progress = typeof b.progress === 'number' ? b.progress : 0
+        batchUi.value.failed_jobs = b.failed_jobs ?? 0
+
+        if (b.cancelled) {
+          batchUi.value.status = 'cancelled'
+          limparPollBatch()
+          return
+        }
+        if (b.finished) {
+          if ((b.failed_jobs ?? 0) > 0) {
+            batchUi.value.status = 'error'
+          } else {
+            batchUi.value.status = 'done'
+            batchUi.value.progress = 100
+            await recarregarFolhas()
+            await carregarConsistenciaAtual()
+          }
+          limparPollBatch()
+          return
+        }
+      } catch (err) {
+        batchUi.value.status = 'error'
+        batchUi.value.message = err.response?.data?.erro || err.message || 'Erro ao consultar batch.'
+        limparPollBatch()
+      }
+    }
+
+    await tick()
+    batchPollTimer = setInterval(tick, POLL_MS)
+  } catch (e) {
+    batchUi.value.status = 'error'
+    batchUi.value.message = e.response?.data?.erro || e.message || 'Falha ao despachar.'
+  }
+}
+
+onUnmounted(() => {
+  limparPollBatch()
+})
 
 const loading = ref(true)
 const loaded = ref(false)
@@ -357,6 +503,8 @@ const modalDetalhes   = ref(false)
 const folhaSelecionada = ref(null)
 const detalhes        = ref([])
 const loadingDet      = ref(false)
+const consistencia = ref(null)
+const consistenciaLoading = ref(false)
 
 onMounted(async () => {
   try {
@@ -378,9 +526,27 @@ onMounted(async () => {
     ]
   } finally {
     loading.value = false
+    await carregarConsistenciaAtual()
     setTimeout(() => { loaded.value = true }, 80)
   }
 })
+
+const carregarConsistenciaAtual = async () => {
+  const comp = ultima.value?.FOLHA_COMPETENCIA_RAW || ultima.value?.FOLHA_COMPETENCIA
+  if (!comp) {
+    consistencia.value = null
+    return
+  }
+  consistenciaLoading.value = true
+  try {
+    const { data } = await api.get(`/api/v3/folhas/consistencia/${encodeURIComponent(String(comp))}`)
+    consistencia.value = data
+  } catch {
+    consistencia.value = null
+  } finally {
+    consistenciaLoading.value = false
+  }
+}
 
 const filtrarPorSecretaria = async () => {
   if (!secretariaSel.value) {
@@ -453,12 +619,9 @@ const calcularFolha = async () => {
   try {
     const { data } = await api.post('/api/v3/folhas/calcular', { competencia })
     calcOk.value = data.mensagem || `Folha calculada! ${data.qtd_funcionarios} servidores`
-    setTimeout(async () => {
-      modalCalc.value = false
-      // Recarrega lista para refletir novos totais
-      const resp = await api.get('/api/v3/folhas')
-      folhas.value = Array.isArray(resp.data) ? resp.data : (resp.data.folhas ?? [])
-    }, 2000)
+    await recarregarFolhas()
+    await carregarConsistenciaAtual()
+    modalCalc.value = false
   } catch (e) {
     calcErro.value = e.response?.data?.erro || 'Erro ao calcular folha.'
   } finally { calculando.value = false }
@@ -691,6 +854,41 @@ const confirmarFolha = async (id) => {
 /* Sprint 3 — Lançamentos */
 .act-btn.act-orange:hover { background: #fff7ed; border-color: #fed7aa; color: #ea580c; }
 .act-btn.act-purple:hover { background: #f5f3ff; border-color: #c4b5fd; color: #7c3aed; }
+.act-btn.act-stream:hover { background: #ecfeff; border-color: #67e8f9; color: #0e7490; }
+.batch-panel {
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+}
+.batch-panel.batch-processing { border-color: #7dd3fc; }
+.batch-panel.batch-done { border-color: #86efac; background: linear-gradient(135deg, #f0fdf4, #ecfdf5); }
+.batch-panel.batch-error, .batch-panel.batch-cancelled { border-color: #fca5a5; background: linear-gradient(135deg, #fef2f2, #fff7ed); }
+.batch-panel-hdr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.batch-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+.batch-comp { font-size: 12px; font-weight: 700; color: #64748b; }
+.batch-dismiss { margin-left: auto; border: none; background: #e2e8f0; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; color: #475569; }
+.batch-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.batch-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0ea5e9, #6366f1);
+  transition: width 0.35s ease;
+}
+.batch-meta { font-size: 13px; font-weight: 600; color: #334155; margin: 0 0 6px; }
+.batch-ok { color: #15803d; }
+.batch-warn { color: #c2410c; }
+.batch-err { color: #b91c1c; }
+.batch-id { font-size: 11px; color: #64748b; margin: 0; }
+.batch-id code { font-size: 11px; background: #fff; padding: 2px 6px; border-radius: 6px; border: 1px solid #e2e8f0; }
 .act-btn.act-red:hover    { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
 .btn-sm-orange { padding: 5px 11px; border-radius: 8px; border: 1px solid #fed7aa; background: #fff7ed; color: #ea580c; font-size: 12px; font-weight: 700; cursor: pointer; }
 .lanc-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
@@ -707,4 +905,12 @@ const confirmarFolha = async (id) => {
 .piso-kpi strong { font-size: 15px; font-weight: 900; color: #1e293b; }
 .piso-kpi.orange strong { color: #ea580c; }
 .piso-table-wrap { overflow-y: auto; max-height: 200px; border-radius: 8px; border: 1px solid #fde68a; }
+.cons-wrap { display: flex; flex-direction: column; gap: 10px; }
+.cons-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cons-status { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.cons-meta { font-size: 12px; font-weight: 700; color: #334155; }
+.cons-list { display: grid; gap: 8px; }
+.cons-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
+.cons-item-title { display: block; font-size: 12px; font-weight: 700; color: #1e293b; }
+.cons-item-action { display: block; margin-top: 3px; font-size: 11px; color: #64748b; }
 </style>

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string CARGO_REMUNERACAO
  * @property int CARGO_GESTAO
  * @property int CARGO_ATIVO
+ * @property int|null $PCCV_ID
  *
  */
 class Cargo extends Model
@@ -26,7 +27,13 @@ class Cargo extends Model
         "CARGO_ESCOLARIDADE",
         "CARGO_GESTAO",
         "CARGO_ATIVO",
+        "PCCV_ID",
     ];
+
+    public function pccv()
+    {
+        return $this->belongsTo(PccvDominio::class, 'PCCV_ID', 'PCCV_DOMINIO_ID');
+    }
 
     public function escolaridade()
     {

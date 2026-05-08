@@ -20,6 +20,8 @@ const BASE_URL = `http://localhost:${PREVIEW_PORT}`
 const MOCK_USER = {
     id: 1, login: 'admin', nome: 'Administrador do Sistema',
     email: 'admin@gente.local', perfil: 'admin', alterar_senha: false,
+    can_bypass_tenant: false,
+    sudo_global_view_header: 'X-Gente-Global-View',
     USUARIO_ID: 1, USUARIO_LOGIN: 'admin', PESSOA_NOME: 'Administrador do Sistema',
     FUNCIONARIO_ID: 1, isAdmin: true, isGestor: true,
     funcionario: {
@@ -98,7 +100,8 @@ const ROTAS = [
     { path: '/pss', nome: '42-pss-concurso' },
     { path: '/terceirizados', nome: '43-terceirizados' },
     { path: '/medicina-trabalho', nome: '44-medicina-trabalho' },
-    { path: '/beneficios', nome: '45-beneficios' },
+    { path: '/beneficios', nome: '45-beneficios-rh' },
+    { path: '/beneficios-admin', nome: '46-beneficios-admin' },
     { path: '/contratos-vinculos', nome: '46-contratos-vinculos' },
     { path: '/avaliacao-desempenho', nome: '47-avaliacao-desempenho' },
     { path: '/treinamentos', nome: '48-treinamentos' },

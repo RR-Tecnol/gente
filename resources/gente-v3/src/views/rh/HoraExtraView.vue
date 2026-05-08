@@ -11,7 +11,7 @@
         <div class="hero-kpis">
           <div class="kpi-card">
             <span class="kpi-label">Total Horas</span>
-            <span class="kpi-val">{{ totalHoras }}h</span>
+            <span class="kpi-val">{{ formatHours(totalHoras) }}h</span>
           </div>
           <div class="kpi-card amber">
             <span class="kpi-label">Total Valor</span>
@@ -55,13 +55,17 @@
               </td>
               <td>{{ h.secretaria || '—' }}</td>
               <td>{{ formatData(h.DATA_REALIZACAO) }}</td>
-              <td><strong>{{ h.TOTAL_HORAS }}h</strong></td>
+              <td><strong>{{ formatHours(h.TOTAL_HORAS) }}h</strong></td>
               <td><span class="tipo-badge">{{ h.TIPO_HORA_EXTRA?.replace('_PORCENTO', '%') }}</span></td>
               <td class="money amber">{{ formatMoney(h.VALOR_CALCULADO) }}</td>
               <td><span class="status-badge" :class="h.STATUS?.toLowerCase()">{{ h.STATUS }}</span></td>
-              <td>
-                <button v-if="h.STATUS === 'PENDENTE'" class="act-btn green" @click="alterarStatus(h.HORA_EXTRA_ID, 'APROVADA')">✅ Aprovar</button>
-                <button v-if="h.STATUS === 'PENDENTE'" class="act-btn red" @click="alterarStatus(h.HORA_EXTRA_ID, 'REJEITADA')">❌ Rejeitar</button>
+              <td class="acoes-cell">
+                <button v-if="h.STATUS === 'PENDENTE'" class="act-btn green" :disabled="updatingId === h.HORA_EXTRA_ID" @click="alterarStatus(h.HORA_EXTRA_ID, 'APROVADA')">
+                  <span>✅</span> Aprovar
+                </button>
+                <button v-if="h.STATUS === 'PENDENTE'" class="act-btn red" :disabled="updatingId === h.HORA_EXTRA_ID" @click="alterarStatus(h.HORA_EXTRA_ID, 'REJEITADA')">
+                  <span>❌</span> Rejeitar
+                </button>
               </td>
             </tr>
           </tbody>
@@ -112,6 +116,13 @@
             <option value="50_PORCENTO">50% — Hora Extra Normal</option>
             <option value="100_PORCENTO">100% — Feriado/Folga</option>
             <option value="FERIADO">Feriado Municipal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status Inicial</label>
+          <select v-model="form.status_inicial" class="form-input">
+            <option value="PENDENTE">Pendente (fluxo normal)</option>
+            <option value="APROVADA">Aprovada</option>
           </select>
         </div>
         <div class="form-group">
@@ -169,8 +180,8 @@ const unidades      = ref([])
 const relatorio     = ref([])
 const filtros       = ref({ competencia: new Date().toISOString().slice(0, 7), unidade_id: '' })
 const relCompetencia = ref(new Date().toISOString().slice(0, 7))
-const totalHoras    = computed(() => lista.value.reduce((s, h) => s + (h.TOTAL_HORAS || 0), 0).toFixed(1))
-const totalValor    = computed(() => lista.value.reduce((s, h) => s + (h.VALOR_CALCULADO || 0), 0))
+const totalHoras    = computed(() => lista.value.reduce((s, h) => s + (Number(h.TOTAL_HORAS) || 0), 0))
+const totalValor    = computed(() => lista.value.reduce((s, h) => s + (Number(h.VALOR_CALCULADO) || 0), 0))
 
 // Lançar
 const busca     = ref('')
@@ -178,7 +189,8 @@ const resultados = ref([])
 const servidor  = ref(null)
 const salvando  = ref(false)
 const msgLancar = ref('')
-const form      = ref({ competencia: new Date().toISOString().slice(0, 7), data_realizacao: '', hora_inicio: '', hora_fim: '', total_horas: 0, tipo_hora_extra: '50_PORCENTO', percentual: 50, observacao: '' })
+const updatingId = ref(null)
+const form      = ref({ competencia: new Date().toISOString().slice(0, 7), data_realizacao: '', hora_inicio: '', hora_fim: '', total_horas: 0, tipo_hora_extra: '50_PORCENTO', percentual: 50, status_inicial: 'PENDENTE', observacao: '' })
 
 async function carregarLista() {
   loading.value = true
@@ -200,8 +212,9 @@ function calcularHoras() {
   if (!form.value.hora_inicio || !form.value.hora_fim) return
   const [hi, mi] = form.value.hora_inicio.split(':').map(Number)
   const [hf, mf] = form.value.hora_fim.split(':').map(Number)
-  const mins = (hf * 60 + mf) - (hi * 60 + mi)
-  form.value.total_horas = Math.max(0, mins / 60)
+  let mins = (hf * 60 + mf) - (hi * 60 + mi)
+  if (mins < 0) mins += 24 * 60
+  form.value.total_horas = Number((Math.max(0, mins / 60)).toFixed(2))
 }
 
 let buscarTimer = null
@@ -221,17 +234,31 @@ async function lancarHoraExtra() {
     const d = (await api.post('/api/v3/hora-extra', { funcionario_id: servidor.value.id, ...form.value })).data
     if (d.ok) {
       msgLancar.value = `✅ Registrado! Valor calculado: ${formatMoney(d.valor_calculado)}`
+      await carregarLista()
       servidor.value = null; busca.value = ''
+      aba.value = 'lista'
     }
   } catch (e) { console.error(e) } finally { salvando.value = false }
 }
 
 async function alterarStatus(id, status) {
-  await api.patch(`/api/v3/hora-extra/${id}/status`, { status })
-  await carregarLista()
+  const row = lista.value.find((x) => x.HORA_EXTRA_ID === id)
+  const prev = row?.STATUS
+  if (row) row.STATUS = status
+  updatingId.value = id
+  try {
+    await api.patch(`/api/v3/hora-extra/${id}/status`, { status })
+  } catch (e) {
+    if (row) row.STATUS = prev
+    console.error(e)
+  } finally {
+    updatingId.value = null
+    carregarLista()
+  }
 }
 
 function formatMoney(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0) }
+function formatHours(v) { return Number(v || 0).toFixed(2).replace('.', ',') }
 function formatData(d) { if (!d) return '—'; return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') }
 
 onMounted(async () => { await carregarLista(); setTimeout(() => loaded.value = true, 80) })
@@ -259,7 +286,30 @@ onMounted(async () => { await carregarLista(); setTimeout(() => loaded.value = t
 .tabs-bar.loaded { opacity: 1; transform: none; }
 .tab-btn { padding: .6rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; background: #f1f5f9; color: #475569; font-weight: 600; font-size: .85rem; transition: all .2s; }
 .tab-btn.active { background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; }
-.section-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,.06); padding: 1.5rem; opacity: 0; transform: translateY(12px); transition: opacity .4s .2s, transform .4s .2s; }
+.section-card {
+  position: relative;
+  background: linear-gradient(130deg, rgba(226, 240, 252, 0.45), rgba(214, 247, 242, 0.28)), rgba(255,255,255,0.96);
+  border: 1px solid #c7deef;
+  border-radius: 22px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.06);
+  padding: 1.5rem;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity .4s .2s, transform .4s .2s;
+}
+.section-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 22px;
+  border: 8px solid transparent;
+  background: repeating-linear-gradient(-45deg, rgba(56,189,248,0.14) 0 7px, rgba(56,189,248,0.05) 7px 14px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 6px;
+}
 .section-card.loaded { opacity: 1; transform: none; }
 .section-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 1.25rem; }
 .section-hdr { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
@@ -280,8 +330,10 @@ onMounted(async () => { await carregarLista(); setTimeout(() => loaded.value = t
 .success-msg { margin-top: 1rem; background: #dcfce7; color: #15803d; border-radius: 8px; padding: .75rem 1rem; font-weight: 600; font-size: .88rem; }
 .table-scroll { overflow-x: auto; }
 .he-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.he-table th { text-align: left; padding: .6rem .75rem; background: #f8fafc; font-size: .72rem; text-transform: uppercase; color: #64748b; }
-.he-table td { padding: .55rem .75rem; border-bottom: 1px solid #f1f5f9; }
+.he-table thead tr { background: rgba(248, 250, 252, 0.82); backdrop-filter: blur(2px); }
+.he-table th { text-align: left; padding: .7rem .8rem; border-bottom: 1px solid #f1f5f9; font-size: .72rem; text-transform: uppercase; color: #64748b; letter-spacing: .05em; }
+.he-table td { padding: .6rem .8rem; border-bottom: 1px solid rgba(226,232,240,0.65); }
+.he-table tbody tr:hover { background: rgba(255,255,255,0.86); box-shadow: inset 0 0 0 1px rgba(186,230,253,0.7); }
 .nome-cell { display: block; font-weight: 600; color: #1e293b; }
 .sub { display: block; font-size: .72rem; color: #94a3b8; }
 .tipo-badge { display: inline-block; background: #eff6ff; color: #1e40af; border-radius: 4px; padding: .15rem .5rem; font-size: .72rem; font-weight: 700; }
@@ -292,9 +344,40 @@ onMounted(async () => { await carregarLista(); setTimeout(() => loaded.value = t
 .status-badge.incluida_folha { background: #dbeafe; color: #1d4ed8; } /* BUG-HE-02 */
 .status-badge.paga { background: #d1fae5; color: #065f46; }
 .money.amber { color: #b45309; font-weight: 600; text-align: right; }
-.act-btn { border: none; border-radius: 6px; padding: .3rem .65rem; font-size: .75rem; cursor: pointer; font-weight: 600; margin-right: .25rem; }
-.act-btn.green { background: #dcfce7; color: #15803d; }
-.act-btn.red { background: #fee2e2; color: #991b1b; }
+.acoes-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  align-items: center;
+  min-width: 140px;
+}
+/* Sobrescreve responsive.css global (.act-btn 30×30) para rótulos Aprovar/Rejeitar */
+.he-page .acoes-cell .act-btn {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 34px;
+  padding: .4rem .85rem;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.act-btn {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: .34rem .75rem;
+  font-size: .75rem;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  transition: all .16s ease;
+}
+.act-btn:disabled { opacity: .55; cursor: not-allowed; }
+.act-btn.green { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.act-btn.green:hover:not(:disabled) { background: #16a34a; color: #fff; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(21,128,61,.22); }
+.act-btn.red { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.act-btn.red:hover:not(:disabled) { background: #dc2626; color: #fff; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(220,38,38,.22); }
 .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
 .spinner-wrap { display: flex; justify-content: center; padding: 2rem; }
 .spinner { width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #f39c12; border-radius: 50%; animation: spin .7s linear infinite; }

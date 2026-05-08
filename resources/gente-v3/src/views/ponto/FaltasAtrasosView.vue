@@ -33,6 +33,15 @@
         <option value="falta">Faltas</option>
         <option value="atraso">Atrasos</option>
       </select>
+      <select
+        v-model="unidadeFiltro"
+        class="filter-select filter-unidade"
+        :disabled="unidadeSelectDisabled"
+        :title="unidadeSelectTitle"
+      >
+        <option v-if="authStore.isAdmin" value="">Todas as unidades</option>
+        <option v-for="u in unidadesDropdown" :key="u.id" :value="String(u.id)">{{ u.nome }}</option>
+      </select>
     </div>
 
     <!-- LOADING -->
@@ -81,13 +90,24 @@
             </td>
             <td>
               <div class="row-acts">
-                <button class="row-act" :disabled="salvando[f.id]" @click="abonarOcorrencia(f)" v-if="f.situacao === 'pendente'">
+                <button
+                  class="row-act"
+                  :disabled="salvando[f.id]"
+                  @click="abonarOcorrencia(f)"
+                  v-if="f.situacao === 'pendente' && podeAgirNoAbono(f)"
+                >
                   {{ salvando[f.id] === 'aprovado' ? '...' : '✅ Aprovar' }}
                 </button>
-                <button class="row-act row-act-red" :disabled="salvando[f.id]" @click="descontarOcorrencia(f)" v-if="f.situacao === 'pendente'">
+                <button
+                  class="row-act row-act-red"
+                  :disabled="salvando[f.id]"
+                  @click="descontarOcorrencia(f)"
+                  v-if="f.situacao === 'pendente' && podeAgirNoAbono(f)"
+                >
                   {{ salvando[f.id] === 'descontado' ? '...' : '💸 Descontar' }}
                 </button>
                 <span class="abonada-tag" v-if="f.situacao !== 'pendente'">{{ sitLabel(f.situacao) }}</span>
+                <span v-if="f.situacao === 'pendente' && !podeAgirNoAbono(f)" class="abonada-tag scopo-negado" title="Fora do seu escopo de unidade">🔒 Escopo</span>
               </div>
             </td>
           </tr>
@@ -112,20 +132,75 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/plugins/axios'
+import { useAuthStore } from '@/store/auth'
 
+const authStore = useAuthStore()
 const loaded = ref(false)
 const loading = ref(true)
 const busca = ref('')
 const tipoFiltro = ref('')
+const unidadeFiltro = ref('')
+const unidadesDropdown = ref([])
 const ocorrencias = ref([])
 const mesAtual = ref(new Date())
 
+const unidadeSelectDisabled = computed(() => unidadesDropdown.value.length <= 1)
+
+const unidadeSelectTitle = computed(() => {
+  if (unidadeSelectDisabled.value && unidadesDropdown.value.length === 1) {
+    return 'Unidade fixa ao seu escopo de gestão'
+  }
+  return ''
+})
+
 onMounted(async () => {
+  await authStore.fetchUser(true)
+  await carregarUnidadesDropdown()
   await fetchOcorrencias()
   setTimeout(() => { loaded.value = true }, 80)
 })
+
+const carregarUnidadesDropdown = async () => {
+  if (authStore.isAdmin) {
+    try {
+      const { data } = await api.get('/api/v3/secretarias')
+      const list = data.unidades ?? []
+      unidadesDropdown.value = list.map((u) => ({
+        id: u.UNIDADE_ID,
+        nome: u.UNIDADE_NOME ?? `Unidade #${u.UNIDADE_ID}`,
+      }))
+    } catch {
+      unidadesDropdown.value = []
+    }
+  } else {
+    const esc = authStore.unidadesEscopo
+    unidadesDropdown.value = esc.map((row) => ({
+      id: row.unidade_id,
+      nome: row.unidade_nome ?? `Unidade #${row.unidade_id}`,
+    }))
+    if (unidadesDropdown.value.length === 0 && authStore.lotacaoAtiva?.unidade_id) {
+      unidadesDropdown.value = [{
+        id: authStore.lotacaoAtiva.unidade_id,
+        nome: authStore.lotacaoAtiva.unidade_nome || 'Minha unidade',
+      }]
+    }
+  }
+  if (unidadesDropdown.value.length === 1) {
+    unidadeFiltro.value = String(unidadesDropdown.value[0].id)
+  } else if (authStore.isAdmin) {
+    unidadeFiltro.value = ''
+  } else if (unidadesDropdown.value.length > 1) {
+    unidadeFiltro.value = String(unidadesDropdown.value[0].id)
+  }
+}
+
+watch(unidadesDropdown, (list) => {
+  if (list.length === 1) {
+    unidadeFiltro.value = String(list[0].id)
+  }
+}, { deep: true })
 
 const fetchOcorrencias = async () => {
   loading.value = true
@@ -136,12 +211,12 @@ const fetchOcorrencias = async () => {
       : (data.ocorrencias ?? data.abonos ?? data.faltas ?? data.data ?? [])
   } catch {
     ocorrencias.value = [
-      { id: 1, funcionario: 'Ana Paula Santos', funcionario_id: 1, cargo: 'Enfermeira', tipo: 'falta', data: '2026-02-10', duracao: '8h 00min', setor: 'UTI Adulto', situacao: 'abonada' },
-      { id: 2, funcionario: 'Carlos Eduardo Lima', funcionario_id: 2, cargo: 'Técnico de Enfermagem', tipo: 'atraso', data: '2026-02-11', duracao: '0h 45min', setor: 'UTI Adulto', situacao: 'descontada' },
-      { id: 3, funcionario: 'Fernanda Rodrigues', funcionario_id: 3, cargo: 'Médica Clínica', tipo: 'falta', data: '2026-02-13', duracao: '12h 00min', setor: 'Pronto-Socorro', situacao: 'pendente' },
-      { id: 4, funcionario: 'Marcos Henrique', funcionario_id: 4, cargo: 'Auxiliar Administrativo', tipo: 'atraso', data: '2026-02-14', duracao: '1h 20min', setor: 'Administração', situacao: 'pendente' },
-      { id: 5, funcionario: 'Juliana Costa', funcionario_id: 5, cargo: 'Enfermeira Chefe', tipo: 'falta', data: '2026-02-17', duracao: '8h 00min', setor: 'UTI Neonatal', situacao: 'abonada' },
-      { id: 6, funcionario: 'Roberto Silva', funcionario_id: 6, cargo: 'Médico Plantonista', tipo: 'atraso', data: '2026-02-18', duracao: '0h 30min', setor: 'Centro Cirúrgico', situacao: 'pendente' },
+      { id: 1, unidade_id: 101, funcionario: 'Ana Paula Santos', funcionario_id: 1, cargo: 'Enfermeira', tipo: 'falta', data: '2026-02-10', duracao: '8h 00min', setor: 'UTI Adulto', situacao: 'abonada' },
+      { id: 2, unidade_id: 101, funcionario: 'Carlos Eduardo Lima', funcionario_id: 2, cargo: 'Técnico de Enfermagem', tipo: 'atraso', data: '2026-02-11', duracao: '0h 45min', setor: 'UTI Adulto', situacao: 'descontada' },
+      { id: 3, unidade_id: 102, funcionario: 'Fernanda Rodrigues', funcionario_id: 3, cargo: 'Médica Clínica', tipo: 'falta', data: '2026-02-13', duracao: '12h 00min', setor: 'Pronto-Socorro', situacao: 'pendente' },
+      { id: 4, unidade_id: 103, funcionario: 'Marcos Henrique', funcionario_id: 4, cargo: 'Auxiliar Administrativo', tipo: 'atraso', data: '2026-02-14', duracao: '1h 20min', setor: 'Administração', situacao: 'pendente' },
+      { id: 5, unidade_id: 104, funcionario: 'Juliana Costa', funcionario_id: 5, cargo: 'Enfermeira Chefe', tipo: 'falta', data: '2026-02-17', duracao: '8h 00min', setor: 'UTI Neonatal', situacao: 'abonada' },
+      { id: 6, unidade_id: 105, funcionario: 'Roberto Silva', funcionario_id: 6, cargo: 'Médico Plantonista', tipo: 'atraso', data: '2026-02-18', duracao: '0h 30min', setor: 'Centro Cirúrgico', situacao: 'pendente' },
     ]
   } finally { loading.value = false }
 }
@@ -155,8 +230,29 @@ const ocorrenciasFiltradas = computed(() => {
   let list = [...ocorrencias.value]
   if (busca.value) { const t = busca.value.toLowerCase(); list = list.filter(f => f.funcionario.toLowerCase().includes(t)) }
   if (tipoFiltro.value) list = list.filter(f => f.tipo === tipoFiltro.value)
+  if (unidadeFiltro.value && unidadeFiltro.value !== '') {
+    const uid = Number(unidadeFiltro.value)
+    if (!Number.isNaN(uid)) {
+      list = list.filter((f) => f.unidade_id == null || Number(f.unidade_id) === uid)
+    }
+  }
   return list
 })
+
+/** Aprovar / descontar: alinhado ao backend (visão central SEMAD) ou escopo de unidade */
+const podeAgirNoAbono = (f) => {
+  if (authStore.isAdmin) {
+    return true
+  }
+  const chavesAmpla = ['DESENVOLVEDOR', 'ADMINISTRADOR', 'RH_FOLHA', 'RH_UNIDADE', 'RH_APS', 'RH_REDE', 'GESTAO']
+  if (chavesAmpla.some((k) => authStore.hasPerfil(k))) {
+    return true
+  }
+  if (f.unidade_id == null) {
+    return false
+  }
+  return authStore.hasEscopoUnidade(f.unidade_id)
+}
 
 const resumo = computed(() => ({
   faltas: ocorrencias.value.filter(o => o.tipo === 'falta').length,
@@ -184,6 +280,10 @@ const semanaSummary = computed(() => [
 const salvando = ref({})
 
 const setStatus = async (f, status) => {
+  if (!podeAgirNoAbono(f)) {
+    alert('Sem permissão para alterar ocorrências desta unidade.')
+    return
+  }
   salvando.value[f.id] = status
   try {
     await api.put(`/api/v3/abonos-gestao/${f.id}/status`, { status })
@@ -242,7 +342,9 @@ const subtipoLabel = (s) => ({
 .search-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
 .s-ico { width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0; }
 .s-input { flex: 1; border: none; font-size: 14px; color: #1e293b; outline: none; background: transparent; font-family: inherit; }
-.filter-select { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: #475569; outline: none; }
+.filter-select { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: #475569; outline: none; max-width: 220px; }
+.filter-unidade { min-width: 160px; }
+.scopo-negado { color: #b45309 !important; font-style: normal !important; }
 .state-box { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; color: #64748b; }
 .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #f59e0b; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div class="view-container space-y-6">
     <!-- Header -->
     <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-slate-200">
       <div>
@@ -10,6 +10,26 @@
         <button @click="exportarCsv" class="btn btn-outline flex items-center gap-2">
           <i data-lucide="download" class="w-4 h-4"></i> Exportar Base
         </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div class="bg-white p-4 rounded-xl border border-slate-200">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Impacto cruzado</div>
+        <div class="mt-2 text-2xl font-bold text-slate-800">{{ contratos.length }}</div>
+        <div class="text-sm text-slate-500">contratos ativos abastecendo OSS, Almoxarifado e Frotas</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Atenção operacional</div>
+        <div class="mt-2 text-2xl font-bold text-amber-600">{{ contratosVencendo.length }}</div>
+        <div class="text-sm text-slate-500">contratos próximos do vencimento</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Teia de módulos</div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button class="btn btn-outline btn-sm" @click="router.push('/oss')">Monitor OSS</button>
+          <button class="btn btn-outline btn-sm" @click="router.push('/almoxarifado')">Almoxarifado</button>
+          <button class="btn btn-outline btn-sm" @click="router.push('/frotas')">Frotas</button>
+        </div>
       </div>
     </div>
 
@@ -369,8 +389,11 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 import { createIcons, icons } from 'lucide'
+
+const router = useRouter()
 
 const tabs = [
   { id: 'ativos', name: 'Contratos Ativos', icon: 'check-circle' },

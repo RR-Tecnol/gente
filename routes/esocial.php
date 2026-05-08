@@ -2,6 +2,9 @@
 // ══════════════════════════════════════════════════════════════════
 // ESOCIAL — painel de rastreamento de eventos
 // ══════════════════════════════════════════════════════════════════
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 // ── GET: lista de eventos com filtros ────────────────────────────
 Route::get('/esocial/eventos', function (Request $request) {
@@ -36,6 +39,35 @@ Route::get('/esocial/eventos', function (Request $request) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+// ── POST: enfileirar evento para envio (S7 fase 1) ─────────────────
+Route::post('/esocial/eventos/{id}/enfileirar', function (Request $request, $id) {
+    try {
+        $evento = DB::table('ESOCIAL_EVENTO')->where('EVENTO_ID', $id)->first();
+        if (!$evento) {
+            return response()->json(['erro' => 'Evento eSocial não encontrado.'], 404);
+        }
+
+        $idempotency = (string) ($request->idempotency_key ?: ('esocial-' . $id . '-' . now()->timestamp));
+
+        $payload = [
+            'STATUS' => 'PENDENTE_ENVIO',
+            'IDEMPOTENCY_KEY' => $idempotency,
+            'RETRY_COUNT' => 0,
+            'NEXT_RETRY_AT' => now(),
+            'LAST_ERROR' => null,
+            'updated_at' => now(),
+        ];
+        $cols = DB::getSchemaBuilder()->getColumnListing('ESOCIAL_EVENTO');
+        $payload = array_intersect_key($payload, array_flip($cols));
+
+        DB::table('ESOCIAL_EVENTO')->where('EVENTO_ID', $id)->update($payload);
+
+        return response()->json(['ok' => true, 'evento_id' => (int) $id, 'idempotency_key' => $idempotency]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
 // ── POST: gerar evento manualmente para um servidor ──────────────
 Route::post('/esocial/eventos', function (Request $request) {
@@ -81,7 +113,7 @@ Route::post('/esocial/eventos', function (Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
-});
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
 // ── GET: endpoint explícito para teste S-1200 ──────────────
 Route::get('/esocial/gerar/S-1200/{competencia}', function (string $competencia) {
@@ -115,7 +147,7 @@ Route::patch('/esocial/eventos/{id}', function (Request $request, $id) {
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
-});
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
 // ── GET: pendências eSocial de uma competência ───────────────────
 Route::get('/esocial/pendencias', function (Request $request) {
@@ -193,4 +225,4 @@ Route::post('/esocial/gerar-lote', function (Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
-});
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');

@@ -29,6 +29,7 @@
         </div>
       </div>
     </div>
+    <div v-if="dataWarning" class="data-warning" :class="{ loaded }">{{ dataWarning }}</div>
 
     <!-- RESUMO FINANCEIRO -->
     <div class="fin-cards" :class="{ loaded }">
@@ -146,6 +147,7 @@ import api from '@/plugins/axios'
 
 const loaded = ref(false)
 const elegibilidade = ref({ elegivel: false, elegivel_promocao: false, bloqueios: [], meses_na_referencia: 0 })
+const dataWarning = ref('')
 
 // ── Dados dinâmicos: calculados a partir do backend ──────────
 const progressoes = ref([])
@@ -210,38 +212,41 @@ const mapProgressao = (p, idx) => ({
   futura:    !!(p.futura  ?? p.PROGRESSAO_FUTURA       ?? false),
 })
 
-const mockProgressoes = [
-  { id: 1, nivel: 'Inicial — Ref. A-I',   tipo: 'Admissão',              salario: 4800, data: '2021-03-15', reajuste: 0,    obs: 'Ingresso como Servidor Efetivo — Concurso Público 001/2020', ativa: false, futura: false },
-  { id: 2, nivel: 'Médio — Ref. A-II',    tipo: 'Progressão por Mérito', salario: 5500, data: '2023-03-15', reajuste: 14.6, obs: null,                                                          ativa: true,  futura: false },
-  { id: 3, nivel: 'Superior — Ref. A-III',tipo: 'Progressão por Mérito', salario: 6250, data: '2025-03-15', reajuste: 13.6, obs: null,                                                          ativa: false, futura: true  },
-]
-
 onMounted(async () => {
   try {
-    const { data } = await api.get('/api/v3/progressao-funcional')
-
+    const { data } = await api.get('/api/v3/servidor/progressao')
     if (data.fallback) {
-      // backend retornou fallback — usa mock
-      progressoes.value = mockProgressoes
-      calcAdicionais('2021-03-15')
-      salarioBaseReal.value = 5500
+      progressoes.value = []
+      trienios.value = []
+      quinquenios.value = []
+      salarioBaseReal.value = 0
+      elegibilidade.value = { elegivel: false, elegivel_promocao: false, bloqueios: [], meses_na_referencia: 0 }
+      dataWarning.value = data.erro
+        ? `Integração indisponível: ${data.erro}`
+        : 'Integração indisponível: backend retornou contingência.'
     } else {
-      // Dados reais do backend
-      progressoes.value = data.progressoes?.length ? data.progressoes : mockProgressoes
+      progressoes.value = Array.isArray(data.progressoes) ? data.progressoes.map(mapProgressao) : []
       elegibilidade.value = data.elegibilidade ?? elegibilidade.value
-      const admissao = data.admissao || '2021-03-15'
+      const admissao = data.admissao || null
       admissaoReal.value = admissao
-      calcAdicionais(admissao)
-      salarioBaseReal.value = data.vencimento_base || data.salario_base || 0
+      if (admissao) calcAdicionais(admissao)
+      else {
+        trienios.value = []
+        quinquenios.value = []
+      }
+      salarioBaseReal.value = Number(data.vencimento_base || data.salario_base || 0)
       if (!salarioBaseReal.value) {
         const ativa = progressoes.value.find(p => p.ativa)
-        salarioBaseReal.value = ativa?.salario ?? 5500
+        salarioBaseReal.value = Number(ativa?.salario ?? 0)
       }
     }
   } catch {
-    progressoes.value = mockProgressoes
-    calcAdicionais('2021-03-15')
-    salarioBaseReal.value = 5500
+    progressoes.value = []
+    trienios.value = []
+    quinquenios.value = []
+    salarioBaseReal.value = 0
+    elegibilidade.value = { elegivel: false, elegivel_promocao: false, bloqueios: [], meses_na_referencia: 0 }
+    dataWarning.value = 'Não foi possível carregar dados reais de progressão funcional.'
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
@@ -262,7 +267,7 @@ const proximaProgressao = computed(() => {
 const pctParaProxima = computed(() => {
   const atual = progressoes.value.find(p => p.ativa)
   const prox  = progressoes.value.find(p => p.futura)
-  if (!atual?.data || !prox?.data) return 72
+  if (!atual?.data || !prox?.data) return 0
   const inicio = new Date(atual.data + 'T12:00:00')
   const fim    = new Date(prox.data  + 'T12:00:00')
   const agora  = new Date()
@@ -283,6 +288,8 @@ const formatDate = (d) => { try { return new Date(d+'T12:00:00').toLocaleDateStr
 .pf-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
 .hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #1a102a 55%, #0e2a0e 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
+.data-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 10px 12px; font-size: 12px; font-weight: 700; opacity: 0; transform: translateY(6px); transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
+.data-warning.loaded { opacity: 1; transform: none; }
 .hero-shapes { position: absolute; inset: 0; pointer-events: none; }
 .hs { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.12; }
 .hs1 { width: 220px; height: 220px; background: #a855f7; right: -40px; top: -60px; }

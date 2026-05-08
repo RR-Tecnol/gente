@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Escala\EscalaWorkflowStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Database\Schema\Blueprint;
@@ -24,6 +25,8 @@ class SidebarCoverageSeeder extends Seeder
         $this->seedRegistroPonto($funcionarios);
         $this->seedBancoHoras($funcionarios, $adminId);
         $this->seedBancoHorasEquipeMesmoSetor($funcionarios, $adminId);
+        $this->seedJornadaLedgerCriticosEquipe($funcionarios, $adminId);
+        $this->seedAdminPontoExecutivo($adminId);
         $this->seedHoraExtraEPlantao($funcionarios, $adminId);
         $this->seedTurnosEscala();
         $this->seedEscalaESubstituicoes($funcionarios);
@@ -57,7 +60,15 @@ class SidebarCoverageSeeder extends Seeder
             return;
         }
 
-        $funcionarioAdmin = $funcionarios->first();
+        // Preferência explícita: Ana Cristina Barros (CPF 47026653038)
+        $funcionarioAdmin = DB::table('FUNCIONARIO as f')
+            ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
+            ->where('p.PESSOA_CPF_NUMERO', '47026653038')
+            ->select('f.FUNCIONARIO_ID')
+            ->first();
+        if (!$funcionarioAdmin) {
+            $funcionarioAdmin = $funcionarios->first();
+        }
         if ($funcionarioAdmin) {
             DB::table('FUNCIONARIO')
                 ->where('FUNCIONARIO_ID', $funcionarioAdmin->FUNCIONARIO_ID)
@@ -294,6 +305,243 @@ class SidebarCoverageSeeder extends Seeder
         $this->command->info('↳ Banco de Horas (equipe): ' . $alvo->count() . ' servidores no setor ' . $setorId . ', competência ' . $compAbril . ' com saldos variados.');
     }
 
+    private function seedJornadaLedgerCriticosEquipe($funcionarios, $adminId): void
+    {
+        if (!Schema::hasTable('JORNADA_LEDGER') || !Schema::hasTable('LOTACAO') || !Schema::hasTable('SETOR')) {
+            return;
+        }
+        $adminUsuarioId = DB::table('USUARIO')->where('USUARIO_LOGIN', 'admin')->value('USUARIO_ID');
+        if (!$adminUsuarioId) {
+            return;
+        }
+        $adminFuncionarioId = DB::table('FUNCIONARIO')->where('USUARIO_ID', $adminUsuarioId)->value('FUNCIONARIO_ID');
+        if (!$adminFuncionarioId) {
+            return;
+        }
+        $setorAdmin = DB::table('LOTACAO')
+            ->where('FUNCIONARIO_ID', $adminFuncionarioId)
+            ->whereNull('LOTACAO_DATA_FIM')
+            ->value('SETOR_ID');
+        if (!$setorAdmin) {
+            return;
+        }
+
+        $colegas = DB::table('LOTACAO as l')
+            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'l.FUNCIONARIO_ID')
+            ->where('l.SETOR_ID', $setorAdmin)
+            ->whereNull('l.LOTACAO_DATA_FIM')
+            ->where('f.FUNCIONARIO_ID', '<>', $adminFuncionarioId)
+            ->limit(6)
+            ->pluck('f.FUNCIONARIO_ID')
+            ->values();
+
+        if ($colegas->isEmpty()) {
+            return;
+        }
+
+        $competencia = now()->format('Y-m');
+        $dataBase = now()->startOfMonth()->addDays(4);
+        $perfis = [
+            ['trab' => 240, 'meta' => 480], // -4h
+            ['trab' => 180, 'meta' => 480], // -5h
+            ['trab' => 300, 'meta' => 480], // -3h
+            ['trab' => 420, 'meta' => 480], // -1h
+            ['trab' => 460, 'meta' => 480], // -20min
+            ['trab' => 520, 'meta' => 480], // +40min
+        ];
+
+        foreach ($colegas as $idx => $fid) {
+            $perfil = $perfis[$idx % count($perfis)];
+            $dia = $dataBase->copy()->addDays($idx)->toDateString();
+            $existe = DB::table('JORNADA_LEDGER')
+                ->where('FUNCIONARIO_ID', $fid)
+                ->where('COMPETENCIA', $competencia)
+                ->where('JORNADA_DATA', $dia)
+                ->exists();
+            if ($existe) {
+                continue;
+            }
+            $delta = (int) $perfil['trab'] - (int) $perfil['meta'];
+            $cred = $delta > 0 ? round($delta / 60, 2) : 0;
+            $deb = $delta < 0 ? round(abs($delta) / 60, 2) : 0;
+            $detalhe = [
+                'funcionario_id' => (int) $fid,
+                'seed' => true,
+                'min_trabalhados' => (int) $perfil['trab'],
+                'min_meta' => (int) $perfil['meta'],
+                'min_delta' => $delta,
+            ];
+            $hash = hash('sha256', json_encode($detalhe, JSON_UNESCAPED_UNICODE) . '|1|');
+            DB::table('JORNADA_LEDGER')->insert([
+                'FUNCIONARIO_ID' => (int) $fid,
+                'COMPETENCIA' => $competencia,
+                'JORNADA_DATA' => $dia,
+                'LANCAMENTO_TIPO' => $delta >= 0 ? 'credito' : 'debito',
+                'MINUTOS_TRABALHADOS' => (int) $perfil['trab'],
+                'MINUTOS_META' => (int) $perfil['meta'],
+                'MINUTOS_DELTA' => $delta,
+                'HORAS_CREDITADAS' => $cred,
+                'HORAS_DEBITADAS' => $deb,
+                'SALDO_HORAS' => round($delta / 60, 2),
+                'VERSAO' => 1,
+                'ORIGEM' => 'seed_sidebar',
+                'MOTIVO' => 'seed_criticos_equipe',
+                'DETALHE' => json_encode($detalhe, JSON_UNESCAPED_UNICODE),
+                'HASH_AUDITORIA' => $hash,
+                'GERADO_POR_USUARIO_ID' => (int) $adminId,
+                'GERADO_EM' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Garante cenário "profissional" para o usuário admin em Ponto/Banco de Horas:
+     * - jornada mensal consistente (horas esperadas, trabalhadas e saldo não nulo),
+     * - distribuição realista de dias com crédito e débito.
+     */
+    private function seedAdminPontoExecutivo($adminId): void
+    {
+        if (
+            !$adminId ||
+            !Schema::hasTable('FUNCIONARIO') ||
+            !Schema::hasTable('JORNADA_LEDGER')
+        ) {
+            return;
+        }
+
+        $adminFuncionarioId = DB::table('FUNCIONARIO')
+            ->where('USUARIO_ID', $adminId)
+            ->value('FUNCIONARIO_ID');
+        if (!$adminFuncionarioId) {
+            return;
+        }
+
+        $competencia = now()->format('Y-m');
+        $colsLedger = Schema::getColumnListing('JORNADA_LEDGER');
+        $temHashAnterior = in_array('HASH_ANTERIOR', $colsLedger, true);
+        $inicioMes = now()->startOfMonth();
+        $diasUteis = [];
+        for ($d = 0; $d < 22; $d++) {
+            $dia = $inicioMes->copy()->addDays($d);
+            if (!$dia->isWeekend()) {
+                $diasUteis[] = $dia;
+            }
+            if (count($diasUteis) >= 18) {
+                break;
+            }
+        }
+        if (empty($diasUteis)) {
+            return;
+        }
+
+        // 18 dias x 8h = 144h esperadas (meta do painel).
+        $padraoMinutos = [480, 465, 510, 450, 480, 495, 470, 500, 455, 480, 490, 460, 520, 430, 480, 505, 470, 490];
+        $hashAnterior = null;
+
+        foreach ($diasUteis as $idx => $dia) {
+            $meta = 480;
+            $trabalhados = $padraoMinutos[$idx % count($padraoMinutos)];
+            $delta = $trabalhados - $meta;
+            $cred = $delta > 0 ? round($delta / 60, 2) : 0;
+            $deb = $delta < 0 ? round(abs($delta) / 60, 2) : 0;
+            $detalhe = [
+                'funcionario_id' => (int) $adminFuncionarioId,
+                'seed' => true,
+                'perfil' => 'admin_executivo',
+                'min_trabalhados' => (int) $trabalhados,
+                'min_meta' => (int) $meta,
+                'min_delta' => (int) $delta,
+            ];
+            $hashAtual = hash('sha256', json_encode($detalhe, JSON_UNESCAPED_UNICODE) . '|' . ($hashAnterior ?? '') . '|');
+
+            DB::table('JORNADA_LEDGER')->updateOrInsert(
+                [
+                    'FUNCIONARIO_ID' => (int) $adminFuncionarioId,
+                    'COMPETENCIA' => $competencia,
+                    'JORNADA_DATA' => $dia->toDateString(),
+                ],
+                [
+                    'LANCAMENTO_TIPO' => $delta >= 0 ? 'credito' : 'debito',
+                    'MINUTOS_TRABALHADOS' => (int) $trabalhados,
+                    'MINUTOS_META' => (int) $meta,
+                    'MINUTOS_DELTA' => (int) $delta,
+                    'HORAS_CREDITADAS' => $cred,
+                    'HORAS_DEBITADAS' => $deb,
+                    'SALDO_HORAS' => round($delta / 60, 2),
+                    'VERSAO' => 1,
+                    'ORIGEM' => 'seed_sidebar',
+                    'MOTIVO' => 'seed_admin_painel_profissional',
+                    'DETALHE' => json_encode($detalhe, JSON_UNESCAPED_UNICODE),
+                    'HASH_AUDITORIA' => $hashAtual,
+                    ...($temHashAnterior ? ['HASH_ANTERIOR' => $hashAnterior] : []),
+                    'GERADO_POR_USUARIO_ID' => (int) $adminId,
+                    'GERADO_EM' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+            $hashAnterior = $hashAtual;
+
+            // Espelha no REGISTRO_PONTO para alimentar calendário e resumo diário do banco.
+            if (Schema::hasTable('REGISTRO_PONTO')) {
+                $colsPonto = Schema::getColumnListing('REGISTRO_PONTO');
+                $tipos = ['entrada' => '08:00:00', 'saida_alm' => '12:00:00', 'ret_alm' => '13:00:00'];
+                $saidaFinal = (new Carbon($dia->toDateString() . ' 17:00:00'))
+                    ->addMinutes(max(0, $delta))
+                    ->format('H:i:s');
+                $tipos['saida'] = $saidaFinal;
+
+                foreach ($tipos as $tipo => $hora) {
+                    $dataHora = $dia->toDateString() . ' ' . $hora;
+                    $existe = DB::table('REGISTRO_PONTO')
+                        ->where('FUNCIONARIO_ID', (int) $adminFuncionarioId)
+                        ->where('REGISTRO_DATA_HORA', $dataHora)
+                        ->where('REGISTRO_TIPO', $tipo)
+                        ->exists();
+                    if ($existe) {
+                        continue;
+                    }
+
+                    $payload = [
+                        'FUNCIONARIO_ID' => (int) $adminFuncionarioId,
+                        'REGISTRO_DATA_HORA' => $dataHora,
+                        'REGISTRO_TIPO' => $tipo,
+                    ];
+                    if (in_array('REGISTRO_ORIGEM', $colsPonto, true)) {
+                        $payload['REGISTRO_ORIGEM'] = 'SEED';
+                    }
+                    DB::table('REGISTRO_PONTO')->insert($payload);
+                }
+            }
+        }
+
+        if (Schema::hasTable('BANCO_HORAS')) {
+            $credMes = (float) DB::table('JORNADA_LEDGER')
+                ->where('FUNCIONARIO_ID', (int) $adminFuncionarioId)
+                ->where('COMPETENCIA', $competencia)
+                ->sum('HORAS_CREDITADAS');
+            $debMes = (float) DB::table('JORNADA_LEDGER')
+                ->where('FUNCIONARIO_ID', (int) $adminFuncionarioId)
+                ->where('COMPETENCIA', $competencia)
+                ->sum('HORAS_DEBITADAS');
+
+            DB::table('BANCO_HORAS')->updateOrInsert(
+                ['FUNCIONARIO_ID' => (int) $adminFuncionarioId, 'COMPETENCIA' => $competencia],
+                [
+                    'HORAS_CREDITADAS' => round($credMes, 2),
+                    'HORAS_DEBITADAS' => round($debMes, 2),
+                    'TIPO' => 'APURACAO',
+                    'OBSERVACAO' => 'Consolidação seed admin profissional',
+                    'REGISTRADO_POR' => (int) $adminId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+        }
+    }
+
     private function seedHoraExtraEPlantao($funcionarios, $adminId): void
     {
         if (Schema::hasTable('HORA_EXTRA')) {
@@ -440,8 +688,9 @@ class SidebarCoverageSeeder extends Seeder
                         'ESCALA_COMPETENCIA' => $comp,
                         'SETOR_ID' => $setorId,
                     ];
-                    if (in_array('ESCALA_STATUS', $colsEscala, true))
-                        $dadosEscala['ESCALA_STATUS'] = 'Fechada';
+                    if (in_array('ESCALA_STATUS', $colsEscala, true)) {
+                        $dadosEscala['ESCALA_STATUS'] = EscalaWorkflowStatus::RASCUNHO;
+                    }
                     if (in_array('ESCALA_ATIVO', $colsEscala, true))
                         $dadosEscala['ESCALA_ATIVO'] = 1;
                     if (in_array('ESCALA_OBSERVACAO', $colsEscala, true))
@@ -612,16 +861,33 @@ class SidebarCoverageSeeder extends Seeder
 
         foreach ($defs as $def) {
             $payload = [];
-            if (in_array('TURNO_DESCRICAO', $colunas, true))
+            if (in_array('TURNO_NOME', $colunas, true)) {
+                $payload['TURNO_NOME'] = $def['nome'];
+            }
+            if (in_array('TURNO_SIGLA', $colunas, true)) {
+                $payload['TURNO_SIGLA'] = $def['sigla'];
+            }
+            if (in_array('TURNO_DESCRICAO', $colunas, true)) {
                 $payload['TURNO_DESCRICAO'] = $def['nome'];
-            if (in_array('TURNO_HORA_INICIO', $colunas, true))
+            }
+            if (in_array('TURNO_HORA_INICIO', $colunas, true)) {
                 $payload['TURNO_HORA_INICIO'] = $def['inicio'];
-            if (in_array('TURNO_HORA_FIM', $colunas, true))
+            }
+            if (in_array('TURNO_HORA_FIM', $colunas, true)) {
                 $payload['TURNO_HORA_FIM'] = $def['fim'];
-            if (in_array('TURNO_CARGA_HORARIA', $colunas, true))
+            }
+            if (in_array('TURNO_HORA_ENTRADA', $colunas, true)) {
+                $payload['TURNO_HORA_ENTRADA'] = $def['inicio'];
+            }
+            if (in_array('TURNO_HORA_SAIDA', $colunas, true)) {
+                $payload['TURNO_HORA_SAIDA'] = $def['fim'];
+            }
+            if (in_array('TURNO_CARGA_HORARIA', $colunas, true)) {
                 $payload['TURNO_CARGA_HORARIA'] = $def['carga'];
-            if (in_array('TURNO_ATIVO', $colunas, true))
+            }
+            if (in_array('TURNO_ATIVO', $colunas, true)) {
                 $payload['TURNO_ATIVO'] = 1;
+            }
 
             DB::table('TURNO')->updateOrInsert(
                 ['TURNO_SIGLA' => $def['sigla']],

@@ -17,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
         // Necessário para ODBC Driver 18+ sem TLS em ambiente Docker de desenvolvimento.
         $this->app->resolving(DatabaseManager::class, function (DatabaseManager $db) {
             $db->extend('sqlsrv', function (array $config, string $name) {
+                // Garante metadados mínimos usados internamente pelo DatabaseManager.
+                $config['driver'] = $config['driver'] ?? 'sqlsrv';
+                $config['name'] = $config['name'] ?? $name;
+
                 $connector = new TrustSqlServerConnector();
                 $connection = $connector->connect($config);
 

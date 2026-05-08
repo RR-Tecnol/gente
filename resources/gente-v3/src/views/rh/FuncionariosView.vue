@@ -8,7 +8,10 @@
         <div>
           <span class="hero-eyebrow">Recursos Humanos</span>
           <h1 class="hero-title">Funcionários</h1>
-          <p class="hero-sub">{{ total }} servidores cadastrados · página {{ paginaAtual }} de {{ ultimaPagina }}</p>
+          <p class="hero-sub">
+            {{ totalGeral }} servidores cadastrados · página {{ paginaAtual }} de {{ ultimaPagina }}
+            <span v-if="limboTotal > 0">· Limbo: {{ limboTotal }} (R$ {{ moeda(limboCustoMensal) }}/mês)</span>
+          </p>
         </div>
         <div class="hero-chips">
           <div class="chip"><span class="chip-dot green"></span><span>Ativos</span><strong>{{ ativos }}</strong></div>
@@ -37,6 +40,13 @@
         <span class="result-count">{{ funcionarios.length }} resultado{{ funcionarios.length !== 1 ? 's' : '' }}</span>
       </div>
     </div>
+    <div class="audit-filters" :class="{ loaded }">
+      <span class="af-label">Filtros de Auditoria:</span>
+      <button class="af-btn" :class="{ active: auditFilter === '' }" @click="setAuditFilter('')">Todos</button>
+      <button class="af-btn" :class="{ active: auditFilter === 'limbo' }" @click="setAuditFilter('limbo')">Aguardando Lotação (Limbo)</button>
+      <button class="af-btn" :class="{ active: auditFilter === 'vinculo_expirando' }" @click="setAuditFilter('vinculo_expirando')">Vínculo Expirando (30d)</button>
+      <button class="af-btn" :class="{ active: auditFilter === 'progressao_pendente' }" @click="setAuditFilter('progressao_pendente')">Progressão Pendente</button>
+    </div>
     <div v-if="erroApoio" class="state-box error" style="padding:14px 20px;">
       <p style="margin:0;">{{ erroApoio }}</p>
     </div>
@@ -60,18 +70,18 @@
       <table class="func-table">
         <thead>
           <tr>
-            <th>Servidor</th>
-            <th>Matrícula</th>
-            <th>Lotação / Setor</th>
-            <th>Vínculo</th>
-            <th>Início</th>
-            <th>Status</th>
+            <th><button class="th-sort" @click="definirOrdenacao('servidor')">Servidor <span>{{ indicadorOrdem('servidor') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('matricula')">Matrícula <span>{{ indicadorOrdem('matricula') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('setor')">Lotação / Setor <span>{{ indicadorOrdem('setor') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('vinculo')">Vínculo <span>{{ indicadorOrdem('vinculo') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('inicio')">Início <span>{{ indicadorOrdem('inicio') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('status')">Status <span>{{ indicadorOrdem('status') }}</span></button></th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="(f, i) in funcionarios"
+            v-for="(f, i) in funcionariosOrdenados"
             :key="f.FUNCIONARIO_ID"
             class="func-row"
             :class="{ 'row-visible': loaded }"
@@ -95,9 +105,13 @@
             <td><span class="vinculo-badge">{{ f.vinculo || '—' }}</span></td>
             <td>{{ formatDate(f.FUNCIONARIO_DATA_INICIO) }}</td>
             <td>
-              <span class="status-badge" :class="isFuncionarioAtivo(f) ? 'badge-green' : 'badge-red'">
+              <span
+                class="status-badge"
+                :class="statusBadgeClass(f)"
+                :title="statusTooltip(f)"
+              >
                 <span class="badge-dot"></span>
-                {{ isFuncionarioAtivo(f) ? 'Ativo' : 'Inativo' }}
+                {{ statusLabel(f) }}
               </span>
             </td>
             <td>
@@ -110,6 +124,9 @@
                 </button>
                 <button v-if="isFuncionarioAtivo(f)" class="act-btn act-red" title="Inativar" @click.stop="confirmarInativacao(f)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </button>
+                <button v-else class="act-btn act-green" title="Reativar" @click.stop="reativar(f)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
                 </button>
               </div>
             </td>
@@ -410,6 +427,35 @@
                 </div>
               </div>
 
+              <div class="form-section">
+                <h3 class="section-label">Jornada e Ponto</h3>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Regime de Batida</label>
+                    <select v-model="form.REGIME" class="form-input">
+                      <option value="4_batidas">4 batidas (entrada/almoco/retorno/saida)</option>
+                      <option value="2_batidas">2 batidas (entrada/saida)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Tolerância (min)</label>
+                    <input v-model.number="form.TOLERANCIA" type="number" min="0" max="120" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Hora de Entrada</label>
+                    <input v-model="form.HORA_ENTRADA" type="time" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Hora de Saída</label>
+                    <input v-model="form.HORA_SAIDA" type="time" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Intervalo de Almoço (min)</label>
+                    <input v-model.number="form.INTERVALO_ALMOCO" type="number" min="0" max="240" class="form-input" />
+                  </div>
+                </div>
+              </div>
+
               <!-- ── SEÇÃO: Lotação ─────────────────────────── -->
               <div class="form-section">
                 <h3 class="section-label">Lotação e Vínculo</h3>
@@ -507,9 +553,15 @@ const filtroAtivo  = ref('1')
 const paginaAtual  = ref(1)
 const ultimaPagina = ref(1)
 const total        = ref(0)
+const totalGeral   = ref(0)
 const totalAtivos  = ref(0)
+const limboTotal   = ref(0)
+const limboCustoMensal = ref(0)
+const auditFilter  = ref('')
+const ordenacao = ref({ campo: 'servidor', direcao: 'asc' })
 
 const apoio = ref({ setores: [], vinculos: [], atribuicoes: [], cargos: [] })
+const configsPontoPorFuncionario = ref({})
 
 // ── Modal ───────────────────────────────────────────────────
 const modalAberto    = ref(false)
@@ -539,6 +591,12 @@ const formVazio = () => ({
   FUNCIONARIO_MATRICULA: '', FUNCIONARIO_DATA_INICIO: '', FUNCIONARIO_DATA_FIM: '',
   FUNCIONARIO_OBSERVACAO: '',
   CARGO_ID: '',
+  /* Jornada/Ponto */
+  REGIME: '4_batidas',
+  HORA_ENTRADA: '08:00',
+  HORA_SAIDA: '18:00',
+  TOLERANCIA: 15,
+  INTERVALO_ALMOCO: 60,
   /* Lotação */
   SETOR_ID: '', VINCULO_ID: '', ATRIBUICAO_ID: '',
   /* ID para edição */
@@ -549,10 +607,44 @@ const form = ref(formVazio())
 // ── Computed ────────────────────────────────────────────────
 // BUG-EST-07: usar total do backend em vez de contar só a página atual
 const ativos = computed(() => totalAtivos.value)
+const funcionariosOrdenados = computed(() => {
+  const list = [...funcionarios.value]
+  const { campo, direcao } = ordenacao.value
+  const factor = direcao === 'asc' ? 1 : -1
+  const str = (v) => String(v ?? '').trim()
+  const toDateNum = (v) => {
+    const t = new Date(String(v ?? '')).getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+  list.sort((a, b) => {
+    let av = ''
+    let bv = ''
+    if (campo === 'servidor') {
+      av = str(a.pessoa?.PESSOA_NOME)
+      bv = str(b.pessoa?.PESSOA_NOME)
+    } else if (campo === 'matricula') {
+      av = str(a.FUNCIONARIO_MATRICULA)
+      bv = str(b.FUNCIONARIO_MATRICULA)
+    } else if (campo === 'setor') {
+      av = str(a.setor)
+      bv = str(b.setor)
+    } else if (campo === 'vinculo') {
+      av = str(a.vinculo)
+      bv = str(b.vinculo)
+    } else if (campo === 'inicio') {
+      return (toDateNum(a.FUNCIONARIO_DATA_INICIO) - toDateNum(b.FUNCIONARIO_DATA_INICIO)) * factor
+    } else if (campo === 'status') {
+      av = isFuncionarioAtivo(a) ? 'ativo' : 'inativo'
+      bv = isFuncionarioAtivo(b) ? 'ativo' : 'inativo'
+    }
+    return av.localeCompare(bv, 'pt-BR', { numeric: true, sensitivity: 'base' }) * factor
+  })
+  return list
+})
 
 // ── Carregamento ────────────────────────────────────────────
 onMounted(async () => {
-  await Promise.all([fetchFuncionarios(), fetchApoio()])
+  await Promise.all([fetchFuncionarios(), fetchApoio(), fetchConfigsPontoFuncionarios()])
   setTimeout(() => { loaded.value = true }, 80)
 })
 
@@ -564,12 +656,16 @@ const fetchFuncionarios = async (pag = 1) => {
     const params = { page: pag }
     if (busca.value)    params.q = busca.value
     if (filtroAtivo.value !== '') params.funcionario_ativo = filtroAtivo.value
+    if (auditFilter.value) params.audit_filter = auditFilter.value
     const { data } = await api.get('/api/v3/funcionarios', { params })
     funcionarios.value = data.data ?? data
     ultimaPagina.value = data.last_page ?? 1
     total.value        = data.total ?? funcionarios.value.length
+    totalGeral.value   = data.total_geral ?? data.total ?? funcionarios.value.length
     // BUG-EST-07: total_ativos do backend ou fallback local (conta apenas a página)
     totalAtivos.value  = data.total_ativos ?? funcionarios.value.filter(isFuncionarioAtivo).length
+    limboTotal.value = Number(data.limbo_total || 0)
+    limboCustoMensal.value = Number(data.limbo_custo_mensal_estimado || 0)
   } catch (e) {
     erro.value = e.response?.data?.message || 'Erro ao carregar funcionários.'
   } finally {
@@ -587,6 +683,26 @@ const fetchApoio = async () => {
   }
 }
 
+const fetchConfigsPontoFuncionarios = async () => {
+  try {
+    const { data } = await api.get('/api/v3/ponto/config/funcionarios')
+    const rows = Array.isArray(data?.configs) ? data.configs : []
+    const mapa = {}
+    rows.forEach((row) => {
+      mapa[row.FUNCIONARIO_ID] = {
+        REGIME: row.REGIME || '4_batidas',
+        HORA_ENTRADA: row.HORA_ENTRADA || '08:00',
+        HORA_SAIDA: row.HORA_SAIDA || '18:00',
+        TOLERANCIA: Number.isFinite(Number(row.TOLERANCIA)) ? Number(row.TOLERANCIA) : 15,
+        INTERVALO_ALMOCO: Number.isFinite(Number(row.INTERVALO_ALMOCO)) ? Number(row.INTERVALO_ALMOCO) : 60,
+      }
+    })
+    configsPontoPorFuncionario.value = mapa
+  } catch {
+    configsPontoPorFuncionario.value = {}
+  }
+}
+
 // ── Debounce busca ──────────────────────────────────────────
 let timer
 const debounceBusca = () => {
@@ -595,6 +711,21 @@ const debounceBusca = () => {
 }
 
 const mudarPagina = (pag) => { fetchFuncionarios(pag) }
+const setAuditFilter = (filtro) => {
+  auditFilter.value = filtro
+  fetchFuncionarios(1)
+}
+const definirOrdenacao = (campo) => {
+  if (ordenacao.value.campo === campo) {
+    ordenacao.value.direcao = ordenacao.value.direcao === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  ordenacao.value = { campo, direcao: 'asc' }
+}
+const indicadorOrdem = (campo) => {
+  if (ordenacao.value.campo !== campo) return '↕'
+  return ordenacao.value.direcao === 'asc' ? '↑' : '↓'
+}
 const isFuncionarioAtivo = (f) => {
   const fim = f?.FUNCIONARIO_DATA_FIM
   if (!fim) return true
@@ -654,6 +785,7 @@ const abrirModalNovo = () => {
 // ── Modal: Edição ───────────────────────────────────────────
 const abrirModalEdicao = (f) => {
   const lotacao = (f.lotacoes ?? []).filter(l => !l.LOTACAO_DATA_FIM).sort((a, b) => b.LOTACAO_ID - a.LOTACAO_ID)[0]
+  const cfgPonto = configsPontoPorFuncionario.value[f.FUNCIONARIO_ID] || {}
   form.value = {
     _id: f.FUNCIONARIO_ID,
     /* Pessoa */
@@ -695,6 +827,12 @@ const abrirModalEdicao = (f) => {
     FUNCIONARIO_DATA_FIM:     f.FUNCIONARIO_DATA_FIM ?? '',
     FUNCIONARIO_OBSERVACAO:   f.FUNCIONARIO_OBSERVACAO ?? '',
     CARGO_ID:                 f.CARGO_ID ?? '',
+    /* Jornada/Ponto */
+    REGIME: cfgPonto.REGIME ?? '4_batidas',
+    HORA_ENTRADA: cfgPonto.HORA_ENTRADA ?? '08:00',
+    HORA_SAIDA: cfgPonto.HORA_SAIDA ?? '18:00',
+    TOLERANCIA: cfgPonto.TOLERANCIA ?? 15,
+    INTERVALO_ALMOCO: cfgPonto.INTERVALO_ALMOCO ?? 60,
     /* Lotação */
     SETOR_ID:       lotacao?.SETOR_ID ?? '',
     VINCULO_ID:     lotacao?.VINCULO_ID ?? '',
@@ -724,7 +862,7 @@ const salvar = async () => {
       await api.post('/api/v3/funcionarios', form.value)
       successoModal.value = 'Funcionário cadastrado com sucesso!'
     }
-    await fetchFuncionarios(paginaAtual.value)
+    await Promise.all([fetchFuncionarios(paginaAtual.value), fetchConfigsPontoFuncionarios()])
     setTimeout(() => fecharModal(), 1500)
   } catch (e) {
     erroModal.value = e.response?.data?.erro || e.response?.data?.message || 'Erro ao salvar. Tente novamente.'
@@ -755,6 +893,17 @@ const inativar = async () => {
   }
 }
 
+const reativar = async (f) => {
+  if (!f?.FUNCIONARIO_ID) return
+  if (!confirm(`Reativar o cadastro de ${f.pessoa?.PESSOA_NOME || 'este funcionário'}?`)) return
+  try {
+    await api.patch(`/api/v3/funcionarios/${f.FUNCIONARIO_ID}/reativar`)
+    await Promise.all([fetchFuncionarios(paginaAtual.value), fetchConfigsPontoFuncionarios()])
+  } catch (e) {
+    alert(e.response?.data?.erro || e.response?.data?.message || 'Erro ao reativar.')
+  }
+}
+
 // ── Helpers ─────────────────────────────────────────────────
 const iniciais = (nome) => {
   if (!nome) return '?'
@@ -765,6 +914,21 @@ const formatDate = (d) => {
   if (!d) return '—'
   const [y, m, day] = String(d).slice(0, 10).split('-')
   return `${day}/${m}/${y}`
+}
+const moeda = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const statusSemantico = (f) => f?.status_semantico || null
+const statusLabel = (f) => {
+  const s = statusSemantico(f)
+  if (s?.label) return `${s.icone || ''} ${s.label}`.trim()
+  return isFuncionarioAtivo(f) ? '🟢 Lotado' : '⚫ Inativo'
+}
+const statusTooltip = (f) => statusSemantico(f)?.tooltip || (isFuncionarioAtivo(f) ? 'Servidor ativo' : 'Servidor inativo')
+const statusBadgeClass = (f) => {
+  const tipo = statusSemantico(f)?.tipo
+  if (tipo === 'lotado') return 'badge-green'
+  if (tipo === 'limbo') return 'badge-yellow'
+  if (tipo === 'afastado') return 'badge-red'
+  return isFuncionarioAtivo(f) ? 'badge-green' : 'badge-red'
 }
 </script>
 
@@ -819,6 +983,32 @@ const formatDate = (d) => {
 .toolbar-right { display: flex; align-items: center; gap: 12px; }
 .filter-select { border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 12px; font-size: 13px; font-family: inherit; color: #475569; outline: none; cursor: pointer; }
 .result-count { font-size: 12px; color: #94a3b8; font-weight: 600; white-space: nowrap; }
+.audit-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s;
+}
+.audit-filters.loaded { opacity: 1; transform: none; }
+.af-label { font-size: 12px; font-weight: 700; color: #64748b; }
+.af-btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.af-btn.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
 
 /* ESTADOS */
 .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; color: #64748b; gap: 12px; }
@@ -829,16 +1019,37 @@ const formatDate = (d) => {
 
 /* TABLE CARD */
 .table-card {
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: visible; overflow-x: auto;
+  position: relative;
+  background:
+    linear-gradient(130deg, rgba(226, 240, 252, 0.45), rgba(214, 247, 242, 0.28)),
+    rgba(255,255,255,0.96);
+  border: 1px solid #c7deef;
+  border-radius: 22px;
+  overflow: visible; overflow-x: auto;
   opacity: 0; transform: translateY(12px);
   transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.1s;
 }
+.table-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 22px;
+  border: 8px solid transparent;
+  background: repeating-linear-gradient(-45deg, rgba(56,189,248,0.16) 0 6px, rgba(56,189,248,0.06) 6px 12px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 6px;
+}
 .table-card.loaded { opacity: 1; transform: none; }
 .func-table { width: 100%; border-collapse: collapse; }
-.func-table thead tr { background: #f8fafc; border-bottom: 1px solid #f1f5f9; }
+.func-table thead tr { background: rgba(248, 250, 252, 0.82); backdrop-filter: blur(2px); border-bottom: 1px solid #f1f5f9; }
 .func-table th { padding: 12px 16px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; text-align: left; white-space: nowrap; }
-.func-row { border-bottom: 1px solid #f8fafc; transition: background 0.12s; cursor: default; }
-.func-row:hover { background: #f8fafc; }
+.th-sort { background: transparent; border: none; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 0; }
+.th-sort span { color: #64748b; font-size: 11px; }
+.func-row { border-bottom: 1px solid rgba(226,232,240,0.65); transition: background 0.2s, transform 0.2s, box-shadow 0.2s; cursor: default; }
+.func-row:hover { background: rgba(255,255,255,0.86); transform: translateY(-1px); box-shadow: inset 0 0 0 1px rgba(186,230,253,0.7); }
 .func-row:last-child { border-bottom: none; }
 .func-row.row-visible td { animation: rowIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) var(--row-delay) both; }
 @keyframes rowIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
@@ -854,6 +1065,7 @@ const formatDate = (d) => {
 .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
 .badge-green { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
 .badge-red   { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+.badge-yellow { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
 .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 .row-actions { display: flex; gap: 5px; }
@@ -862,6 +1074,7 @@ const formatDate = (d) => {
 .act-btn.act-blue:hover  { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
 .act-btn.act-purple:hover { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }
 .act-btn.act-red:hover   { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+.act-btn.act-green:hover { background: #ecfdf5; border-color: #6ee7b7; color: #047857; }
 
 /* PAGINAÇÃO */
 .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; border-top: 1px solid #f1f5f9; }

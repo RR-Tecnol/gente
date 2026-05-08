@@ -15,14 +15,18 @@ Route::get('/vinculos', function () {
     try {
         $cols = \Illuminate\Support\Facades\Schema::getColumnListing('VINCULO');
         $query = DB::table('VINCULO')->orderBy('VINCULO_NOME');
-        $vinculos = $query->get()->map(function ($v) use ($cols) {
-            $row = (array) $v;
-            // Normaliza flags boolean para front
-            foreach (['VINCULO_FGTS', 'VINCULO_INSS', 'VINCULO_IRRF'] as $flag) {
-                if (isset($row[$flag]))
-                    $row[$flag] = (bool) $row[$flag];
-            }
-            return $row;
+        $vinculos = $query->get()->map(function ($v) {
+            return [
+                'id' => $v->VINCULO_ID,
+                'nome' => $v->VINCULO_NOME ?? '',
+                'sigla' => $v->VINCULO_SIGLA ?? '',
+                'descricao' => $v->VINCULO_DESCRICAO ?? '',
+                'tipo_esocial' => $v->VINCULO_TIPO_ESOCIAL ?? '',
+                'fgts' => (bool) ($v->VINCULO_FGTS ?? false),
+                'inss' => (bool) ($v->VINCULO_INSS ?? false),
+                'irrf' => (bool) ($v->VINCULO_IRRF ?? false),
+                'ativo' => (bool) ($v->VINCULO_ATIVO ?? true),
+            ];
         });
         return response()->json(['vinculos' => $vinculos]);
     } catch (\Throwable $e) {

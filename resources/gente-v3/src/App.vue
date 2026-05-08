@@ -16,4 +16,4 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: #F8FAFC; /* Match theme background */
 }
-</style
+</style>

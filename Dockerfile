@@ -1,4 +1,4 @@
-FROM php:8.0-fpm
+FROM php:8.4-fpm
 
 # Dependências base
 RUN apt-get update && apt-get install -y \
@@ -15,16 +15,15 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
     && ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Configura odbcinst.ini para desabilitar Encrypt por padrão no ODBC Driver 18
-# Necessário para conexão com SQL Server sem TLS em ambiente de desenvolvimento Docker
-RUN printf '[ODBC Driver 18 for SQL Server]\nDescription=Microsoft ODBC Driver 18 for SQL Server\nDriver=/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.6.so.1.1\nUsageCount=1\nEncrypt=no\nTrustServerCertificate=yes\n' > /etc/odbcinst.ini
+# Evita erro "dubious ownership" ao executar Composer em bind mount
+RUN git config --global --add safe.directory /var/www
 
 # Extensões PHP
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo mbstring exif pcntl bcmath xml zip gd
 
-# pdo_sqlsrv 5.10.1 — última versão compatível com PHP 8.0
-RUN pecl install pdo_sqlsrv-5.10.1 sqlsrv-5.10.1 \
+# Drivers SQL Server via PECL (compatível com PHP 8.4)
+RUN pecl install pdo_sqlsrv sqlsrv \
     && docker-php-ext-enable pdo_sqlsrv sqlsrv
 
 # Composer

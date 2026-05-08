@@ -73,35 +73,3 @@ Route::get('/contratos', function () {
     }
 });
 
-//  GET: progressÃ£o funcional (via HistoricoEvento/HistoricoParametro)
-Route::get('/progressao-funcional', function () {
-    try {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-        if (!$func)
-            return response()->json(['progressoes' => [], 'fallback' => true]);
-
-        // Busca histÃ³rico de parÃ¢metros salariais do funcionÃ¡rio
-        $hist = [];
-        try {
-            $hist = \Illuminate\Support\Facades\DB::table('HISTORICO_PARAMETRO as hp')
-                ->join('FOLHA as f', 'f.FOLHA_ID', '=', 'hp.FOLHA_ID')
-                ->where('hp.FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-                ->orderByDesc('f.FOLHA_COMPETENCIA')
-                ->take(12)
-                ->select('hp.*', 'f.FOLHA_COMPETENCIA')
-                ->get()
-                ->map(fn($r) => (array) $r)
-                ->toArray();
-        } catch (\Throwable $e) {
-        }
-
-        return response()->json([
-            'progressoes' => $hist,
-            'admissao' => $func->FUNCIONARIO_DATA_INICIO,
-            'fallback' => empty($hist),
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json(['progressoes' => [], 'fallback' => true]);
-    }
-});

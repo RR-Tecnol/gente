@@ -4,9 +4,9 @@
       <div class="hero-shapes"><div class="hs hs1"></div><div class="hs hs2"></div></div>
       <div class="hero-inner">
         <div>
-          <span class="hero-eyebrow">🔄 Escalas Hospitalares</span>
-          <h1 class="hero-title">Substituições de Plantão</h1>
-          <p class="hero-sub">Gerencie as trocas e substituições de plantão</p>
+          <span class="hero-eyebrow">🔄 Gestão de Substituições (SEMED)</span>
+          <h1 class="hero-title">Cobertura de Turnos</h1>
+          <p class="hero-sub">Gerencie coberturas de regência e dobra de turno</p>
         </div>
         <div class="hero-stats">
           <div class="hstat hstat-yellow"><span class="hstat-val">{{ resumo.pendentes }}</span><span class="hstat-label">Pendentes</span></div>
@@ -28,8 +28,8 @@
       </div>
       <select v-model="statusFiltro" class="filter-select">
         <option value="">Todos os status</option>
-        <option value="pendente">Pendentes</option>
-        <option value="aprovada">Aprovadas</option>
+        <option value="pendente_aceite">Pendentes</option>
+        <option value="confirmada">Confirmadas</option>
         <option value="recusada">Recusadas</option>
       </select>
       <button class="nova-btn" @click="abrirModalNova">
@@ -56,12 +56,14 @@
           <div class="sub-details">
             <span class="sub-detail">📅 {{ formatDate(s.data_plantao) }}</span>
             <span class="sub-detail">⏱️ {{ s.turno }}</span>
-            <span class="sub-detail" v-if="s.setor">🏥 {{ s.setor }}</span>
+            <span class="sub-detail" v-if="s.unidade_escolar">🏫 {{ s.unidade_escolar }}</span>
+            <span class="sub-detail" v-if="s.setor">🏛️ {{ s.setor }}</span>
+            <span class="sub-detail" v-if="s.tipo_convocacao">📌 {{ s.tipo_convocacao }}</span>
           </div>
           <p class="sub-motivo" v-if="s.motivo">{{ s.motivo }}</p>
           <div class="sub-footer">
             <span class="sub-criado">{{ formatDateRel(s.criado_em) }}</span>
-            <div class="sub-actions" v-if="s.status === 'pendente'">
+            <div class="sub-actions" v-if="s.status === 'pendente_aceite'">
               <button class="act-approve" :disabled="acaoEmAndamento === `aprovar-${s.id}`" @click="aprovar(s)" title="Aprovar">✅</button>
               <button class="act-reject"  :disabled="acaoEmAndamento === `recusar-${s.id}`" @click="recusar(s)"  title="Recusar">❌</button>
             </div>
@@ -74,7 +76,7 @@
     <div v-else class="hist-wrap" :class="{ loaded }">
       <div class="hist-filtros">
         <button class="hf-btn" :class="{ active: filtroHistorico === 'todos' }" @click="filtroHistorico = 'todos'">Todos</button>
-        <button class="hf-btn" :class="{ active: filtroHistorico === 'aprovada' }" @click="filtroHistorico = 'aprovada'">Aprovados</button>
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'confirmada' }" @click="filtroHistorico = 'confirmada'">Confirmados</button>
         <button class="hf-btn" :class="{ active: filtroHistorico === 'recusada' }" @click="filtroHistorico = 'recusada'">Recusados</button>
       </div>
       <div v-if="historicoFiltrado.length === 0" class="state-box"><span class="state-ico">🗃️</span><p>Nenhuma decisão no filtro selecionado.</p></div>
@@ -85,7 +87,8 @@
           <div class="sub-details">
             <span class="sub-detail">📅 {{ formatDate(h.data_plantao) }}</span>
             <span class="sub-detail">⏱️ {{ h.turno || '—' }}</span>
-            <span class="sub-detail" v-if="h.setor">🏥 {{ h.setor }}</span>
+            <span class="sub-detail" v-if="h.unidade_escolar">🏫 {{ h.unidade_escolar }}</span>
+            <span class="sub-detail" v-if="h.setor">🏛️ {{ h.setor }}</span>
           </div>
           <p class="sub-motivo" v-if="h.justificativa">{{ h.justificativa }}</p>
         </div>
@@ -98,7 +101,7 @@
       <div v-if="modalAberto" class="modal-overlay" @click.self="modalAberto = false">
         <div class="modal-card">
           <div class="modal-hdr">
-            <h3>🔄 Nova Substituição</h3>
+            <h3>🔄 Nova Cobertura de Turno</h3>
             <button class="modal-close" @click="modalAberto = false">✕</button>
           </div>
           <div class="modal-body">
@@ -135,7 +138,7 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label>Data do Plantão <span class="req">*</span></label>
+                <label>Data do Turno <span class="req">*</span></label>
                 <input v-model="novaForm.data" type="date" class="cfg-input" />
               </div>
               <div class="form-group">
@@ -145,9 +148,37 @@
                   <option>Manhã (07–13h)</option>
                   <option>Tarde (13–19h)</option>
                   <option>Noturno (19–07h)</option>
-                  <option>Plantão 12h</option>
+                  <option>Dobra de Turno</option>
                 </select>
               </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Tipo de Convocação <span class="req">*</span></label>
+                <select v-model="novaForm.tipo_convocacao" class="cfg-input">
+                  <option value="OPTATIVA">OPTATIVA</option>
+                  <option value="COMPULSORIA">COMPULSORIA</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Unidade Escolar</label>
+                <input v-model="novaForm.unidade_escolar" class="cfg-input" placeholder="Ex: UEB João XXIII" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Horário Início</label>
+                <input v-model="novaForm.horario_inicio" class="cfg-input" placeholder="07:00" />
+              </div>
+              <div class="form-group">
+                <label>Horário Fim</label>
+                <input v-model="novaForm.horario_fim" class="cfg-input" placeholder="11:00" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Disciplina/Cargo</label>
+              <input v-model="novaForm.disciplina_cargo" class="cfg-input" placeholder="Matemática / Professor" />
             </div>
 
             <div class="form-group">
@@ -221,7 +252,12 @@ const modalRecusa = ref({ open: false, item: null, justificativa: '', erro: '', 
 
 const novaForm = reactive({
   escala_id: '', solicitante_id: '', substituto_id: '',
-  data: '', turno: '', motivo: ''
+  data: '', turno: '', motivo: '',
+  tipo_convocacao: 'OPTATIVA',
+  horario_inicio: '',
+  horario_fim: '',
+  unidade_escolar: '',
+  disciplina_cargo: '',
 })
 
 const normalizarEscala = (e = {}) => ({
@@ -238,6 +274,11 @@ const normalizarSub = (s = {}) => ({
   substituto_id: s.substituto_id ?? s.FUNCIONARIO_SUBSTITUTO_ID ?? null,
   data_plantao: s.data_plantao ?? s.data ?? s.SUBSTITUICAO_ESCALA_DATA ?? null,
   turno: s.turno ?? s.turno_sigla ?? '—',
+  tipo_convocacao: (s.tipo_convocacao || 'OPTATIVA').toUpperCase(),
+  horario_inicio: s.horario_inicio ?? null,
+  horario_fim: s.horario_fim ?? null,
+  unidade_escolar: s.unidade_escolar ?? null,
+  disciplina_cargo: s.disciplina_cargo ?? null,
   setor: s.setor ?? s.setor_nome ?? '—',
   motivo: s.motivo ?? s.justificativa ?? null,
   status: normalizarStatus(s.status),
@@ -246,9 +287,10 @@ const normalizarSub = (s = {}) => ({
 
 const normalizarStatus = (v) => {
   const raw = String(v ?? 'pendente').toLowerCase().trim()
-  if (raw === 'aprovado' || raw === 'aprovada') return 'aprovada'
+  if (raw === 'aprovado' || raw === 'aprovada' || raw === 'confirmada' || raw === 'aceita' || raw === 'aceito') return 'confirmada'
   if (raw === 'reprovado' || raw === 'reprovada' || raw === 'recusada') return 'recusada'
-  return 'pendente'
+  if (raw === 'falta_substituicao') return 'falta_substituicao'
+  return 'pendente_aceite'
 }
 
 // ── Carregamento de dados ────────────────────────────────────
@@ -309,7 +351,7 @@ const carregarFuncionariosEscala = async () => {
 }
 
 const abrirModalNova = async () => {
-  Object.assign(novaForm, { escala_id: '', solicitante_id: '', substituto_id: '', data: '', turno: '', motivo: '' })
+  Object.assign(novaForm, { escala_id: '', solicitante_id: '', substituto_id: '', data: '', turno: '', motivo: '', tipo_convocacao: 'OPTATIVA', horario_inicio: '', horario_fim: '', unidade_escolar: '', disciplina_cargo: '' })
   erroEnvio.value = ''
   modalAberto.value = true
   if (!escalasDisponiveis.value.length) await carregarEscalas()
@@ -328,8 +370,8 @@ const subsFiltradas = computed(() => {
   return list
 })
 const resumo = computed(() => ({
-  pendentes: subs.value.filter(s => s.status === 'pendente').length,
-  aprovadas: subs.value.filter(s => s.status === 'aprovada').length,
+  pendentes: subs.value.filter(s => s.status === 'pendente_aceite').length,
+  aprovadas: subs.value.filter(s => s.status === 'confirmada').length,
   total: subs.value.length,
 }))
 const historicoFiltrado = computed(() => {
@@ -351,6 +393,11 @@ const enviarSub = async () => {
       data_plantao:   novaForm.data,
       turno:          novaForm.turno,
       motivo:         novaForm.motivo,
+      tipo_convocacao: novaForm.tipo_convocacao,
+      horario_inicio: novaForm.horario_inicio || null,
+      horario_fim: novaForm.horario_fim || null,
+      unidade_escolar: novaForm.unidade_escolar || null,
+      disciplina_cargo: novaForm.disciplina_cargo || null,
     })
     await fetchSubs()
     modalAberto.value = false
@@ -364,7 +411,7 @@ const enviarSub = async () => {
 const aprovar = async (s) => {
   acaoEmAndamento.value = `aprovar-${s.id}`
   try {
-    await api.put(`/api/v3/substituicoes/${s.id}`, { status: 'aprovada' })
+    await api.put(`/api/v3/substituicoes/${s.id}`, { status: 'confirmada' })
     await fetchSubs()
   } catch {
     // sem atualização otimista: mantém estado consistente do backend
@@ -401,8 +448,8 @@ const confirmarRecusa = async () => {
 // ── Helpers ───────────────────────────────────────────────────
 const avatarHue  = (id) => ((id ?? 1) * 137) % 360
 const iniciais   = (n) => { const w = (n||'').trim().split(' ').filter(Boolean); return w.length >= 2 ? (w[0][0]+w[w.length-1][0]).toUpperCase() : (n||'?').substring(0,2).toUpperCase() }
-const statusLabel = (s) => ({ pendente: 'Pendente', aprovada: 'Aprovada', recusada: 'Recusada' })[s] ?? s
-const statusClass = (s) => ({ pendente: 'st-yellow', aprovada: 'st-green', recusada: 'st-red' })[s] ?? ''
+const statusLabel = (s) => ({ pendente_aceite: 'Pendente Aceite', confirmada: 'Confirmada', recusada: 'Recusada', falta_substituicao: 'Falta em Substituição' })[s] ?? s
+const statusClass = (s) => ({ pendente_aceite: 'st-yellow', confirmada: 'st-green', recusada: 'st-red', falta_substituicao: 'st-red' })[s] ?? ''
 const formatDate  = (d) => { try { const dt = new Date(`${d}T12:00:00`); if (Number.isNaN(dt.getTime())) return '—'; return dt.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }) } catch { return '—' } }
 const formatDateRel = (d) => { try { const dt = new Date(`${d}T12:00:00`); if (Number.isNaN(dt.getTime())) return '—'; const diff = Math.floor((Date.now() - dt.getTime()) / 86400000); return diff === 0 ? 'Hoje' : `Há ${diff}d` } catch { return '—' } }
 

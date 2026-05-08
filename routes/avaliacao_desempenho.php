@@ -24,16 +24,6 @@ if (!function_exists('resolveFuncionarioIdParaAvaliacao')) {
             ->where('USUARIO_ID', $user->USUARIO_ID)
             ->value('FUNCIONARIO_ID');
 
-        if (!$funcId && !app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
-            $livre = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
-            if ($livre) {
-                \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                    ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
-                    ->update(['USUARIO_ID' => $user->USUARIO_ID]);
-                $funcId = $livre->FUNCIONARIO_ID;
-            }
-        }
-
         return $funcId ? (int) $funcId : null;
     }
 }
@@ -41,29 +31,8 @@ if (!function_exists('resolveFuncionarioIdParaAvaliacao')) {
 if (!function_exists('ensureTabelasAvaliacao')) {
     function ensureTabelasAvaliacao(): void
     {
-        if (!\Illuminate\Support\Facades\Schema::hasTable('AVALIACAO_DESEMPENHO')) {
-            \Illuminate\Support\Facades\Schema::create('AVALIACAO_DESEMPENHO', function ($table) {
-                $table->increments('AVALIACAO_ID');
-                $table->integer('FUNCIONARIO_ID');
-                $table->string('AVALIACAO_CICLO', 20)->nullable();
-                $table->decimal('AVALIACAO_NOTA_FINAL', 5, 2)->default(0);
-                $table->string('AVALIACAO_STATUS', 30)->default('enviada');
-                $table->integer('AVALIADOR_ID')->nullable();
-                $table->text('AVALIACAO_OBS')->nullable();
-                $table->timestamps();
-            });
-        }
-
-        if (!\Illuminate\Support\Facades\Schema::hasTable('AVALIACAO_CRITERIO')) {
-            \Illuminate\Support\Facades\Schema::create('AVALIACAO_CRITERIO', function ($table) {
-                $table->increments('CRITERIO_ID');
-                $table->integer('AVALIACAO_ID');
-                $table->string('CRITERIO_NOME', 150);
-                $table->integer('CRITERIO_PESO')->default(20);
-                $table->integer('CRITERIO_NOTA')->default(0);
-                $table->text('CRITERIO_OBS')->nullable();
-                $table->timestamps();
-            });
+        if (!\Illuminate\Support\Facades\Schema::hasTable('AVALIACAO_DESEMPENHO') || !\Illuminate\Support\Facades\Schema::hasTable('AVALIACAO_CRITERIO')) {
+            throw new \RuntimeException('Tabelas de avaliação não encontradas. Execute migrations canônicas.');
         }
     }
 }
@@ -171,4 +140,4 @@ Route::post('/avaliacoes', function (\Illuminate\Http\Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
-});
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');

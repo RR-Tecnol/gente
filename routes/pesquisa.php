@@ -2,47 +2,24 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
-// Auto-migration Pesquisa
-if (!Schema::hasTable('PESQUISA')) {
-    Schema::create('PESQUISA', function (Blueprint $table) {
-        $table->increments('PESQUISA_ID');
-        $table->string('PESQUISA_TITULO', 200);
-        $table->date('PESQUISA_DATA_INICIO')->nullable();
-        $table->date('PESQUISA_DATA_FIM')->nullable();
-        $table->string('PESQUISA_PUBLICO_ALVO', 100)->nullable();
-        $table->boolean('PESQUISA_ATIVA')->default(true);
-        $table->timestamps();
-        $table->timestamps();
-    });
-}
-if (!Schema::hasTable('PESQUISA_PERGUNTA')) {
-    Schema::create('PESQUISA_PERGUNTA', function (Blueprint $table) {
-        $table->increments('PERGUNTA_ID');
-        $table->unsignedInteger('PESQUISA_ID');
-        $table->string('PERGUNTA_TEXTO', 500);
-        $table->string('PERGUNTA_TIPO', 50); // NPS, MULTIPLA, ABERTA
-        $table->json('PERGUNTA_OPCOES')->nullable();
-        $table->integer('PERGUNTA_ORDEM')->default(0);
-        $table->timestamps();
-        $table->timestamps();
-    });
-}
-if (!Schema::hasTable('PESQUISA_RESPOSTA')) {
-    Schema::create('PESQUISA_RESPOSTA', function (Blueprint $table) {
-        $table->increments('RESPOSTA_ID');
-        $table->unsignedInteger('PESQUISA_ID');
-        $table->unsignedInteger('PERGUNTA_ID');
-        $table->text('RESPOSTA_VALOR')->nullable();
-        $table->string('SESSAO_TOKEN', 100)->nullable(); // agrupar respostas
-        $table->timestamps();
-    });
+/**
+ * DDL apenas ao tratar pedido — evita query no boot do route:list.
+ * Nota: pode colidir com outro módulo que use as mesmas tabelas (PESQUISA_*); legado.
+ */
+if (!function_exists('ensurePesquisaRhTablesFromRoutes')) {
+    function ensurePesquisaRhTablesFromRoutes(): void
+    {
+        if (!Schema::hasTable('PESQUISA') || !Schema::hasTable('PESQUISA_PERGUNTA') || !Schema::hasTable('PESQUISA_RESPOSTA')) {
+            throw new \RuntimeException('Tabelas de pesquisa RH não encontradas. Execute migrations canônicas.');
+        }
+    }
 }
 
 Route::post('/pesquisas', function (Request $request) {
+    ensurePesquisaRhTablesFromRoutes();
     $dados = $request->validate([
         'titulo' => 'required|string|max:200',
         'data_inicio' => 'nullable|date',
@@ -77,9 +54,10 @@ Route::post('/pesquisas', function (Request $request) {
     }
 
     return response()->json(['ok' => true, 'pesquisa_id' => $pesquisaId]);
-});
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
 Route::get('/pesquisas/{id}/responder', function ($id) {
+    ensurePesquisaRhTablesFromRoutes();
     $pesquisa = DB::table('PESQUISA')->where('PESQUISA_ID', $id)->first();
     if (!$pesquisa || !$pesquisa->PESQUISA_ATIVA) {
         return response()->json(['erro' => 'Pesquisa não encontrada ou inativa'], 404);
@@ -92,6 +70,7 @@ Route::get('/pesquisas/{id}/responder', function ($id) {
 });
 
 Route::post('/pesquisas/{id}/responder', function (Request $request, $id) {
+    ensurePesquisaRhTablesFromRoutes();
     if (!\Illuminate\Support\Facades\Schema::hasTable('PESQUISA_RESPOSTA')) {
         return response()->json(['ok' => true, 'fallback' => true]);
     }
@@ -109,9 +88,10 @@ Route::post('/pesquisas/{id}/responder', function (Request $request, $id) {
         ]);
     }
     return response()->json(['ok' => true]);
-});
+})->middleware('perfil:SERVIDOR,ADMINISTRADOR,Administrador,GESTOR');
 
 Route::get('/pesquisas/{id}/resultados', function ($id) {
+    ensurePesquisaRhTablesFromRoutes();
     $pesquisa = DB::table('PESQUISA')->where('PESQUISA_ID', $id)->first();
     $perguntas = DB::table('PESQUISA_PERGUNTA')->where('PESQUISA_ID', $id)->get();
     
@@ -149,4 +129,4 @@ Route::get('/pesquisas/{id}/resultados', function ($id) {
         ];
     }
     return response()->json(['pesquisa' => $pesquisa, 'resultados' => $resultados]);
-});
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');

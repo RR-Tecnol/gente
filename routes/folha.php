@@ -1,9 +1,13 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Models\Folha;
 use App\Models\DetalheFolha;
+use App\Models\Folha;
+use App\Services\MotorFolhaService;
+use App\Support\FolhaCompetenciaCabecalho;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 // ⚠️ NÃO abrir Route::middleware()->prefix()->group() aqui
 // O contexto api/v3 + auth já é herdado do web.php — ver regra §2 de regras-gerais.md
@@ -89,6 +93,120 @@ Route::get('/folhas', function () {
     }
 });
 
+// GET /api/v3/folhas/consistencia/{competencia} — Cross-check Folha x Consignacao x RPPS
+Route::get('/folhas/consistencia/{competencia}', function (string $competencia) {
+    try {
+        $comp = preg_replace('/[^0-9]/', '', $competencia);
+        if (strlen($comp) === 6 && substr($comp, 0, 2) >= '01' && substr($comp, 0, 2) <= '12') {
+            $comp = substr($comp, 2) . substr($comp, 0, 2); // MMYYYY -> YYYYMM
+        }
+        $compYm = substr($comp, 0, 4) . '-' . substr($comp, 4, 2);
+
+        $folha = DB::table('FOLHA')
+            ->whereIn('FOLHA_COMPETENCIA', [$comp, $compYm, $competencia])
+            ->orderByDesc('FOLHA_ID')
+            ->first();
+
+        if (!$folha) {
+            return response()->json([
+                'competencia' => $competencia,
+                'status' => 'inconsistente',
+                'regras' => [[
+                    'codigo' => 'folha_inexistente',
+                    'ok' => false,
+                    'mensagem' => 'Folha da competência não encontrada.',
+                    'acao' => 'Criar/importar a folha antes de rodar consistência.',
+                ]],
+            ], 404);
+        }
+
+        $detalhes = DB::table('DETALHE_FOLHA')
+            ->where('FOLHA_ID', $folha->FOLHA_ID)
+            ->get();
+        $funcIds = $detalhes->pluck('FUNCIONARIO_ID')->filter()->unique()->values()->all();
+
+        // Regra 1: Consignacao descontada confere com desconto em folha
+        $consigDescontada = (float) (DB::table('CONSIG_PARCELA')
+            ->whereIn('COMPETENCIA', [$compYm, $competencia])
+            ->where('STATUS', 'DESCONTADA')
+            ->sum('VALOR_PAGO') ?? 0);
+        $descontoFolha = (float) ($detalhes->sum('DETALHE_FOLHA_DESCONTOS') ?? 0);
+        $difConsig = abs($descontoFolha - $consigDescontada);
+        $regraConsig = [
+            'codigo' => 'consig_vs_folha',
+            'ok' => $difConsig <= 0.5,
+            'mensagem' => $difConsig <= 0.5
+                ? 'Descontos de consignação coerentes com a folha.'
+                : 'Diferença entre descontos da folha e parcelas descontadas.',
+            'acao' => $difConsig <= 0.5
+                ? 'Sem ação necessária.'
+                : 'Revisar parcelas com STATUS DESCONTADA e recálculo da folha.',
+            'diagnostico' => [
+                'desconto_folha' => round($descontoFolha, 2),
+                'consig_descontada' => round($consigDescontada, 2),
+                'diferenca' => round($difConsig, 2),
+            ],
+        ];
+
+        // Regra 2: RPPS deve existir para ativos da folha
+        $rppsQtd = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('RPPS_CONTRIBUICAO') && !empty($funcIds)) {
+            $rppsQtd = (int) (DB::table('RPPS_CONTRIBUICAO')
+                ->whereIn('FUNCIONARIO_ID', $funcIds)
+                ->whereIn('COMPETENCIA', [$compYm, $competencia])
+                ->count() ?? 0);
+        }
+        $coberturaRpps = count($funcIds) > 0 ? ($rppsQtd / count($funcIds)) : 1;
+        $regraRpps = [
+            'codigo' => 'rpps_cobertura',
+            'ok' => $coberturaRpps >= 0.9,
+            'mensagem' => $coberturaRpps >= 0.9
+                ? 'Cobertura RPPS adequada para os servidores da folha.'
+                : 'Cobertura RPPS abaixo do mínimo esperado (90%).',
+            'acao' => $coberturaRpps >= 0.9
+                ? 'Sem ação necessária.'
+                : 'Revisar vínculos sem contribuição RPPS na competência.',
+            'diagnostico' => [
+                'servidores_folha' => count($funcIds),
+                'rpps_registrados' => $rppsQtd,
+                'cobertura' => round($coberturaRpps * 100, 1) . '%',
+            ],
+        ];
+
+        // Regra 3: Liquido negativo suspeito
+        $negativos = $detalhes->filter(fn($d) => (float) ($d->DETALHE_FOLHA_LIQUIDO ?? 0) < 0)->count();
+        $regraLiquido = [
+            'codigo' => 'liquido_negativo',
+            'ok' => $negativos === 0,
+            'mensagem' => $negativos === 0
+                ? 'Nenhum líquido negativo encontrado.'
+                : 'Foram encontrados líquidos negativos na folha.',
+            'acao' => $negativos === 0
+                ? 'Sem ação necessária.'
+                : 'Auditar lançamentos de desconto e limites legais por servidor.',
+            'diagnostico' => [
+                'servidores_liquido_negativo' => (int) $negativos,
+            ],
+        ];
+
+        $regras = [$regraConsig, $regraRpps, $regraLiquido];
+        $okTotal = collect($regras)->every(fn($r) => (bool) ($r['ok'] ?? false));
+
+        return response()->json([
+            'competencia' => $competencia,
+            'status' => $okTotal ? 'coerente' : 'inconsistente',
+            'regras' => $regras,
+            'resumo' => [
+                'total_regras' => count($regras),
+                'regras_ok' => collect($regras)->where('ok', true)->count(),
+                'regras_falha' => collect($regras)->where('ok', false)->count(),
+            ],
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
 // GET /api/v3/folhas/{id}/detalhes — Lista funcionários de uma folha (para modal)
 Route::get('/folhas/{id}/detalhes', function (int $id) {
     try {
@@ -138,11 +256,10 @@ Route::post('/folhas/{id}/confirmar', function (int $id) {
 Route::post('/folhas/calcular', function (Request $request) {
     try {
         $comp = $request->competencia ?? now()->format('Y-m');
-        $compDb = str_replace('-', '', $comp);
-
-        $folha = DB::table('FOLHA')->where('FOLHA_COMPETENCIA', $compDb)->first();
-        if (!$folha) {
-            return response()->json(['erro' => "Folha {$comp} não encontrada. Crie ou importe a folha antes de calcular."], 404);
+        try {
+            $folha = FolhaCompetenciaCabecalho::obterOuCriarPorCompetencia((string) $comp);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['erro' => $e->getMessage()], 422);
         }
 
         DB::beginTransaction();
@@ -233,19 +350,83 @@ Route::post('/folhas/calcular', function (Request $request) {
 // SPRINT 3 — MOTOR DE FOLHA
 // ══════════════════════════════════════════════════════════════════════════════
 
-// POST /api/v3/folhas/calcular-proventos — Dispara o MotorFolhaService completo
+// POST /api/v3/folhas/calcular-proventos — Motor síncrono por lotes (memória acotada; mesmo núcleo que o batch)
 Route::post('/folhas/calcular-proventos', function (Request $request) {
     try {
         $folhaId = $request->folha_id;
         if (!$folhaId) {
             return response()->json(['erro' => 'folha_id é obrigatório.'], 422);
         }
-        $motor = new \App\Services\MotorFolhaService();
+        $motor = new MotorFolhaService();
         $result = $motor->calcularFolha((int) $folhaId);
         return response()->json($result, $result['ok'] ? 200 : 400);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
+});
+
+// POST /api/v3/folha/processar — Fase 13: despacho assíncrono (Bus::batch); 202 + batch_id (fila não-sync em produção)
+Route::post('/folha/processar', function (Request $request) {
+    $folhaId = (int) ($request->input('folha_id') ?? $request->input('folhaId') ?? 0);
+    if ($folhaId <= 0) {
+        return response()->json(['erro' => 'folha_id é obrigatório.'], 422);
+    }
+
+    $lock = Cache::lock('folha:processar:' . $folhaId, 3600);
+    if (! $lock->get()) {
+        return response()->json([
+            'erro' => 'Já existe um processamento em curso para esta folha. Aguarde ou consulte o estado do batch.',
+        ], 409);
+    }
+
+    try {
+        $motor = new MotorFolhaService();
+        $batch = $motor->despacharProcessamentoAssincrono($folhaId, auth()->id());
+        $folha = DB::table('FOLHA')->where('FOLHA_ID', $folhaId)->first();
+
+        return response()->json([
+            'batch_id' => $batch->id,
+            'name' => $batch->name,
+            'folha_id' => $folhaId,
+            'competencia' => $folha->FOLHA_COMPETENCIA ?? null,
+            'total_jobs' => $batch->totalJobs,
+            'message' => 'Processamento da folha despachado. Consulte GET /api/v3/folha/batch/{batchId} para o progresso.',
+        ], 202);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    } finally {
+        $lock->release();
+    }
+});
+
+// GET /api/v3/folha/batch/{batchId} — estado do batch (polling / barra de progresso)
+Route::get('/folha/batch/{batchId}', function (string $batchId) {
+    if (! preg_match('/^[a-f0-9\-]{36}$/i', $batchId)) {
+        return response()->json(['erro' => 'batch_id inválido.'], 422);
+    }
+    $batch = Bus::findBatch($batchId);
+    if (! $batch) {
+        return response()->json(['erro' => 'Batch não encontrado.'], 404);
+    }
+
+    $createdBy = $batch->options['created_by'] ?? null;
+    if ($createdBy !== null && auth()->id() !== null && (int) $createdBy !== (int) auth()->id()) {
+        return response()->json(['erro' => 'Não autorizado a consultar este batch.'], 403);
+    }
+
+    return response()->json([
+        'id' => $batch->id,
+        'name' => $batch->name,
+        'total_jobs' => $batch->totalJobs,
+        'pending_jobs' => $batch->pendingJobs,
+        'failed_jobs' => $batch->failedJobs,
+        'progress' => $batch->progress(),
+        'finished' => $batch->finished(),
+        'cancelled' => $batch->cancelled(),
+        'created_at' => $batch->createdAt,
+        'finished_at' => $batch->finishedAt,
+        'failed_job_ids' => $batch->failedJobIds,
+    ]);
 });
 
 // GET /api/v3/folhas/{competencia}/piso-salarial — Relatório complemento SM

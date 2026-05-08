@@ -6,7 +6,7 @@
       <div class="hero-shapes"><div class="hs hs1"></div><div class="hs hs2"></div></div>
       <div class="hero-inner">
         <div>
-          <span class="hero-eyebrow">🏥 Gestão Hospitalar</span>
+          <span class="hero-eyebrow">🏛️ Gestão de Unidades SEMED</span>
           <h1 class="hero-title">Organograma</h1>
           <p class="hero-sub">Estrutura hierárquica · {{ totalFuncionarios }} servidores em {{ totalSetores }} setores</p>
         </div>
@@ -74,14 +74,14 @@
       <!-- Organograma somente-leitura (modo árvore, sem CRUD) -->
       <div class="func-section">
         <div class="func-section-hdr">
-          <span class="fsh-ico">🏥</span>
+          <span class="fsh-ico">🏛️</span>
           <h3>Estrutura da Instituição</h3>
           <span class="fsh-count">{{ totalSetores }} setores</span>
         </div>
         <div class="tree-container">
           <div class="tree-level">
             <div class="tree-root-card" style="pointer-events:none">
-              <div class="root-ico">🏥</div>
+              <div class="root-ico">🏛️</div>
               <div class="root-info"><span class="root-nome">{{ nomeHospital }}</span><span class="root-sub">Instituição de Saúde</span></div>
             </div>
           </div>
@@ -119,7 +119,7 @@
       <div class="tree-container">
         <div class="tree-level">
           <div class="tree-root-card">
-            <div class="root-ico">🏥</div>
+            <div class="root-ico">🏛️</div>
             <div class="root-info">
               <span class="root-nome">{{ nomeHospital }}</span>
               <span class="root-sub">Instituição de Saúde</span>
@@ -382,7 +382,7 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import api from '@/plugins/axios'
 import { useAuthStore } from '@/store/auth'
 
-const icones = ['🏥','💉','📋','🔬','🏃','🛡️','🩺','🫀','👶','🚑','🛏️','💼','💰','🧪','🦴']
+const icones = ['🏛️','📚','📋','🧭','🏫','🛡️','🗂️','👥','🧠','🧾','📌','💼','💰','📊','🧩']
 
 const loaded      = ref(false)
 const busca       = ref('')
@@ -429,7 +429,7 @@ const editandoId     = ref(null)
 const salvando       = ref(false)
 const excluindo      = ref(false)
 const erroModal      = ref('')
-const formSetor      = reactive({ nome: '', sigla: '', unidade_id: null, ico: '🏥' })
+const formSetor      = reactive({ nome: '', sigla: '', unidade_id: null, ico: '🏛️' })
 const unidadesFlat   = ref([])
 
 // ── CRUD Diretoria state ──────────────────────────────────────
@@ -457,7 +457,7 @@ const mockEstrutura = [
   {
     id: 2, nome: 'Diretoria de Enfermagem', ico: '💉', cor: '#0d9488',
     setores: [
-      { id: 21, ico: '🛏️', nome: 'Clínica Médica', responsavel: 'Enf. Maria Carvalho', unidade_id: 2, funcionarios: [{ nome: 'Sandra Lima', cargo: 'Enfermeira' }, { nome: 'Paulo Freitas', cargo: 'Técnico de Enfermagem' }] },
+      { id: 21, ico: '🏫', nome: 'Núcleo de Unidades Escolares', responsavel: 'Maria Carvalho', unidade_id: 2, funcionarios: [{ nome: 'Sandra Lima', cargo: 'Gestora Escolar' }, { nome: 'Paulo Freitas', cargo: 'Técnico de Gestão' }] },
       { id: 22, ico: '🏃', nome: 'Fisioterapia', responsavel: 'Ft. João Batista', unidade_id: 2, funcionarios: [{ nome: 'Larissa Cunha', cargo: 'Fisioterapeuta' }] },
     ]
   },
@@ -479,7 +479,7 @@ const mapEstrutura = (unidades) => {
     id:      u.id ?? 0,  // null vira 0 (grupo virtual 'Sem Diretoria')
     nome:    u.nome || 'Sem Diretoria',
     sigla:   u.sigla ?? null,
-    ico:     u.sigla ? ['🏥','💉','📋','🔬','🏃','🛡️'][i % 6] : '🏥',
+    ico:     u.sigla ? ['🏛️','📚','📋','🧭','🏫','🛡️'][i % 6] : '🏛️',
     cor:     CORES[i % CORES.length],
     setores: (u.setores ?? []).map(s => ({
       id:           s.id,
@@ -534,17 +534,17 @@ const showToast = (msg) => { toast.value = { visible: true, msg }; setTimeout(()
 // ── CRUD Setor ────────────────────────────────────────────────
 const abrirModalNovo = () => {
   editandoId.value = null; erroModal.value = ''
-  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: null, ico: '🏥' })
+  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: null, ico: '🏛️' })
   modalAberto.value = true
 }
 const abrirModalNovoNaDir = (dir) => {
   editandoId.value = null; erroModal.value = ''
-  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: dir.id, ico: '🏥' })
+  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: dir.id, ico: '🏛️' })
   modalAberto.value = true
 }
 const abrirModalEditar = (s) => {
   editandoId.value = s.id; erroModal.value = ''
-  Object.assign(formSetor, { nome: s.nome, sigla: s.sigla ?? '', unidade_id: s.unidade_id ?? null, ico: s.ico ?? '🏥' })
+  Object.assign(formSetor, { nome: s.nome, sigla: s.sigla ?? '', unidade_id: s.unidade_id ?? null, ico: s.ico ?? '🏛️' })
   modalAberto.value = true
 }
 const confirmarExcluir = (s) => { confirmExcluir.value = s }
@@ -580,7 +580,7 @@ const salvarSetor = async () => {
           estrutura.value[novaDirIdx].setores.push(setorAtualizado)
         } else {
           // Criar grupo 'Sem Diretoria' caso não exista
-          estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏥', cor: '#64748b', setores: [setorAtualizado] })
+          estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏛️', cor: '#64748b', setores: [setorAtualizado] })
         }
         // Limpar grupos virtuais vazios
         estrutura.value = estrutura.value.filter(d => d.setores.length > 0 || (d.id && d.id !== 0))
@@ -596,7 +596,7 @@ const salvarSetor = async () => {
       const novoSetor = { id: data.id ?? Date.now(), nome: formSetor.nome, sigla: formSetor.sigla, ico: formSetor.ico, responsavel: '—', unidade_id: formSetor.unidade_id, funcionarios: [] }
       const dirIdx = estrutura.value.findIndex(d => d.id === formSetor.unidade_id)
       if (dirIdx !== -1) { estrutura.value[dirIdx].setores.push(novoSetor) }
-      else { estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏥', cor: '#64748b', setores: [novoSetor] }) }
+      else { estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏛️', cor: '#64748b', setores: [novoSetor] }) }
       showToast(`Setor "${formSetor.nome}" criado!`)
     }
     modalAberto.value = false

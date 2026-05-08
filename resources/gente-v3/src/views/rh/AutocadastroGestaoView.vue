@@ -317,7 +317,11 @@ const copiarToken = (token) => {
 
 const abrir = (t) => {
   erroAprovacao.value = ''
-  tokenAberto.value = { ...t, TOKEN_DADOS: typeof t.TOKEN_DADOS === 'string' ? JSON.parse(t.TOKEN_DADOS) : (t.TOKEN_DADOS ?? {}) }
+  let dados = t.TOKEN_DADOS ?? {}
+  if (typeof dados === 'string') {
+    try { dados = JSON.parse(dados) } catch { dados = {} }
+  }
+  tokenAberto.value = { ...t, TOKEN_DADOS: dados }
 }
 
 const aprovar = async (token) => {
@@ -329,6 +333,7 @@ const aprovar = async (token) => {
       tokens.value[idx].TOKEN_STATUS = 'aprovado'
       if (data.funcionario_id) tokens.value[idx].FUNCIONARIO_ID = data.funcionario_id
     }
+    await carregar()
     tokenAberto.value = null
     // BUG-EST-09: exibir matrícula e login no toast
     const mat = data.matricula ? ` Matrícula: ${data.matricula} | Login: ${data.login ?? ''}` : ''

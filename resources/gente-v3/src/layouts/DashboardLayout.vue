@@ -96,6 +96,51 @@
 
         <div class="topbar-actions">
 
+          <!-- Sudo: visão global (cabeçalho HTTP) — topbar, sempre visível para quem tem can_bypass_tenant -->
+          <div
+            v-if="authStore.canBypassTenant"
+            class="sudo-global-pill"
+            :class="{ 'sudo-on': globalViewSudoModel }"
+            :title="sudoGlobalTitle"
+          >
+            <label class="sudo-global-label">
+              <input
+                v-model="globalViewSudoModel"
+                type="checkbox"
+                class="sudo-global-input"
+                aria-label="Ativar visão global (Sudo) para dados de toda a prefeitura; uso auditado"
+              />
+              <span class="sudo-global-ico" aria-hidden="true">⛨</span>
+              <span class="sudo-global-text">Visão global</span>
+            </label>
+          </div>
+
+          <!-- Fase 8A: acúmulo — escolher matrícula / vínculo activo (cabeçalho nas APIs) -->
+          <div
+            v-if="authStore.temMultiplosVinculosFuncionario"
+            class="fnctx-pill"
+            :title="fnctxTitle"
+          >
+            <label class="fnctx-label">
+              <span class="fnctx-ico" aria-hidden="true">👤</span>
+              <span class="fnctx-text">Vínculo</span>
+              <select
+                class="fnctx-select"
+                :value="String(authStore.funcionarioContextId || '')"
+                aria-label="Seleccionar vínculo ou matrícula activa"
+                @change="onFuncionarioContextChange($event)"
+              >
+                <option
+                  v-for="v in authStore.funcionarioVinculos"
+                  :key="v.id"
+                  :value="String(v.id)"
+                >
+                  {{ (v.matricula || v.id) + (v.nome ? ' — ' + v.nome : '') }}
+                </option>
+              </select>
+            </label>
+          </div>
+
           <!-- ── Sininho de Notificações ─────────────────────────── -->
           <div class="notif-wrap" ref="notifWrap">
             <button class="action-btn" title="Notificações" @click="toggleNotifPanel">
@@ -147,6 +192,19 @@
         </div>
       </header>
 
+      <!-- Banner SEMAD (trava de edição na manta; chapéu duplo TI+SEMAD não exibe) -->
+      <div
+        v-if="authStore.semadMantaUiReadonlyForShell"
+        class="semad-audit-banner"
+        role="status"
+      >
+        <span class="semad-audit-ico" aria-hidden="true">🛡️</span>
+        <span><strong>Modo Auditoria:</strong> somente leitura — operações de criação, edição e exclusão estão desactivadas nas áreas protegidas.</span>
+      </div>
+      <div v-if="rbacDeniedToast" class="rbac-denied-toast" role="alert">
+        {{ rbacDeniedToast }}
+      </div>
+
       <!-- ─── PÁGINA ──────────────────────────────────────────── -->
       <main class="page-content">
         <router-view></router-view>
@@ -161,10 +219,34 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth.js'
 import AppIcon from '@/components/AppIcon.vue'
 import api from '@/plugins/axios'
+import { NAV_MANIFEST, canAccessNavEntry, canAccessNavSection } from '@/navigation/navManifest.js'
+import { registerMobileDrawerClose } from '@/navigation/mobileDrawerBus.js'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const rbacDeniedToast = ref('')
+
+const globalViewSudoModel = computed({
+  get: () => authStore.isGlobalViewActive,
+  set: (v) => authStore.setGlobalViewActive(v)
+})
+
+const sudoGlobalTitle = computed(() =>
+  globalViewSudoModel.value
+    ? 'Visão global (Sudo) ativa: as requisições enviam o cabeçalho; o acesso amplo pode ser auditado no servidor.'
+    : 'Ligar a visão global: lista completa de setores/organograma. O backend exige o cabeçalho; uso registrado em auditoria.'
+)
+
+const fnctxTitle = 'Vínculo activo: lotação e dados de contexto seguem esta matrícula. O servidor valida que o vínculo pertence ao seu utilizador.'
+
+async function onFuncionarioContextChange(ev) {
+  const v = ev?.target?.value
+  if (v == null || v === '') {
+    return
+  }
+  await authStore.setFuncionarioContext(v)
+}
 
 // ── Detecção de mobile reativa ────────────────────────────────────
 // Usa matchMedia para reagir ao resize do browser corretamente
@@ -192,6 +274,26 @@ watch(() => route.path, () => {
   if (isMobileNow()) drawer.value = false
 })
 
+watch(
+  () => route.query,
+  (query) => {
+    if (query?.denied !== 'rbac') return
+    const code = String(query?.code || '')
+    rbacDeniedToast.value =
+      code === 'required_slug_missing'
+        ? 'Acesso negado: o seu perfil não possui o passaporte RBAC necessário para esse módulo.'
+        : 'Acesso negado: o seu perfil não possui permissão para esse módulo.'
+    setTimeout(() => {
+      rbacDeniedToast.value = ''
+    }, 4500)
+    const cleanedQuery = { ...route.query }
+    delete cleanedQuery.denied
+    delete cleanedQuery.code
+    router.replace({ query: cleanedQuery })
+  },
+  { immediate: true }
+)
+
 // Sempre busca o perfil atualizado do servidor ao montar o layout
 // (garante que mudanças de perfil sejam refletidas sem logout)
 if (!authStore.user) authStore.fetchUser()
@@ -202,7 +304,9 @@ const notifWrap = ref(null)
 const notificacoes = ref([])
 const naoLidas = ref(0)
 const notifErro = ref('')
+const pendenciasSubstituicao = ref(0)
 let notifInterval = null
+let pendenciasInterval = null
 
 const fetchNotif = async () => {
   try {
@@ -212,6 +316,15 @@ const fetchNotif = async () => {
     notifErro.value = ''
   } catch (e) {
     notifErro.value = e?.response?.data?.erro || 'Falha ao atualizar notificações.'
+  }
+}
+
+const fetchPendenciasSubstituicao = async () => {
+  try {
+    const { data } = await api.get('/api/v3/substituicoes/minhas')
+    pendenciasSubstituicao.value = Array.isArray(data?.pendentes) ? data.pendentes.length : 0
+  } catch {
+    pendenciasSubstituicao.value = 0
   }
 }
 
@@ -258,14 +371,21 @@ const tempoRelativo = (iso) => {
 const clickFora = (e) => { if (notifWrap.value && !notifWrap.value.contains(e.target)) notifPanelOpen.value = false }
 
 onMounted(async () => {
+  registerMobileDrawerClose(() => {
+    if (isMobileNow()) drawer.value = false
+  })
   // Re-busca o perfil do servidor (para pegar mudanças de perfil sem logout)
   await authStore.fetchUser()
   fetchNotif()
+  fetchPendenciasSubstituicao()
   notifInterval = setInterval(() => { if (!document.hidden) fetchNotif() }, 60_000) // pausa em aba background
+  pendenciasInterval = setInterval(() => { if (!document.hidden) fetchPendenciasSubstituicao() }, 90_000)
   document.addEventListener('click', clickFora)
 })
 onUnmounted(() => {
+  registerMobileDrawerClose(null)
   clearInterval(notifInterval)
+  clearInterval(pendenciasInterval)
   document.removeEventListener('click', clickFora)
 })
 
@@ -275,375 +395,35 @@ const userInitials = computed(() => {
   return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : w[0].substring(0, 2).toUpperCase()
 })
 
-// Mapa de roles para cada item do menu:
-// roles vazio [] = visível para todos os usuários autenticados
-// ['admin'] = só admin, ['admin','rh'] = admin e rh, etc.
 const sidebarBusca = ref('')
 
-const ALL_NAV_ITEMS = [
+/** Itens com link na sidebar (exclui entradas só para gate do router). */
+const SIDEBAR_NAV_ITEMS = NAV_MANIFEST.filter(
+  (row) => row.type !== 'item' || (row.to && row.sidebar !== false)
+)
 
-  // ═══════════════════════════════════════════════════════════════
-  // VISÃO GERAL — todos os perfis
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Visão Geral' },
-  { type: 'item', to: '/dashboard',
-    label: 'Dashboard', icon: 'dashboard', roles: [] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // MINHA ÁREA — o que o funcionário vê sobre si mesmo
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Minha Área' },
-  { type: 'item', to: '/meu-perfil',
-    label: 'Meu Perfil', icon: 'user', roles: [] },
-  { type: 'item', to: '/ponto',
-    label: 'Ponto Eletrônico', icon: 'clock', roles: [] },
-  { type: 'item', to: '/meus-holerites',
-    label: 'Meus Holerites', icon: 'money', roles: [] },
-  { type: 'item', to: '/ferias-licencas',
-    label: 'Férias e Licenças', icon: 'beach', roles: [] },
-  { type: 'item', to: '/banco-horas',
-    label: 'Banco de Horas', icon: 'hourglass', roles: [] },
-  { type: 'item', to: '/declaracoes-requerimentos',
-    label: 'Declarações', icon: 'doc', roles: [] },
-  { type: 'item', to: '/progressao-funcional',
-    label: 'Minha Progressão', icon: 'trending', roles: [] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // MINHA EQUIPE — gestor de setor
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Minha Equipe',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/portal-gestor',
-    label: 'Portal do Gestor', icon: 'tie-person',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/organograma',
-    label: 'Organograma', icon: 'organogram',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/escala-trabalho',
-    label: 'Escala de Trabalho', icon: 'calendar',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/escala-matriz-v3',
-    label: 'Escalas Hospitalares', icon: 'calendar-week',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/substituicoes',
-    label: 'Substituições', icon: 'swap',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/escala-sobreaviso',
-    label: 'Sobreaviso', icon: 'phone',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/hora-extra',
-    label: 'Hora Extra', icon: 'clock',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/plantoes-extras',
-    label: 'Plantões Extras', icon: 'plus',
-    roles: ['admin', 'rh', 'gestor'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // RECURSOS HUMANOS — cadastros e gestão de pessoal
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Recursos Humanos',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/funcionarios',
-    label: 'Funcionários', icon: 'users',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/autocadastro-gestao',
-    label: 'Autocadastro', icon: 'user-plus',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/cargos-salarios',
-    label: 'Cargos e Salários', icon: 'briefcase',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/contratos-vinculos',
-    label: 'Contratos e Vínculos', icon: 'contract',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/progressao-admin',
-    label: 'Gerir Progressões', icon: 'badge',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/exoneracao',
-    label: 'Exoneração / Rescisão', icon: 'exit',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/pss',
-    label: 'PSS / Concurso', icon: 'school',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/estagiarios',
-    label: 'Estagiários', icon: 'student',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/terceirizados',
-    label: 'Terceirizados', icon: 'briefcase',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/acumulacao-cargos',
-    label: 'Acumulação de Cargos', icon: 'layers',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/diarias',
-    label: 'Diárias', icon: 'map-pin',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/avaliacao-gestor',
-    label: 'Avaliações da Equipe', icon: 'star',
-    roles: ['admin', 'rh', 'gestor'] },
-  { type: 'item', to: '/beneficios',
-    label: 'Gestão de Benefícios', icon: 'zap',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/treinamentos-admin',
-    label: 'Gestão de Treinamentos', icon: 'school',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/medicina-admin',
-    label: 'Gestão SESMT (Med.', icon: 'stethoscope',
-    roles: ['admin', 'rh', 'sesmt'] },
-  { type: 'item', to: '/seguranca-admin',
-    label: 'Gestão SESMT (Seg.', icon: 'shield',
-    roles: ['admin', 'rh', 'sesmt'] },
-
-  // ── Frequência ──────────────────────────────────────────────────
-  { type: 'section', label: 'Frequência',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/faltas-atrasos',
-    label: 'Faltas e Atrasos', icon: 'warning',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/abono-faltas',
-    label: 'Abono de Faltas', icon: 'check',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/atestados-medicos',
-    label: 'Atestados Médicos', icon: 'hospital',
-    roles: ['admin', 'rh'] },
-
-  // ── Saúde Ocupacional ───────────────────────────────────────────
-  { type: 'section', label: 'Saúde Ocupacional',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/medicina-trabalho',
-    label: 'Medicina do Trabalho', icon: 'stethoscope',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/seguranca-trabalho',
-    label: 'Segurança do Trabalho', icon: 'shield',
-    roles: ['admin', 'rh'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // FINANCEIRO E FOLHA
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Financeiro e Folha',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/folha-pagamento',
-    label: 'Folha de Pagamento', icon: 'credit-card',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/consignacao',
-    label: 'Consignações', icon: 'account-balance',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/consignatarias',
-    label: 'Consignatárias', icon: 'building-bank',
-    roles: ['admin'] },
-  { type: 'item', to: '/verba-indenizatoria',
-    label: 'Verbas Indenizatórias', icon: 'money',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/beneficios',
-    label: 'Benefícios', icon: 'gift',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/rpps',
-    label: 'RPPS / IPAM', icon: 'bank',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/remessa-cnab',
-    label: 'Remessa CNAB', icon: 'bank',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/gestao-declaracoes',
-    label: 'Gestão de Declarações', icon: 'clipboard',
-    roles: ['admin', 'rh'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SAÚDE
-  { type: 'section', label: 'Saúde', roles: ['admin'] },
-  { type: 'item', to: '/oss',
-    label: 'Monitor OSS', icon: 'activity',
-    roles: ['admin'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // ADMINISTRATIVO
-  { type: 'section', label: 'Administrativo', roles: ['admin'] },
-  { type: 'item', to: '/compras',
-    label: 'Compras e Licitações', icon: 'shopping-cart',
-    roles: ['admin'] },
-  { type: 'item', to: '/almoxarifado',
-    label: 'Almoxarifado', icon: 'package',
-    roles: ['admin'] },
-  { type: 'item', to: '/patrimonio',
-    label: 'Patrimônio', icon: 'building',
-    roles: ['admin'] },
-  { type: 'item', to: '/contratos-admin',
-    label: 'Contratos', icon: 'file-text',
-    roles: ['admin'] },
-  { type: 'item', to: '/frotas',
-    label: 'Frotas', icon: 'car',
-    roles: ['admin'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // COMPLIANCE — obrigações legais
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Compliance',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/esocial',
-    label: 'eSocial', icon: 'cloud-upload',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/sagres-tce',
-    label: 'SAGRES / TCE-MA', icon: 'chart',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/transparencia',
-    label: 'Transparência Pública', icon: 'eye',
-    roles: ['admin', 'rh'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // DESENVOLVIMENTO — pessoas e capacitação
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Desenvolvimento',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/avaliacao-desempenho',
-    label: 'Avaliação de Desempenho', icon: 'star',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/treinamentos',
-    label: 'Treinamentos', icon: 'school',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/pesquisa-satisfacao',
-    label: 'Pesquisa de Satisfação', icon: 'poll',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/pesquisa-admin',
-    label: 'Gerenciar Pesquisas', icon: 'edit',
-    roles: ['admin', 'rh'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // COMUNICAÇÃO — todos os perfis
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Comunicação' },
-  { type: 'item', to: '/agenda',
-    label: 'Agenda', icon: 'agenda', roles: [] },
-  { type: 'item', to: '/comunicados',
-    label: 'Comunicados', icon: 'megaphone', roles: [] },
-  { type: 'item', to: '/notificacoes',
-    label: 'Notificações', icon: 'bell', roles: [] },
-  { type: 'item', to: '/ouvidoria',
-    label: 'Ouvidoria', icon: 'comment', roles: [] },
-  { type: 'item', to: '/ouvidoria-admin',
-    label: 'Painel Ouvidoria', icon: 'shield',
-    roles: ['admin', 'rh'] },
-  { type: 'item', to: '/relatorios',
-    label: 'Relatórios', icon: 'chart',
-    roles: ['admin', 'rh'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // CONFIGURAÇÕES DO SISTEMA — admin apenas
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'Configurações',
-    roles: ['admin'] },
-  { type: 'item', to: '/configuracoes',
-    label: 'Configurações Gerais', icon: 'settings',
-    roles: ['admin'] },
-  { type: 'item', to: '/configuracao-sistema',
-    label: 'Motor de Folha', icon: 'cpu',
-    roles: ['admin'] },
-  { type: 'item', to: '/parametros-financeiros',
-    label: 'Parâmetros Financeiros', icon: 'sliders',
-    roles: ['admin'] },
-  { type: 'item', to: '/vinculos',
-    label: 'Vínculos', icon: 'link',
-    roles: ['admin'] },
-  { type: 'item', to: '/turnos',
-    label: 'Turnos', icon: 'clock',
-    roles: ['admin'] },
-  { type: 'item', to: '/feriados',
-    label: 'Feriados', icon: 'calendar',
-    roles: ['admin'] },
-  { type: 'item', to: '/tabelas-auxiliares',
-    label: 'Tabelas Auxiliares', icon: 'table',
-    roles: ['admin'] },
-  { type: 'item', to: '/eventos-folha',
-    label: 'Eventos de Folha', icon: 'list',
-    roles: ['admin'] },
-
-  // ═══════════════════════════════════════════════════════════════
-  // ERP / FISCAL — pós-contrato, admin apenas
-  // ═══════════════════════════════════════════════════════════════
-  { type: 'section', label: 'ERP / Fiscal',
-    roles: ['admin'] },
-  { type: 'item', to: '/orcamento',
-    label: 'Orçamento (PPA/LOA)', icon: 'budget',
-    roles: ['admin'] },
-  { type: 'item', to: '/execucao-despesa',
-    label: 'Execução da Despesa', icon: 'pay',
-    roles: ['admin'] },
-  { type: 'item', to: '/contabilidade',
-    label: 'Contabilidade (PCASP)', icon: 'book',
-    roles: ['admin'] },
-  { type: 'item', to: '/tesouraria',
-    label: 'Tesouraria', icon: 'bank',
-    roles: ['admin'] },
-  { type: 'item', to: '/receita-municipal',
-    label: 'Receita Municipal', icon: 'credit-card',
-    roles: ['admin'] },
-  { type: 'item', to: '/controle-externo',
-    label: 'Controle Externo', icon: 'chart',
-    roles: ['admin'] },
-]
-
-// Hierarquia de roles (índice menor = mais privilegiado)
-const ROLE_HIERARCHY = ['admin', 'rh', 'gestor', 'funcionario']
-
-function userRoleLevel(perfil) {
-  if (!perfil) return 3 // funcionario por padrão
-  const p = perfil.toLowerCase().trim().replace(/[^a-záéíóúàâêôãõç\s]/g, '')
-
-  // admin — 15 perfis reais do banco
-  const adminPerfis = [
-    'admin', 'administrador', 'administrator', 'desenvolvedor',
-    'manutencao', 'manutenção', 'equipe sisgep',
-  ]
-  if (adminPerfis.some(x => p.includes(x))) return 0
-
-  // rh — operacional, folha, unidade, aps, rede, direitos, recrutador
-  const rhPerfis = [
-    'rh', 'recursos humanos', 'rh folha', 'rh unidade', 'rh aps',
-    'rh rede', 'operacional', 'direitos e deveres', 'recrutador',
-    'recursoshumanos',
-  ]
-  if (rhPerfis.some(x => p.includes(x))) return 1
-
-  // gestor — coordenador, diretor, gestor de unidade
-  const gestorPerfis = [
-    'gestor', 'gestão', 'gestao', 'coordenador', 'diretor',
-    'gestor de setor', 'diretor gestor', 'coordenador de setor',
-  ]
-  if (gestorPerfis.some(x => p.includes(x))) return 2
-
-  return 3 // funcionario / externo / outros
-}
-
-function itemVisivel(item, perfil) {
-  const roles = item.roles
-  // roles vazio ou ausente = visível para todos
-  if (!roles || roles.length === 0) return true
-  const userLevel = userRoleLevel(perfil)
-  // Item visível se o usuário tem um nível MENOR OU IGUAL ao exigido
-  // (nível 0 = admin vê tudo; nível 3 = funcionário só vê o que está liberado para ele)
-  return roles.some(r => {
-    const requiredLevel = ROLE_HIERARCHY.indexOf(r)
-    return requiredLevel !== -1 && userLevel <= requiredLevel
-  })
-}
-
-
-// Remove seções que ficam sem nenhum item visível após o filtro
 const navItemsFiltrados = computed(() => {
-  const perfil = authStore.user?.perfil ?? ''
   const result = []
   let lastSection = null
 
-  for (const item of ALL_NAV_ITEMS) {
+  for (const item of SIDEBAR_NAV_ITEMS) {
     if (item.type === 'section') {
-      // Guarda a seção, mas só insere se houver itens visíveis a seguir
-      lastSection = item
-    } else if (itemVisivel(item, perfil)) {
+      lastSection = canAccessNavSection(authStore, item) ? item : null
+    } else if (item.to && canAccessNavEntry(authStore, item)) {
       if (lastSection) {
         result.push(lastSection)
         lastSection = null
       }
-      result.push(item)
+      const itemComBadge = { ...item }
+      if (item.to === '/minhas-substituicoes') {
+        itemComBadge.badge = pendenciasSubstituicao.value > 0
+          ? (pendenciasSubstituicao.value > 99 ? '99+' : String(pendenciasSubstituicao.value))
+          : ''
+      }
+      result.push(itemComBadge)
     }
   }
 
-  // Filtro de busca textual
   if (sidebarBusca.value.trim()) {
     const termo = sidebarBusca.value.toLowerCase().trim()
     const filtrado = []
@@ -667,7 +447,7 @@ const routeMap = {
   '/dashboard':                  { label: 'Dashboard',                  icon: 'dashboard' },
   '/funcionarios':               { label: 'Funcionários',               icon: 'users' },
   '/autocadastro-gestao':        { label: 'Autocadastro',               icon: 'user-plus' },
-  '/organograma':                { label: 'Organograma',                icon: 'organogram' },
+  '/organograma':                { label: 'Estrutura Organizacional',  icon: 'organogram' },
   '/cargos-salarios':            { label: 'Cargos e Salários',          icon: 'briefcase' },
   '/contratos-vinculos':         { label: 'Contratos e Vínculos',       icon: 'contract' },
   '/progressao-funcional':       { label: 'Minha Progressão',           icon: 'trending' },
@@ -678,6 +458,7 @@ const routeMap = {
   '/seguranca-trabalho':         { label: 'Segurança do Trabalho',      icon: 'shield' },
   '/avaliacao-gestor':           { label: 'Avaliações da Equipe',       icon: 'star' },
   '/beneficios':                 { label: 'Gestão de Benefícios',       icon: 'zap' },
+  '/beneficios-admin':            { label: 'Benefícios (Financeiro)',   icon: 'gift' },
   '/treinamentos-admin':         { label: 'Gestão de Treinamentos',     icon: 'school' },
   '/medicina-admin':             { label: 'Gestão SESMT',               icon: 'stethoscope' },
   '/seguranca-admin':            { label: 'Segurança SESMT',            icon: 'shield' },
@@ -690,11 +471,12 @@ const routeMap = {
   '/ferias-licencas':            { label: 'Férias e Licenças',          icon: 'beach' },
   '/frequencia':                 { label: 'Controle de Frequência',     icon: 'clipboard-check' },
   '/remessa-cnab':               { label: 'Remessa CNAB 240',           icon: 'bank' },
-  '/escala-trabalho':            { label: 'Escala de Trabalho',         icon: 'calendar' },
-  '/escala-matriz-v3':           { label: 'Escalas Hospitalares',       icon: 'calendar-week' },
-  '/substituicoes':              { label: 'Substituições de Plantão',   icon: 'swap' },
+  '/escala-trabalho':            { label: 'Escalas',                    icon: 'calendar-week' },
+  '/escala-matriz-v3':           { label: 'Escalas',                    icon: 'calendar-week' },
+  '/substituicoes':              { label: 'Gestão de Substituições',            icon: 'swap' },
+  '/minhas-substituicoes':       { label: 'Minhas Substituições',   icon: 'swap' },
   '/escala-sobreaviso':          { label: 'Sobreaviso',                 icon: 'phone' },
-  '/plantoes-extras':            { label: 'Plantões Extras',            icon: 'plus' },
+  '/plantoes-extras':            { label: 'Horas / Plantões Extras',    icon: 'plus' },
   '/exoneracao':                 { label: 'Exoneração / Rescisão',      icon: 'exit' },
   '/hora-extra':                 { label: 'Hora Extra',                 icon: 'clock' },
   '/folha-pagamento':            { label: 'Folha de Pagamento',         icon: 'credit-card' },
@@ -725,7 +507,7 @@ const routeMap = {
   '/parametros-financeiros':     { label: 'Parâmetros Financeiros',     icon: 'sliders' },
   '/vinculos':                   { label: 'Vínculos',                   icon: 'link' },
   '/turnos':                     { label: 'Turnos',                     icon: 'clock' },
-  '/feriados':                   { label: 'Feriados',                   icon: 'calendar' },
+  '/feriados':                   { label: 'Feriados e Folgas',          icon: 'calendar' },
   '/tabelas-auxiliares':         { label: 'Tabelas Auxiliares',         icon: 'table' },
   '/eventos-folha':              { label: 'Eventos de Folha',           icon: 'list' },
   '/oss':                        { label: 'Monitor OSS',                icon: 'activity' },
@@ -741,9 +523,18 @@ const handleLogout = async () => {
 <style scoped>
 /* ═══ LAYOUT SHELL ══════════════════════════════════════════════ */
 .app-shell {
+  /* Tokens visuais «São Luís premium» — aplicados incrementalmente ao shell */
+  --gente-sl-ocean-deep: #0a1f33;
+  --gente-sl-ocean-mid: #0f2d4a;
+  --gente-sl-ocean-soft: #164e63;
+  --gente-sl-sand-warm: #e8dcc4;
+  --gente-sl-palm: #166534;
+  --gente-sl-sky: #38bdf8;
+  --gente-sl-shell-bg: #f4f8fb;
+
   display: flex;
   min-height: 100vh;
-  background: #f8fafc;
+  background: var(--gente-sl-shell-bg);
   font-family: 'Inter', system-ui, sans-serif;
 }
 
@@ -763,7 +554,12 @@ const handleLogout = async () => {
 .sidebar {
   width: 260px;
   min-width: 260px;
-  background: linear-gradient(180deg, #0f172a 0%, #132037 60%, #0f2044 100%);
+  background: linear-gradient(
+    180deg,
+    var(--gente-sl-ocean-deep) 0%,
+    var(--gente-sl-ocean-mid) 52%,
+    var(--gente-sl-ocean-soft) 100%
+  );
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -812,7 +608,7 @@ const handleLogout = async () => {
   letter-spacing: 0.06em;
   line-height: 1;
 }
-.logo-sub { display: block; font-size: 10px; color: #60a5fa; font-weight: 600; margin-top: 2px; }
+.logo-sub { display: block; font-size: 10px; color: var(--gente-sl-sky); font-weight: 600; margin-top: 2px; }
 
 /* ─── PROFILE ──────────────────────────────────────────────────── */
 .sidebar-profile {
@@ -830,7 +626,7 @@ const handleLogout = async () => {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, var(--gente-sl-sky), #6366f1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -936,6 +732,7 @@ const handleLogout = async () => {
 /* ═══ MAIN CONTENT ═══════════════════════════════════════════════ */
 .main-content {
   flex: 1;
+  min-width: 0; /* permite encolher abaixo do min-content da grade larga → scroll interno */
   margin-left: 260px;
   display: flex;
   flex-direction: column;
@@ -1000,6 +797,87 @@ const handleLogout = async () => {
   align-items: center;
   gap: 6px;
 }
+/* Sudo: visão global (topbar — ponto operacional, sem ocupar a sidebar) */
+.sudo-global-pill {
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+  padding: 0 2px 0 6px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sudo-global-pill.sudo-on {
+  border-color: #a78bfa;
+  background: #f5f3ff;
+}
+.sudo-global-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 4px 6px 4px 2px;
+  white-space: nowrap;
+}
+.sudo-on .sudo-global-label { color: #5b21b6; }
+.sudo-global-input {
+  width: 16px;
+  height: 16px;
+  accent-color: #7c3aed;
+  cursor: pointer;
+}
+.sudo-global-ico {
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.75;
+}
+@media (max-width: 767px) {
+  .sudo-global-text { display: none; }
+  .sudo-global-pill { padding: 0 2px; }
+  .sudo-global-label { padding: 6px 4px; }
+}
+
+.fnctx-pill {
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+  padding: 0 4px 0 6px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.fnctx-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 2px 2px 2px 0;
+  white-space: nowrap;
+}
+.fnctx-ico { font-size: 13px; line-height: 1; opacity: 0.8; }
+.fnctx-select {
+  max-width: 200px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: #fff;
+  cursor: pointer;
+}
+@media (max-width: 767px) {
+  .fnctx-text { display: none; }
+  .fnctx-select { max-width: 140px; }
+}
+
 .action-btn {
   position: relative;
   width: 36px;
@@ -1091,15 +969,55 @@ const handleLogout = async () => {
   margin-left: 4px;
 }
 
+/* Banner auditoria SEMAD */
+.semad-audit-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 28px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #fef3c7, #fffbeb);
+  border: 1px solid #f59e0b;
+  color: #78350f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.semad-audit-ico { flex-shrink: 0; }
+.rbac-denied-toast {
+  margin: 10px 28px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ─── PAGE CONTENT ─────────────────────────────────────────────── */
 .page-content {
   flex: 1;
+  min-width: 0;
   padding: 28px;
+  overflow-x: auto;
   overflow-y: auto;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* ═══ RESPONSIVE ═════════════════════════════════════════════════ */
 @media (max-width: 768px) {
+  .semad-audit-banner {
+    margin: 0 12px;
+    font-size: 12px;
+  }
+  .rbac-denied-toast {
+    margin: 8px 12px 0;
+    font-size: 12px;
+  }
   .sidebar {
     transform: translateX(-100%);
   }

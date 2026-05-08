@@ -1,10 +1,28 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <div class="fleet-hero flex justify-between items-center p-6 rounded-xl shadow-sm border border-slate-200">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-800">Gestão de Frotas</h1>
-        <p class="text-slate-500 mt-1">Controle de veículos, saídas, manutenções e alertas</p>
+        <h1 class="text-2xl font-bold tracking-tight text-white">Gestão de Frotas</h1>
+        <p class="text-slate-200 mt-1">Controle de veículos, saídas, manutenções e alertas</p>
+      </div>
+      <div class="fleet-kpis">
+        <div class="kpi-card">
+          <div class="kpi-label">Total</div>
+          <div class="kpi-value">{{ frotaKpis.total }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Em uso</div>
+          <div class="kpi-value">{{ frotaKpis.emUso }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Manutenção</div>
+          <div class="kpi-value">{{ frotaKpis.emManutencao }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Alertas 7d</div>
+          <div class="kpi-value">{{ frotaKpis.alertasCriticos }}</div>
+        </div>
       </div>
     </div>
 
@@ -445,7 +463,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch, nextTick } from 'vue'
+import { ref, reactive, onMounted, watch, nextTick, computed } from 'vue'
 import api from '@/plugins/axios'
 import { createIcons, icons } from 'lucide'
 
@@ -475,6 +493,20 @@ const statusColors = {
   EM_MANUTENCAO: { border: 'border-red-500', badge: 'bg-red-100 text-red-800' },
   INATIVO: { border: 'border-slate-500', badge: 'bg-slate-100 text-slate-800' }
 }
+
+const frotaKpis = computed(() => {
+  const total = veiculos.value.length
+  const emUso = veiculos.value.filter(v => v.VEICULO_STATUS === 'EM_USO').length
+  const emManutencao = veiculos.value.filter(v => v.VEICULO_STATUS === 'EM_MANUTENCAO').length
+  const hoje = new Date()
+  const alertasCriticos = veiculos.value.filter(v => {
+    if (!v.VEICULO_PROX_MANUTENCAO) return false
+    const dt = new Date(String(v.VEICULO_PROX_MANUTENCAO).slice(0, 10))
+    const diff = Math.ceil((dt.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
+    return diff <= 7
+  }).length
+  return { total, emUso, emManutencao, alertasCriticos }
+})
 
 // Filtros & Controle de Estado
 const filtersFrota = reactive({ status: '', tipo: '' })
@@ -683,3 +715,38 @@ const abrirManutencaoFromAlerta = (veiculoId) => {
   activeTab.value = 'manutencoes'
 }
 </script>
+
+<style scoped>
+.fleet-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #065f46 100%);
+}
+.fleet-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.kpi-card {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 88px;
+}
+.kpi-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #cbd5e1;
+}
+.kpi-value {
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #fff;
+}
+@media (max-width: 980px) {
+  .fleet-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

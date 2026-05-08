@@ -16,6 +16,17 @@
       </div>
     </div>
 
+    <div class="teia-box" :class="{ loaded }">
+      <div>
+        <strong>Teia SESMT:</strong> exames ocupacionais conectam Segurança do Trabalho, Treinamentos e indicadores de risco.
+      </div>
+      <div class="teia-actions">
+        <button class="teia-btn" @click="irPara('/seguranca-trabalho')">Segurança</button>
+        <button class="teia-btn" @click="irPara('/treinamentos')">Treinamentos</button>
+      </div>
+    </div>
+    <div v-if="dataWarning" class="data-warning" :class="{ loaded }">{{ dataWarning }}</div>
+
     <!-- ALERTA PRÓXIMOS -->
     <div v-if="examesProximos.length > 0" class="alert-banner" :class="{ loaded }">
       <span class="alert-ico">⚠️</span>
@@ -122,6 +133,9 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import api from '@/plugins/axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const loaded      = ref(false)
 const modalAberto = ref(false)
@@ -129,6 +143,7 @@ const salvando    = ref(false)
 const hoje        = new Date().toISOString().slice(0, 10)
 const agenda      = reactive({ tipo: '', data: '', obs: '' })
 const toast       = ref({ visible: false, msg: '' })
+const dataWarning = ref('')
 
 const exames    = ref([])
 const historico = ref([])
@@ -161,30 +176,16 @@ const mapExame = (e) => {
   }
 }
 
-const mockExames = [
-  { id: 1, ico: '🏥', tipo: 'Exame Periódico',  subtipo: 'Clínico + Laboratorial', realizado: '2025-02-15', vencimento: '2026-02-15', medico: 'Dr. Nelson Barbosa', apto: true },
-  { id: 2, ico: '🫁', tipo: 'Audiometria',       subtipo: 'NR-7 — PCA',             realizado: '2025-02-15', vencimento: '2026-02-15', medico: 'Dra. Amanda Torres',  apto: true },
-  { id: 3, ico: '👁️', tipo: 'Acuidade Visual',   subtipo: 'Avaliação oftalmológica', realizado: '2025-02-15', vencimento: '2026-05-15', medico: 'Dr. Nelson Barbosa', apto: true },
-  { id: 4, ico: '🩻', tipo: 'Raio-X de Tórax',  subtipo: 'NR-7 — Controle Anual',  realizado: '2024-08-20', vencimento: '2025-08-20', medico: 'Dr. Nelson Barbosa', apto: true },
-].map(mapExame)
-
-const mockHistorico = [
-  { tipo: 'Periódico',   data: '2024-02-10', apto: true },
-  { tipo: 'Audiometria', data: '2024-02-10', apto: true },
-  { tipo: 'Periódico',   data: '2023-02-08', apto: true },
-  { tipo: 'Admissional', data: '2021-03-01', apto: true },
-]
-
 onMounted(async () => {
   try {
     const { data } = await api.get('/api/v3/medicina')
-    exames.value   = (!data.fallback && data.exames?.length)
-      ? data.exames.map(mapExame)
-      : mockExames
-    historico.value = data.historico?.length ? data.historico : mockHistorico
+    exames.value = Array.isArray(data.exames) ? data.exames.map(mapExame) : []
+    historico.value = Array.isArray(data.historico) ? data.historico : []
+    if (data.fallback) dataWarning.value = 'API retornou dados de contingência. Operação com dados reais indisponível no momento.'
   } catch {
-    exames.value    = mockExames
-    historico.value = mockHistorico
+    exames.value = []
+    historico.value = []
+    dataWarning.value = 'Não foi possível carregar dados reais de Medicina do Trabalho.'
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
@@ -205,7 +206,7 @@ const salvarAgenda = async () => {
     await api.post('/api/v3/medicina/agendar', { ...agenda })
     showToast('✅ Agendamento solicitado com sucesso!')
   } catch {
-    showToast('✅ Agendamento registrado (modo demo)!')
+    showToast('❌ Não foi possível registrar o agendamento.')
   } finally {
     modalAberto.value = false
     Object.assign(agenda, { tipo: '', data: '', obs: '' })
@@ -214,10 +215,16 @@ const salvarAgenda = async () => {
 }
 
 const formatDate = (d) => { try { return new Date(d+'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return d } }
+const irPara = (path) => router.push(path)
 </script>
 
 <style scoped>
 .mt-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
+.teia-box { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#f0f9ff; border:1px solid #bae6fd; color:#0c4a6e; border-radius:12px; padding:10px 14px; font-size:12px; font-weight:600; }
+.teia-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.teia-btn { border:1px solid #7dd3fc; background:#fff; color:#0369a1; border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+.data-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 10px 12px; font-size: 12px; font-weight: 700; opacity: 0; transform: translateY(6px); transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
+.data-warning.loaded { opacity: 1; transform: none; }
 .hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #1a1a1a 55%, #0a2a2a 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
 .hero-shapes { position: absolute; inset: 0; pointer-events: none; }

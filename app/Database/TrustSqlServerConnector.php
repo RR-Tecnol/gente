@@ -26,6 +26,15 @@ class TrustSqlServerConnector extends SqlServerConnector
         // Obtém o DSN padrão do Laravel (ex: sqlsrv:Server=host,port;Database=db)
         $dsn = parent::getDsn($config);
 
+        // Garante LoginTimeout no DSN (evita esperas longas quando o servidor está fora).
+        if (!str_contains($dsn, 'LoginTimeout')) {
+            $timeout = (int) ($config['login_timeout'] ?? 8);
+            if ($timeout < 1) {
+                $timeout = 8;
+            }
+            $dsn .= ';LoginTimeout=' . $timeout;
+        }
+
         // Adiciona as opções TLS apenas se não estiverem presentes
         if (!str_contains($dsn, 'TrustServerCertificate')) {
             $dsn .= ';TrustServerCertificate=1';

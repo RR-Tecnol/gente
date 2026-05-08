@@ -17,10 +17,12 @@ $app = new Illuminate\Foundation\Application(
 
 // Redireciona o cache do bootstrap para fora do OneDrive (evita erro de escrita)
 $app->useStoragePath(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'storage');
-if (!is_dir('C:\\dev\\sisgep-cache')) {
-    mkdir('C:\\dev\\sisgep-cache', 0777, true);
+if (DIRECTORY_SEPARATOR === '\\') {
+    if (!is_dir('C:\\dev\\sisgep-cache')) {
+        mkdir('C:\\dev\\sisgep-cache', 0777, true);
+    }
+    $app->bootstrapPath('C:\\dev\\sisgep-cache');
 }
-$app->bootstrapPath('C:\\dev\\sisgep-cache');
 
 
 /*

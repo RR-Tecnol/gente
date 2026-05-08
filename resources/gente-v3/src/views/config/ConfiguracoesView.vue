@@ -637,7 +637,7 @@ const densidades = [
 
 const notificacoes = reactive([
   { id: 1, ico: '🏥', titulo: 'Abono de Faltas', desc: 'Notificação quando um abono for deferido ou indeferido', ativo: true },
-  { id: 2, ico: '📅', titulo: 'Escalas Hospitalares', desc: 'Lembrete 2 dias antes de um plantão', ativo: true },
+  { id: 2, ico: '📅', titulo: 'Cobertura de Turnos (SEMED)', desc: 'Lembrete 2 dias antes de um turno de regência', ativo: true },
   { id: 3, ico: '💰', titulo: 'Holerite disponível', desc: 'Aviso quando um novo holerite for processado', ativo: true },
   { id: 4, ico: '⏱️', titulo: 'Inconsistências de Ponto', desc: 'Alerta de batidas inconsistentes no mês', ativo: false },
 ])

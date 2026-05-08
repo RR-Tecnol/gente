@@ -2,20 +2,17 @@
 // MEDICINA DO TRABALHO - GET /medicina POST /medicina/agendar
 // Extraido de web.php - herda prefix api/v3 + auth do grupo principal
 
-if (!\Illuminate\Support\Facades\Schema::hasTable('AGENDAMENTO_EXAME')) {
-    \Illuminate\Support\Facades\Schema::create('AGENDAMENTO_EXAME', function ($table) {
-        $table->increments('AGENDAMENTO_ID');
-        $table->unsignedInteger('FUNCIONARIO_ID')->index();
-        $table->string('AGENDAMENTO_TIPO', 50);
-        $table->date('AGENDAMENTO_DATA')->nullable();
-        $table->string('AGENDAMENTO_OBS', 300)->nullable();
-        $table->string('AGENDAMENTO_STATUS', 20)->default('pendente');
-        $table->date('AGENDAMENTO_DT_SOLICITACAO')->nullable();
-        $table->timestamps();
-    });
+if (!function_exists('ensureAgendamentoExameTableFromRoutes')) {
+    function ensureAgendamentoExameTableFromRoutes(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('AGENDAMENTO_EXAME')) {
+            throw new \RuntimeException('Tabela AGENDAMENTO_EXAME não encontrada. Execute migrations canônicas.');
+        }
+    }
 }
 
 Route::get('/medicina', function (\Illuminate\Http\Request $request) {
+    ensureAgendamentoExameTableFromRoutes();
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
         $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
@@ -74,6 +71,7 @@ Route::get('/medicina', function (\Illuminate\Http\Request $request) {
 
 // POST /api/v3/medicina/agendar  Solicitar agendamento de exame ocupacional
 Route::post('/medicina/agendar', function (\Illuminate\Http\Request $request) {
+    ensureAgendamentoExameTableFromRoutes();
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
         $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
@@ -116,5 +114,5 @@ Route::post('/medicina/agendar', function (\Illuminate\Http\Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['message' => 'Agendamento solicitado (modo demo).', 'id' => rand(1000, 9999)], 201);
     }
-});
+})->middleware('perfil:SERVIDOR,ADMINISTRADOR,Administrador,GESTOR');
 

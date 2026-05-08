@@ -17,6 +17,9 @@
         </div>
       </div>
     </div>
+    <div v-if="dataWarning" class="data-warning" :class="{ loaded }">
+      <span>⚠️ {{ dataWarning }}</span>
+    </div>
 
     <!-- KPI CARDS -->
     <div class="kpi-grid" :class="{ loaded }">
@@ -28,6 +31,53 @@
           <span class="kpi-delta" :class="k.up ? 'kd-up' : 'kd-down'" v-if="k.delta">{{ k.up ? '▲' : '▼' }} {{ k.delta }}</span>
         </div>
       </div>
+    </div>
+
+    <div class="section-hdr" :class="{ loaded }">
+      <h2 class="sh-title">🚨 Ações Prioritárias Hoje</h2>
+      <span class="sh-badge" v-if="acoesPrioritarias.length > 0">{{ acoesPrioritarias.length }}</span>
+    </div>
+    <div class="priority-list" :class="{ loaded }">
+      <div v-for="(a, i) in acoesPrioritariasTop5" :key="a.id" class="priority-item" :style="{ '--api': i }">
+        <div class="priority-main">
+          <span class="priority-nome">{{ a.servidor || 'Servidor' }}</span>
+          <span class="priority-det">{{ tipoLabel(a.tipo) }} — {{ a.detalhe || 'Sem detalhe' }}</span>
+          <span class="priority-micro">Espera: {{ a.idade_dias || 0 }} dia(s)</span>
+        </div>
+        <div class="priority-meta">
+          <span class="priority-level" :class="`pl-${a.severidade || 'baixo'}`">{{ labelSeveridade(a.severidade) }} · {{ a.impacto_score || 0 }}</span>
+          <span class="priority-debt">Débito: {{ formatHoras(a.deficit_horas) }}h</span>
+        </div>
+        <div class="priority-actions">
+          <button class="ap-btn-neg" @click="reprovar(a)" title="Reprovar">✕</button>
+          <button class="ap-btn-ok" @click="aprovar(a)" title="Aprovar">✓</button>
+        </div>
+      </div>
+      <div v-if="acoesPrioritariasTop5.length === 0" class="ap-empty">
+        <span>🧭</span><p>Sem ações prioritárias no momento.</p>
+      </div>
+      <div v-else-if="acoesPrioritarias.length > 5" class="priority-footnote">
+        Mostrando 5 de {{ acoesPrioritarias.length }} ações priorizadas.
+      </div>
+    </div>
+
+    <div class="section-hdr" :class="{ loaded }">
+      <h2 class="sh-title">🧠 Risco Agregado do Setor (SLA diário)</h2>
+    </div>
+    <div class="risk-agg-card" :class="{ loaded }">
+      <div class="rac-top">
+        <div>
+          <span class="rac-setor">{{ riscoAgregado.setor }}</span>
+          <span class="rac-score" :class="`pl-${riscoAgregado.severidade}`">{{ labelSeveridade(riscoAgregado.severidade) }} · {{ riscoAgregado.score }}</span>
+        </div>
+        <span class="rac-trend" :class="`rt-${riscoAgregado.tendencia}`">{{ labelTendencia(riscoAgregado.tendencia) }}</span>
+      </div>
+      <div class="rac-metrics">
+        <span>Deficit: <strong>{{ formatHoras(riscoAgregado.metricas?.deficit_horas) }}h</strong></span>
+        <span>Ausencias hoje: <strong>{{ riscoAgregado.metricas?.ausencias_hoje ?? 0 }}</strong></span>
+        <span>Inconsistencias: <strong>{{ riscoAgregado.metricas?.inconsistencias_ponto ?? 0 }}</strong></span>
+      </div>
+      <p class="rac-rec">{{ riscoAgregado.recomendacao }}</p>
     </div>
 
     <!-- APROVAÇÕES PENDENTES -->
@@ -274,6 +324,15 @@ const router = useRouter()
 const loaded = ref(false)
 const busca = ref('')
 const toast = ref({ visible: false, msg: '', tipo: '' })
+const dataWarning = ref('')
+
+const sanitizeUtf = (v) => String(v ?? '')
+  .replaceAll('Ã£', 'ã')
+  .replaceAll('Ã¡', 'á')
+  .replaceAll('Ã©', 'é')
+  .replaceAll('Ãª', 'ê')
+  .replaceAll('Ã§', 'ç')
+  .replaceAll('Ã', 'à')
 
 // ── Mapeamento de equipe backend→Vue ─────────────────────────
 const mapMembro = (m) => ({
@@ -289,37 +348,35 @@ const mapMembro = (m) => ({
 
 const mapPendencia = (p) => ({
   id:          p.id         ?? p.ref_id,
-  servidor:    p.servidor   ?? '—',
+  servidor:    sanitizeUtf(p.servidor ?? '—'),
   tipo:        p.tipo       ?? 'outros',
-  detalhe:     p.detalhe    ?? '—',
+  detalhe:     sanitizeUtf(p.detalhe ?? '—'),
   data:        p.data       ?? null,
   ref_id:      p.ref_id     ?? null,
   ref_tabela:  p.ref_tabela ?? null,
 })
 
-// ── Mock data completo como fallback ─────────────────────────
-const mockEquipe = [
-  { id: 1, nome: 'Ana Beatriz Santos', cargo: 'Enfermeira Assistencial', turno: 'Manhã 07–13h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-  { id: 2, nome: 'Carlos Eduardo Lima', cargo: 'Técnico de Enfermagem', turno: 'Tarde 13–19h', presente: false, ferias: false, atestado: false, statusLabel: 'Escalado Tarde' },
-  { id: 3, nome: 'Fernanda Rodrigues', cargo: 'Enfermeira Chefe', turno: null, presente: false, ferias: true, atestado: false, statusLabel: 'Em Férias' },
-  { id: 4, nome: 'Marcos Vinicius Souza', cargo: 'Técnico de Enfermagem', turno: 'Noite 19–07h', presente: false, ferias: false, atestado: false, statusLabel: 'Escalado Noite' },
-  { id: 5, nome: 'Juliana Martins', cargo: 'Enfermeira Assistencial', turno: 'Manhã 07–13h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-  { id: 6, nome: 'Roberto Alves', cargo: 'Técnico de Enfermagem', turno: null, presente: false, ferias: false, atestado: true, statusLabel: 'Atestado' },
-  { id: 7, nome: 'Patrícia Costa', cargo: 'Enfermeira Assistencial', turno: 'Manhã 07–13h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-  { id: 8, nome: 'Diego Ferreira', cargo: 'Técnico de Enfermagem', turno: 'Tarde 13–19h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-]
-
-const mockPendencias = [
-  { id: 1, servidor: 'Ana Beatriz Santos', tipo: 'ferias', detalhe: '15 dias — 10/03/2026 a 25/03/2026', data: '2026-02-20' },
-  { id: 2, servidor: 'Carlos Eduardo Lima', tipo: 'plantao', detalhe: 'Plantão extra 08/03 — UTI Adulto 07h–19h', data: '2026-02-21' },
-  { id: 3, servidor: 'Fernanda Rodrigues', tipo: 'abono', detalhe: 'Abono de falta — 18/02/2026 — Consulta médica', data: '2026-02-22' },
-  { id: 4, servidor: 'Marcos Vinicius Souza', tipo: 'horas', detalhe: 'Compensação banco de horas — 4h em 06/03', data: '2026-02-23' },
-]
+const mapAcaoPrioritaria = (a) => ({
+  ...mapPendencia(a),
+  impacto_score: Number(a.impacto_score ?? 0),
+  severidade: a.severidade ?? 'baixo',
+  deficit_horas: Math.max(0, Number(a.deficit_horas ?? 0)),
+  idade_dias: Number(a.idade_dias ?? 0),
+})
 
 const equipe    = ref([])
 const pendencias = ref([])
 const historico = ref([])
 const kpisData  = ref(null)
+const acoesPrioritarias = ref([])
+const riscoAgregado = ref({
+  setor: 'Sem setor',
+  score: 0,
+  severidade: 'baixo',
+  tendencia: 'estavel',
+  recomendacao: 'Operação estável. Manter monitoramento diário.',
+  metricas: { deficit_horas: 0, ausencias_hoje: 0, inconsistencias_ponto: 0 },
+})
 const filtroHistorico = ref('todos')
 
 // ── KPIs: usa valores do backend ou calcula a partir da equipe localmente ──
@@ -340,26 +397,42 @@ const kpis = computed(() => {
 onMounted(async () => {
   try {
     const { data } = await api.get('/api/v3/gestor')
-    if (!data.fallback && data.equipe?.length) {
-      equipe.value    = data.equipe.map(mapMembro)
-      pendencias.value = (data.pendencias ?? []).map(mapPendencia)
-      historico.value = data.historico ?? []
-      kpisData.value  = data.kpis ?? null
-    } else {
-      equipe.value    = mockEquipe
-      pendencias.value = mockPendencias
-      historico.value = []
+    equipe.value = Array.isArray(data.equipe) ? data.equipe.map(mapMembro) : []
+    pendencias.value = Array.isArray(data.pendencias) ? data.pendencias.map(mapPendencia) : []
+    acoesPrioritarias.value = Array.isArray(data.acoes_prioritarias) ? data.acoes_prioritarias.map(mapAcaoPrioritaria) : []
+    riscoAgregado.value = data.risco_agregado_setor ?? riscoAgregado.value
+    historico.value = Array.isArray(data.historico) ? data.historico.map((h) => ({
+      ...h,
+      servidor: sanitizeUtf(h.servidor),
+      detalhe: sanitizeUtf(h.detalhe),
+      justificativa: sanitizeUtf(h.justificativa),
+    })) : []
+    kpisData.value  = data.kpis ?? null
+
+    if (data.fallback) {
+      dataWarning.value = 'Dados de contingência recebidos pela API. Revise integrações do backend para operação de produção.'
     }
   } catch {
-    equipe.value    = mockEquipe
-    pendencias.value = mockPendencias
+    equipe.value = []
+    pendencias.value = []
+    acoesPrioritarias.value = []
+    riscoAgregado.value = {
+      setor: 'Sem setor',
+      score: 0,
+      severidade: 'baixo',
+      tendencia: 'estavel',
+      recomendacao: 'Operação estável. Manter monitoramento diário.',
+      metricas: { deficit_horas: 0, ausencias_hoje: 0, inconsistencias_ponto: 0 },
+    }
     historico.value = []
+    dataWarning.value = 'Não foi possível carregar os dados reais do Portal do Gestor.'
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
 })
 
 const totalPendencias = computed(() => pendencias.value.length)
+const acoesPrioritariasTop5 = computed(() => acoesPrioritarias.value.slice(0, 5))
 const historicoFiltrado = computed(() => {
   if (filtroHistorico.value === 'todos') return historico.value
   return historico.value.filter(h => h.status === filtroHistorico.value)
@@ -372,6 +445,9 @@ const tipoCor   = (t) => ({ ferias: '#3b82f6', plantao: '#f59e0b', abono: '#10b9
 const tipoIco   = (t) => ({ ferias: '🏖️', plantao: '🏥', abono: '📋', horas: '⏱️' })[t] ?? '📄'
 const tipoLabel = (t) => ({ ferias: 'Férias', plantao: 'Plantão Extra', abono: 'Abono de Falta', horas: 'Banco de Horas' })[t] ?? t
 const formatDate = (d) => { try { return new Date(d+'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }) } catch { return d } }
+const formatHoras = (h) => Number(h || 0).toFixed(1)
+const labelSeveridade = (s) => ({ critico: 'Crítico', alto: 'Alto', medio: 'Médio', baixo: 'Baixo' }[s] ?? 'Baixo')
+const labelTendencia = (t) => ({ piorando: 'Tendência: piorando', melhorando: 'Tendência: melhorando', estavel: 'Tendência: estável' }[t] ?? 'Tendência: estável')
 const showToast  = (msg, tipo = 'ok') => { toast.value = { visible: true, msg, tipo }; setTimeout(() => toast.value.visible = false, 3500) }
 
 const aprovar = async (p) => {
@@ -532,8 +608,25 @@ const salvarAvaliacao = async () => {
 </script>
 
 <style scoped>
-.pg-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
-.hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #0a1428 55%, #14280a 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
+.pg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-family: 'Inter', system-ui, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+.pg-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 10% -10%, rgba(56, 189, 248, 0.10), transparent 55%),
+    radial-gradient(120% 70% at 90% 120%, rgba(14, 165, 233, 0.10), transparent 55%);
+}
+.pg-page > * { position: relative; z-index: 1; }
+.hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0b1f3a 0%, #114a72 55%, #0f766e 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
 .hero-shapes { position: absolute; inset: 0; pointer-events: none; }
 .hs { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.12; }
@@ -565,7 +658,36 @@ const salvarAvaliacao = async () => {
 .s-input { border: none; font-size: 13px; color: #1e293b; outline: none; background: transparent; font-family: inherit; width: 160px; }
 .aprovacoes-list { display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s; }
 .aprovacoes-list.loaded { opacity: 1; transform: none; }
-.aprov-item { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 18px; animation: apIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--api) * 60ms) both; flex-wrap: wrap; }
+.priority-list { display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s; }
+.priority-list.loaded { opacity: 1; transform: none; }
+.priority-item { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, rgba(239,246,255,0.95), rgba(236,253,245,0.85)); border: 1px solid #bfdbfe; border-radius: 14px; padding: 12px 14px; animation: apIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--api) * 60ms) both; }
+.priority-footnote { font-size: 12px; color: #475569; font-weight: 600; padding: 2px 4px 0; }
+.priority-main { flex: 1; min-width: 180px; }
+.priority-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.priority-nome { display: block; font-size: 13px; font-weight: 800; color: #0f172a; }
+.priority-det { display: block; font-size: 11px; color: #334155; margin-top: 1px; }
+.priority-micro { display: block; font-size: 10px; color: #64748b; margin-top: 3px; }
+.priority-level { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 8px; white-space: nowrap; }
+.priority-debt { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 8px; white-space: nowrap; background: #dbeafe; color: #1e3a8a; }
+.pl-critico { background: #fee2e2; color: #991b1b; }
+.pl-alto { background: #ffedd5; color: #9a3412; }
+.pl-medio { background: #fef3c7; color: #92400e; }
+.pl-baixo { background: #dcfce7; color: #166534; }
+.priority-actions { display: flex; gap: 8px; }
+.data-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 12px; font-weight: 700; border-radius: 12px; padding: 10px 12px; opacity: 0; transform: translateY(6px); transition: all 0.35s cubic-bezier(0.22,1,0.36,1); }
+.data-warning.loaded { opacity: 1; transform: none; }
+.risk-agg-card { border: 1px solid #dbeafe; background: radial-gradient(circle at top, rgba(224,242,254,0.65), #fff); border-radius: 16px; padding: 14px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s; }
+.risk-agg-card.loaded { opacity: 1; transform: none; }
+.rac-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.rac-setor { display: block; font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 5px; }
+.rac-score { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 8px; }
+.rac-trend { font-size: 11px; font-weight: 700; border-radius: 8px; padding: 4px 8px; }
+.rt-piorando { background: #fee2e2; color: #991b1b; }
+.rt-melhorando { background: #dcfce7; color: #166534; }
+.rt-estavel { background: #e2e8f0; color: #334155; }
+.rac-metrics { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: #334155; margin-bottom: 8px; }
+.rac-rec { margin: 0; font-size: 12px; color: #1e293b; font-weight: 600; }
+.aprov-item { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, rgba(239,246,255,0.95), rgba(255,255,255,0.96)); border: 1px solid #dbeafe; border-radius: 16px; padding: 14px 18px; animation: apIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--api) * 60ms) both; flex-wrap: wrap; }
 @keyframes apIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 .ap-tipo-ico { width: 44px; height: 44px; border-radius: 12px; border: 1px solid; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .ap-info { flex: 1; min-width: 160px; }

@@ -7,6 +7,28 @@
 // ══════════════════════════════════════════════════════════════════
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Http\Request;
+
+if (!function_exists('maskCpfTransparencia')) {
+    function maskCpfTransparencia(?string $cpf): string
+    {
+        $dig = preg_replace('/\D+/', '', (string) ($cpf ?? ''));
+        if (strlen($dig) < 11) {
+            return '***.***.***-**';
+        }
+        return substr($dig, 0, 3) . '.***.***-' . substr($dig, -2);
+    }
+}
+
+if (!function_exists('ffTransparenciaEnabled')) {
+    function ffTransparenciaEnabled(string $feature): bool
+    {
+        return (bool) config('feature_flags.transparencia.' . $feature, false);
+    }
+}
 
 // POST /transparencia/exportar — gera CSV/JSON da competência
 Route::post('/transparencia/exportar', function (Request $request) {
@@ -67,7 +89,7 @@ Route::post('/transparencia/exportar', function (Request $request) {
         $linhas = $dados->map(fn($r) => [
             $r->nome,
             $r->matricula,
-            $r->cpf,
+            maskCpfTransparencia($r->cpf),
             $r->cargo,
             $r->regime,
             $r->setor,
@@ -180,7 +202,7 @@ Route::get('/transparencia/download/{id}', function ($id) {
             $csv .= implode(';', array_map(fn($v) => '"' . str_replace('"', '""', $v ?? '') . '"', [
                 $r->nome,
                 $r->matricula,
-                $r->cpf,
+                maskCpfTransparencia($r->cpf),
                 $r->cargo,
                 $r->regime,
                 $r->setor,
@@ -200,3 +222,116 @@ Route::get('/transparencia/download/{id}', function ($id) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
+
+// GET /transparencia/dossie-terceirizacao — visão pública mínima (S5.4)
+Route::get('/transparencia/dossie-terceirizacao', function (Request $request) {
+    if (!ffTransparenciaEnabled('dossie_terceirizacao')) {
+        return response()->json(['erro' => 'Recurso temporariamente indisponível por governança.'], 404);
+    }
+
+    try {
+        $query = DB::table('TERCEIRO_POSTO as p')
+            ->leftJoin('TERCEIRO_EMPRESA as e', 'e.EMPRESA_ID', '=', 'p.EMPRESA_ID')
+            ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'p.SETOR_ID')
+            ->leftJoin('UNIDADE as u', 'u.UNIDADE_ID', '=', 's.UNIDADE_ID')
+            ->select(
+                DB::raw('COALESCE(p.TRABALHADOR_NOME, p.PESSOA_NOME) as nome'),
+                DB::raw('COALESCE(p.FUNCAO, p.CARGO, p.POSTO_DESCRICAO) as funcao'),
+                'e.RAZAO_SOCIAL as razao_social',
+                'e.EMPRESA_RAZAO_SOCIAL as empresa_razao_social',
+                'e.CONTRATO_NUMERO as contrato_numero',
+                'e.CONTRATO_ANO as contrato_ano',
+                'u.UNIDADE_NOME as secretaria',
+                's.SETOR_NOME as setor',
+                DB::raw('COALESCE(p.TRABALHADOR_CPF, p.PESSOA_CPF_NUMERO) as cpf')
+            );
+
+        if (Schema::hasColumn('TERCEIRO_POSTO', 'ATIVO')) {
+            $query->where('p.ATIVO', 1);
+        }
+
+        $itens = $query->orderBy('nome')->limit(5000)->get()->map(function ($r) {
+            return [
+                'nome' => $r->nome,
+                'funcao' => $r->funcao,
+                'empresa' => $r->razao_social ?? $r->empresa_razao_social,
+                'contrato' => trim((string) (($r->contrato_numero ?? '') . (empty($r->contrato_ano) ? '' : '/' . $r->contrato_ano))),
+                'secretaria' => $r->secretaria,
+                'setor' => $r->setor,
+                'cpf_mascarado' => maskCpfTransparencia($r->cpf ?? null),
+            ];
+        });
+
+        return response()->json([
+            'fonte' => 'dossie_terceirizacao',
+            'total' => $itens->count(),
+            'itens' => $itens,
+            'campos_publicos' => ['nome', 'funcao', 'empresa', 'contrato', 'secretaria', 'setor', 'cpf_mascarado'],
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+})->middleware('tenant.resolve');
+
+// GET /transparencia/observabilidade-integracoes — S8 fase 1 (indicadores públicos)
+Route::get('/transparencia/observabilidade-integracoes', function () {
+    if (!ffTransparenciaEnabled('observabilidade_integracoes')) {
+        return response()->json(['erro' => 'Recurso temporariamente indisponível por governança.'], 404);
+    }
+
+    try {
+        $payload = [
+            'gerado_em' => now()->toIso8601String(),
+            'metricas' => [],
+        ];
+
+        if (Schema::hasTable('TRANSPARENCIA_EXPORTACAO')) {
+            $payload['metricas']['transparencia_exportacoes_7d'] = (int) DB::table('TRANSPARENCIA_EXPORTACAO')
+                ->where('created_at', '>=', now()->subDays(7))
+                ->count();
+        }
+
+        if (Schema::hasTable('ESOCIAL_EVENTO')) {
+            $payload['metricas']['esocial_pendente_envio'] = (int) DB::table('ESOCIAL_EVENTO')
+                ->whereIn('STATUS', ['PENDENTE_ENVIO', 'GERADO'])
+                ->count();
+            $payload['metricas']['esocial_rejeitado_7d'] = (int) DB::table('ESOCIAL_EVENTO')
+                ->where('STATUS', 'REJEITADO')
+                ->where('updated_at', '>=', now()->subDays(7))
+                ->count();
+        }
+
+        if (Schema::hasTable('RPPS_BLOQUEIO_EVENTO')) {
+            $payload['metricas']['rpps_bloqueios_30d'] = (int) DB::table('RPPS_BLOQUEIO_EVENTO')
+                ->where('EVENTO', 'bloqueado')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->count();
+            $payload['metricas']['rpps_desbloqueios_30d'] = (int) DB::table('RPPS_BLOQUEIO_EVENTO')
+                ->where('EVENTO', 'desbloqueado')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->count();
+        }
+
+        return response()->json($payload);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+})->middleware('tenant.resolve');
+
+// GET /transparencia/catalogo-dados — S8 fase 2 (catálogo público versionado)
+Route::get('/transparencia/catalogo-dados', function () {
+    if (!ffTransparenciaEnabled('catalogo_dados')) {
+        return response()->json(['erro' => 'Recurso temporariamente indisponível por governança.'], 404);
+    }
+
+    try {
+        $catalogo = config('transparencia_catalogo', []);
+        return response()->json([
+            'versao' => $catalogo['versao'] ?? null,
+            'fontes' => $catalogo['fontes'] ?? [],
+            'gerado_em' => now()->toIso8601String(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+})->middleware('tenant.resolve');

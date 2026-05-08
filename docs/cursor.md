@@ -8,6 +8,11 @@ Este arquivo existe para garantir que o Cursor sempre use o Brain correto antes 
 - aumentar precisão;
 - evitar retrabalho em bugs já mapeados.
 
+## Vault Obsidian oficial (memória fixa)
+
+- Caminho oficial do vault: `/home/DK/brain/Obsidian-Brain-v6/`
+- Sempre que houver documentação de sprint, revisão, auditoria ou melhorias no GENTE, manter espelho neste vault quando o ambiente tiver acesso ao caminho.
+
 ## Leitura silenciosa obrigatória (antes de implementar)
 
 ### Projeto GENTE (Brain)

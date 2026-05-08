@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string SETOR_NOME
  * @property string SETOR_SIGLA
  * @property int SETOR_ATIVO
+ * @property int|null SETOR_PAI_ID
  *
  */
 class Setor extends Model
@@ -21,6 +22,7 @@ class Setor extends Model
     public static $snakeAttributes = false;
     protected $fillable = [
         "UNIDADE_ID",
+        "SETOR_PAI_ID",
         "SETOR_NOME",
         "SETOR_SIGLA",
         "SETOR_ATIVO",
@@ -29,6 +31,7 @@ class Setor extends Model
         "SETOR_ATIVO" => "integer",
         "UNIDADE_ID" => "integer",
         "SETOR_ID" => "integer",
+        "SETOR_PAI_ID" => "integer",
     ];
     protected static $relacionamentos = [
         'unidade'

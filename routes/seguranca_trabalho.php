@@ -2,43 +2,15 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 
-if (!Schema::hasTable('EPI_REGISTRO')) {
-    Schema::create('EPI_REGISTRO', function (Blueprint $table) {
-        $table->increments('EPI_ID');
-        $table->unsignedInteger('FUNCIONARIO_ID')->index();
-        $table->string('EPI_NOME', 200);   
-        $table->string('EPI_OBS', 300)->nullable();
-        $table->string('EPI_CA', 30)->nullable();
-        $table->integer('EPI_QUANTIDADE')->default(1);
-        $table->boolean('EPI_ENTREGUE')->default(false); // Só vira true quando o SESMT/Almoxarifado aprova e entrega
-        $table->date('EPI_DATA_VENCIMENTO')->nullable();
-        $table->timestamps();
-    });
-}
-if (!Schema::hasTable('ACIDENTE_TRABALHO')) {
-    Schema::create('ACIDENTE_TRABALHO', function (Blueprint $table) {
-        $table->increments('ACIDENTE_ID');
-        $table->unsignedInteger('FUNCIONARIO_ID')->index()->nullable(); // Pode ser nulo se não achou usuário logado na hora
-        $table->string('ACIDENTE_TIPO', 30); // acidente | quase
-        $table->string('ACIDENTE_LOCAL', 150); 
-        $table->text('ACIDENTE_DESCRICAO')->nullable();
-        $table->string('ACIDENTE_CAT', 50)->nullable();
-        $table->boolean('ACIDENTE_CLOSED')->default(false);
-        $table->timestamps();
-    });
-}
-if (!Schema::hasTable('LAUDO_SST')) {
-    Schema::create('LAUDO_SST', function (Blueprint $table) {
-        $table->increments('LAUDO_ID');
-        $table->string('LAUDO_TIPO', 50); // LTCAT, PPRA, PCMSO, PGR
-        $table->string('LAUDO_LOCAL', 150); // Setor aplicável
-        $table->date('LAUDO_DATA_VALIDADE')->nullable();
-        $table->string('LAUDO_STATUS', 20)->default('Vigente');
-        $table->timestamps();
-    });
+if (!function_exists('ensureSegurancaTrabalhoTablesFromRoutes')) {
+    function ensureSegurancaTrabalhoTablesFromRoutes(): void
+    {
+        if (!Schema::hasTable('EPI_REGISTRO') || !Schema::hasTable('ACIDENTE_TRABALHO') || !Schema::hasTable('LAUDO_SST')) {
+            throw new \RuntimeException('Tabelas de segurança do trabalho não encontradas. Execute migrations canônicas.');
+        }
+    }
 }
 
 // Prefix herda de "api/v3/" por ser chamado no web.php
@@ -46,6 +18,7 @@ Route::prefix('seguranca')->group(function () {
 
     // ==== Área do Servidor (SegurancaTrabalhoView.vue) ====
     Route::get('/epis', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
             $func = DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
@@ -81,6 +54,7 @@ Route::prefix('seguranca')->group(function () {
     });
 
     Route::post('/epis', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
             $func = DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
@@ -100,6 +74,7 @@ Route::prefix('seguranca')->group(function () {
     });
 
     Route::get('/incidentes', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
             $func = DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
@@ -126,6 +101,7 @@ Route::prefix('seguranca')->group(function () {
     });
 
     Route::post('/incidentes', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
             $func = DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
@@ -150,6 +126,7 @@ Route::prefix('seguranca-admin')->group(function () {
 
     // ==== Área do Admin SESMT (SegurancaAdminView.vue) ====
     Route::get('/kpis', function () {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             return response()->json([
                 'epis_pendentes' => DB::table('EPI_REGISTRO')->where('EPI_ENTREGUE', false)->count(),
@@ -165,6 +142,7 @@ Route::prefix('seguranca-admin')->group(function () {
 
     // Filtra incidentes para investigar/fechar ou emitir CAT
     Route::get('/incidentes', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             return response()->json(
                 DB::table('ACIDENTE_TRABALHO as a')
@@ -181,6 +159,7 @@ Route::prefix('seguranca-admin')->group(function () {
     });
 
     Route::post('/incidentes/{id}/cat', function (Request $request, $id) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             DB::table('ACIDENTE_TRABALHO')->where('ACIDENTE_ID', $id)->update([
                 'ACIDENTE_CAT' => $request->cat_numero,
@@ -191,10 +170,11 @@ Route::prefix('seguranca-admin')->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // Filtra Solicitações de EPI
     Route::get('/epis/solicitacoes', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             return response()->json(
                 DB::table('EPI_REGISTRO as e')
@@ -212,6 +192,7 @@ Route::prefix('seguranca-admin')->group(function () {
 
     // Admin aprova e emite EPI
     Route::post('/epis/entregar', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             $id = $request->input('EPI_ID');
             DB::table('EPI_REGISTRO')->where('EPI_ID', $id)->update([
@@ -225,15 +206,17 @@ Route::prefix('seguranca-admin')->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // Laudos
     Route::get('/laudos', function () {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try { return response()->json(DB::table('LAUDO_SST')->orderBy('LAUDO_DATA_VALIDADE', 'asc')->get()); } 
         catch (\Exception $e) { return response()->json([], 500); }
     });
     
     Route::post('/laudos', function (Request $request) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try {
             DB::table('LAUDO_SST')->insert([
                 'LAUDO_TIPO' => $request->tipo,
@@ -244,9 +227,10 @@ Route::prefix('seguranca-admin')->group(function () {
             ]);
             return response()->json(['success' => true]);
         } catch (\Exception $e) { return response()->json(['error' => $e->getMessage()], 500); }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
     Route::delete('/laudos/{id}', function ($id) {
+        ensureSegurancaTrabalhoTablesFromRoutes();
         try { DB::table('LAUDO_SST')->where('LAUDO_ID', $id)->delete(); return response()->json(['success' => true]); } 
         catch (\Exception $e) { return response()->json(['error' => $e->getMessage()], 500); }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 });

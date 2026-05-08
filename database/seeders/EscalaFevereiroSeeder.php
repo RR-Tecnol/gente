@@ -2,17 +2,20 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Escala\EscalaWorkflowStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class EscalaFevereiroSeeder extends Seeder
 {
     public function run(): void
     {
-        $competencia = '02/2026';
+        $competencia = '2026-02';
         $ano = 2026;
         $mes = 2;
         $diasNoMes = 28;
+        $turnoBySigla = $this->mapaTurnosPorSigla();
 
         $turnosTrabalho = [
             ['sigla' => 'M', 'peso' => 35],
@@ -61,7 +64,7 @@ class EscalaFevereiroSeeder extends Seeder
             : DB::table('ESCALA')->insertGetId([
                 'ESCALA_COMPETENCIA' => $competencia,
                 'SETOR_ID' => null,
-                'ESCALA_STATUS' => 'Fechada',
+                'ESCALA_STATUS' => EscalaWorkflowStatus::RASCUNHO,
                 'ESCALA_OBSERVACAO' => 'Escala geral – demonstração',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -84,7 +87,7 @@ class EscalaFevereiroSeeder extends Seeder
 
             DB::table('DETALHE_ESCALA_ITEM')->where('DETALHE_ESCALA_ID', $dtId)->delete();
             DB::table('DETALHE_ESCALA_ITEM')->insert(
-                $this->gerarItens($dtId, $ano, $mes, $diasNoMes, $turnosTrabalho)
+                $this->gerarItens($dtId, $ano, $mes, $diasNoMes, $turnosTrabalho, $turnoBySigla)
             );
         }
 
@@ -104,7 +107,7 @@ class EscalaFevereiroSeeder extends Seeder
                 : DB::table('ESCALA')->insertGetId([
                     'ESCALA_COMPETENCIA' => $competencia,
                     'SETOR_ID' => $setorId,
-                    'ESCALA_STATUS' => 'Fechada',
+                    'ESCALA_STATUS' => EscalaWorkflowStatus::RASCUNHO,
                     'ESCALA_OBSERVACAO' => 'Escala médica – demonstração',
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -127,7 +130,7 @@ class EscalaFevereiroSeeder extends Seeder
 
                 DB::table('DETALHE_ESCALA_ITEM')->where('DETALHE_ESCALA_ID', $dtId)->delete();
                 DB::table('DETALHE_ESCALA_ITEM')->insert(
-                    $this->gerarItens($dtId, $ano, $mes, $diasNoMes, $turnosMedicos)
+                    $this->gerarItens($dtId, $ano, $mes, $diasNoMes, $turnosMedicos, $turnoBySigla)
                 );
             }
         }
@@ -140,17 +143,22 @@ class EscalaFevereiroSeeder extends Seeder
         ));
     }
 
-    private function gerarItens(int $detalheId, int $ano, int $mes, int $dias, array $turnos): array
+    private function gerarItens(int $detalheId, int $ano, int $mes, int $dias, array $turnos, array $turnoBySigla): array
     {
         $itens = [];
         for ($dia = 1; $dia <= $dias; $dia++) {
             $dow = (int) date('w', mktime(0, 0, 0, $mes, $dia, $ano));
             $fimSem = ($dow === 0 || $dow === 6);
             $sigla = $fimSem && rand(1, 100) <= 65 ? 'F' : $this->sorteio($turnos, $fimSem ? ['F'] : []);
+            $turnoId = (int) ($turnoBySigla[$sigla] ?? 0);
+            if ($turnoId <= 0) {
+                throw new RuntimeException("Turno '{$sigla}' não encontrado no catálogo TURNO. Seeder abortado para manter consistência com a API v3.");
+            }
 
             $itens[] = [
                 'DETALHE_ESCALA_ID' => $detalheId,
                 'DETALHE_ESCALA_ITEM_DATA' => sprintf('%04d-%02d-%02d', $ano, $mes, $dia),
+                'TURNO_ID' => $turnoId,
                 'TURNO_SIGLA' => $sigla,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -171,5 +179,45 @@ class EscalaFevereiroSeeder extends Seeder
                 return $t['sigla'];
         }
         return $filtrados[0]['sigla'] ?? 'M';
+    }
+
+    private function mapaTurnosPorSigla(): array
+    {
+        $rows = DB::table('TURNO')
+            ->whereNotNull('TURNO_SIGLA')
+            ->get(['TURNO_ID', 'TURNO_SIGLA']);
+        $map = [];
+        foreach ($rows as $row) {
+            $sigla = strtoupper(trim((string) ($row->TURNO_SIGLA ?? '')));
+            $id = (int) ($row->TURNO_ID ?? 0);
+            if ($sigla !== '' && $id > 0) {
+                $map[$sigla] = $id;
+            }
+        }
+
+        if (! isset($map['V']) && isset($map['T'])) {
+            $map['V'] = $map['T'];
+        }
+        if (! isset($map['T']) && isset($map['V'])) {
+            $map['T'] = $map['V'];
+        }
+        if (! isset($map['AT']) && isset($map['AF'])) {
+            $map['AT'] = $map['AF'];
+        }
+        if (! isset($map['AF']) && isset($map['AT'])) {
+            $map['AF'] = $map['AT'];
+        }
+        if (! isset($map['P']) && isset($map['I'])) {
+            $map['P'] = $map['I'];
+        }
+        if (! isset($map['I']) && isset($map['P'])) {
+            $map['I'] = $map['P'];
+        }
+
+        if (! isset($map['M'], $map['V'], $map['N'], $map['F'], $map['AT'])) {
+            throw new RuntimeException('Catálogo TURNO incompleto para o EscalaFevereiroSeeder (mínimo: M, V/T, N, F e AT/AF).');
+        }
+
+        return $map;
     }
 }

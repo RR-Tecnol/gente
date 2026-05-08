@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Support\LoginLookupNormalizer;
+use App\Support\SpaAuthPayloadBuilder;
+use App\Support\UsuarioLoginResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -33,11 +36,18 @@ class SpaAuthController extends Controller
                 'USUARIO_SENHA' => 'required|string',
             ]);
 
-            $login = $request->input('USUARIO_LOGIN');
+            $loginBruto = (string) $request->input('USUARIO_LOGIN');
             $password = $request->input('USUARIO_SENHA');
 
+            if (config('app.debug')) {
+                \Illuminate\Support\Facades\Log::info('SpaAuthController.login USUARIO_LOGIN', [
+                    'bruto_recebido' => $loginBruto,
+                    'apos_lookup' => LoginLookupNormalizer::forDatabaseLookup($loginBruto),
+                ]);
+            }
+
             // Rate limiting básico por IP
-            $throttleKey = Str::lower($login) . '|' . $request->ip();
+            $throttleKey = Str::lower($loginBruto) . '|' . $request->ip();
             if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
                 $seconds = RateLimiter::availableIn($throttleKey);
                 return response()->json([
@@ -45,15 +55,10 @@ class SpaAuthController extends Controller
                 ], 429);
             }
 
-            // Normaliza: remover não-numéricos exceto para "admin"
-            if ($login !== 'admin') {
-                $login = preg_replace('/[^0-9]/', '', $login);
-            }
+            // CPF só-dígitos (legado) ou e-mail em USUARIO_LOGIN (personas Lab)
+            $login = LoginLookupNormalizer::forDatabaseLookup($loginBruto);
 
-            // Busca o usuário ativo
-            $user = Usuario::where('USUARIO_LOGIN', $login)
-                ->where('USUARIO_ATIVO', 1)
-                ->first();
+            $user = UsuarioLoginResolver::resolveByNormalizedLogin($login);
 
             if (!$user) {
                 RateLimiter::hit($throttleKey, 60 * 30);
@@ -90,19 +95,12 @@ class SpaAuthController extends Controller
                 \Log::warning('SpaAuth: não foi possível atualizar USUARIO_ULTIMO_ACESSO: ' . $ex->getMessage());
             }
 
-            // Em ambiente não-produtivo, garante vínculo do admin a um FUNCIONARIO
-            // para telas que dependem de FUNCIONARIO_ID (ponto, declarações etc).
-            $this->ensureAdminFuncionarioVinculo($user);
-
             RateLimiter::clear($throttleKey);
 
             return response()->json([
                 'message' => 'Autenticado com sucesso.',
-                'user' => [
-                    'id' => $user->USUARIO_ID,
-                    'nome' => $user->USUARIO_NOME,
-                    'login' => $user->USUARIO_LOGIN,
-                ],
+                'ok' => true,
+                'user' => SpaAuthPayloadBuilder::forAuthenticatedUser($user),
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $ve) {
@@ -147,26 +145,7 @@ class SpaAuthController extends Controller
 
         $user = Auth::user();
 
-        // Busca o perfil via relacionamento
-        $perfilNome = null;
-        try {
-            $perfilNome = optional($user->usuarioPerfis()->with('perfil')->first())->perfil->PERFIL_NOME ?? null;
-        } catch (\Exception $e) {
-            // Ignora erros de relacionamento
-        }
-
-        if (!$perfilNome || strtolower(trim($perfilNome)) === 'usuário' || strtolower(trim($perfilNome)) === 'usuario') {
-            $perfilNome = 'funcionario';
-        }
-
-        return response()->json([
-            'id' => $user->USUARIO_ID,
-            'nome' => $user->USUARIO_NOME,
-            'login' => $user->USUARIO_LOGIN,
-            'email' => $user->USUARIO_EMAIL,
-            'perfil' => $perfilNome,
-            'alterar_senha' => (bool) $user->USUARIO_ALTERAR_SENHA,
-        ]);
+        return response()->json(SpaAuthPayloadBuilder::forAuthenticatedUser($user));
     }
 
     /**
@@ -175,100 +154,13 @@ class SpaAuthController extends Controller
      */
     public function applyDevAdminFuncionarioVinculo(Usuario $user): void
     {
-        $this->ensureAdminFuncionarioVinculo($user);
+        // Compatibilidade retroativa: bypass desativado por segurança.
     }
 
     private function ensureAdminFuncionarioVinculo(Usuario $user): void
     {
-        if (app()->isProduction()) {
-            return;
-        }
-
-        if (strtolower((string) ($user->USUARIO_LOGIN ?? '')) !== 'admin') {
-            return;
-        }
-
-        if (
-            !\Illuminate\Support\Facades\Schema::hasTable('FUNCIONARIO') ||
-            !\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'USUARIO_ID')
-        ) {
-            return;
-        }
-
-        $jaVinculado = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-            ->where('USUARIO_ID', $user->USUARIO_ID)
-            ->first();
-        if ($jaVinculado) {
-            $this->ensureAdminLotacao((int) $jaVinculado->FUNCIONARIO_ID);
-            return;
-        }
-
-        // 1) tenta reaproveitar funcionário sem usuário
-        $funcLivre = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-            ->whereNull('USUARIO_ID')
-            ->orderBy('FUNCIONARIO_ID')
-            ->first();
-        if ($funcLivre) {
-            \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                ->where('FUNCIONARIO_ID', $funcLivre->FUNCIONARIO_ID)
-                ->update(['USUARIO_ID' => $user->USUARIO_ID]);
-            $this->ensureAdminLotacao((int) $funcLivre->FUNCIONARIO_ID);
-            return;
-        }
-
-        // 2) fallback: cria pessoa/funcionário técnico para o admin
-        if (!\Illuminate\Support\Facades\Schema::hasTable('PESSOA')) {
-            return;
-        }
-
-        try {
-            $pessoaCols = \Illuminate\Support\Facades\Schema::getColumnListing('PESSOA');
-            $funcCols = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCIONARIO');
-
-            $cpfAdmin = '00000000000';
-            $pessoaId = \Illuminate\Support\Facades\DB::table('PESSOA')
-                ->where('PESSOA_CPF_NUMERO', $cpfAdmin)
-                ->value('PESSOA_ID');
-
-            if (!$pessoaId) {
-                $pessoaData = [];
-                if (in_array('PESSOA_NOME', $pessoaCols, true))
-                    $pessoaData['PESSOA_NOME'] = $user->USUARIO_NOME ?: 'Administrador Técnico';
-                if (in_array('PESSOA_CPF_NUMERO', $pessoaCols, true))
-                    $pessoaData['PESSOA_CPF_NUMERO'] = $cpfAdmin;
-                if (in_array('PESSOA_CPF', $pessoaCols, true))
-                    $pessoaData['PESSOA_CPF'] = $cpfAdmin;
-                if (in_array('PESSOA_ATIVO', $pessoaCols, true))
-                    $pessoaData['PESSOA_ATIVO'] = 1;
-                if (in_array('PESSOA_DATA_CADASTRO', $pessoaCols, true))
-                    $pessoaData['PESSOA_DATA_CADASTRO'] = now()->toDateString();
-                if (in_array('PESSOA_DATA_NASCIMENTO', $pessoaCols, true))
-                    $pessoaData['PESSOA_DATA_NASCIMENTO'] = '1990-01-01';
-                if (in_array('PESSOA_NASC', $pessoaCols, true))
-                    $pessoaData['PESSOA_NASC'] = '1990-01-01';
-
-                $pessoaId = \Illuminate\Support\Facades\DB::table('PESSOA')->insertGetId($pessoaData);
-            }
-
-            $funcData = ['PESSOA_ID' => $pessoaId, 'USUARIO_ID' => $user->USUARIO_ID];
-            if (in_array('FUNCIONARIO_MATRICULA', $funcCols, true))
-                $funcData['FUNCIONARIO_MATRICULA'] = 'ADM-FAKE-' . str_pad((string) $user->USUARIO_ID, 4, '0', STR_PAD_LEFT);
-            if (in_array('FUNCIONARIO_ATIVO', $funcCols, true))
-                $funcData['FUNCIONARIO_ATIVO'] = 1;
-            if (in_array('FUNCIONARIO_DATA_INICIO', $funcCols, true))
-                $funcData['FUNCIONARIO_DATA_INICIO'] = now()->toDateString();
-            if (in_array('FUNCIONARIO_DATA_CADASTRO', $funcCols, true))
-                $funcData['FUNCIONARIO_DATA_CADASTRO'] = now()->toDateString();
-            if (in_array('FUNCIONARIO_DATA_ATUALIZACAO', $funcCols, true))
-                $funcData['FUNCIONARIO_DATA_ATUALIZACAO'] = now()->toDateString();
-            if (in_array('FUNCIONARIO_REGIME_PREV', $funcCols, true))
-                $funcData['FUNCIONARIO_REGIME_PREV'] = 'RPPS';
-
-            $funcId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->insertGetId($funcData);
-            $this->ensureAdminLotacao((int) $funcId);
-        } catch (\Throwable $e) {
-            \Log::warning('SpaAuth: não foi possível garantir vínculo técnico do admin: ' . $e->getMessage());
-        }
+        // Bypass removido por segurança: vínculo técnico automático desativado.
+        return;
     }
 
     private function ensureAdminLotacao(int $funcionarioId): void
@@ -286,6 +178,27 @@ class SpaAuthController extends Controller
             ->whereNull('LOTACAO_DATA_FIM')
             ->exists();
         if ($lotAtiva) {
+            // Trava de segurança: se houver duplicidade ativa legada, mantém somente a mais recente.
+            $ativos = \Illuminate\Support\Facades\DB::table('LOTACAO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->whereNull('LOTACAO_DATA_FIM')
+                ->orderByDesc('LOTACAO_DATA_INICIO')
+                ->orderByDesc('LOTACAO_ID')
+                ->get(['LOTACAO_ID']);
+            if ($ativos->count() > 1) {
+                $keeperId = (int) ($ativos->first()->LOTACAO_ID ?? 0);
+                if ($keeperId > 0) {
+                    $payload = ['LOTACAO_DATA_FIM' => now()->toDateString()];
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('LOTACAO', 'LOTACAO_OBSERVACAO')) {
+                        $payload['LOTACAO_OBSERVACAO'] = 'SANEAMENTO AUTOMÁTICO: DUPLICIDADE DE LOTAÇÃO ATIVA';
+                    }
+                    \Illuminate\Support\Facades\DB::table('LOTACAO')
+                        ->where('FUNCIONARIO_ID', $funcionarioId)
+                        ->whereNull('LOTACAO_DATA_FIM')
+                        ->where('LOTACAO_ID', '<>', $keeperId)
+                        ->update($payload);
+                }
+            }
             return;
         }
 

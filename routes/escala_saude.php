@@ -239,7 +239,7 @@ Route::post('/escalas', function (\Illuminate\Http\Request $request) {
             $escalaInsert['ESCALA_SITUACAO'] = 'rascunho';
         }
         if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_STATUS')) {
-            $escalaInsert['ESCALA_STATUS'] = 'rascunho';
+            $escalaInsert['ESCALA_STATUS'] = \App\Domain\Escala\EscalaWorkflowStatus::RASCUNHO;
         }
         if (\Illuminate\Support\Facades\Schema::hasColumn('ESCALA', 'ESCALA_ATIVO')) {
             $escalaInsert['ESCALA_ATIVO'] = 1;

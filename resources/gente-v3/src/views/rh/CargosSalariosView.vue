@@ -46,6 +46,28 @@
             <option value="1">Ativos</option>
             <option value="0">Inativos</option>
           </select>
+          <select v-model="filtroCbo" class="filter-select">
+            <option value="">CBO: todos</option>
+            <option value="com">Com CBO</option>
+            <option value="sem">Sem CBO</option>
+          </select>
+          <select v-model="filtroEscolaridade" class="filter-select">
+            <option value="">Escolaridade: todas</option>
+            <option v-for="n in [1,2,3,4,5,6,7,8,9]" :key="`esc-${n}`" :value="String(n)">
+              {{ escolaridadeLabel(n) }}
+            </option>
+          </select>
+          <select v-model="filtroGestao" class="filter-select">
+            <option value="">Gestão: todos</option>
+            <option value="1">Somente gestão</option>
+            <option value="0">Somente operacional</option>
+          </select>
+          <select v-model="filtroVigencia" class="filter-select">
+            <option value="">Vigência: todas</option>
+            <option value="com">Com vigência</option>
+            <option value="sem">Sem vigência</option>
+          </select>
+          <span class="result-count">{{ cargosFiltrados.length }} resultado{{ cargosFiltrados.length !== 1 ? 's' : '' }}</span>
           <button class="btn-novo" @click="abrirModalCargo()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Cargo
@@ -62,7 +84,7 @@
       <!-- TABELA CARGOS -->
       <div class="table-card">
         <div v-if="loadingCargos" class="state-box"><div class="spinner indigo"></div><p>Carregando cargos...</p></div>
-        <div v-else-if="cargos.length === 0" class="state-box">
+        <div v-else-if="cargosFiltrados.length === 0" class="state-box">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
           <p>Nenhum cargo encontrado</p>
         </div>
@@ -80,7 +102,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in cargos" :key="c.cargo_id" class="cs-row">
+            <tr v-for="c in cargosFiltrados" :key="c.cargo_id" class="cs-row">
               <td>
                 <span class="item-nome">{{ c.nome }}</span>
                 <span v-if="c.sigla" class="item-sigla">{{ c.sigla }}</span>
@@ -94,6 +116,7 @@
               <td>
                 <span v-if="c.remuneracao" class="money">{{ formatMoney(c.remuneracao) }}</span>
                 <span v-else class="text-muted">—</span>
+                <span v-if="c.valor_hora_desconto" class="item-desc">Desc./hora: {{ formatMoney(c.valor_hora_desconto) }}</span>
               </td>
               <td>
                 <span v-if="c.gestao" class="badge-gestao">✦ Gestão</span>
@@ -109,6 +132,7 @@
                 <div class="row-actions">
                   <button class="act-btn act-purple" title="Editar" @click="abrirModalCargo(c)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                   <button v-if="c.ativo" class="act-btn act-red" title="Inativar" @click="inativarCargo(c)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></button>
+                  <button v-else class="act-btn act-green" title="Reativar" @click="reativarCargo(c)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg></button>
                 </div>
               </td>
             </tr>
@@ -264,6 +288,11 @@
                     <input v-model="formCargo.CARGO_REMUNERACAO" type="number" step="0.01" min="0" class="form-input" placeholder="0,00" />
                   </div>
                   <div class="form-group">
+                    <label>Desconto por hora (R$)</label>
+                    <input v-model="formCargo.CARGO_VALOR_HORA_DESCONTO" type="number" step="0.01" min="0" class="form-input" placeholder="Opcional (auto = salário/220)" />
+                    <span class="field-hint">Usado no cálculo de impacto da cobertura de escala.</span>
+                  </div>
+                  <div class="form-group">
                     <label>Escolaridade Mínima</label>
                     <select v-model="formCargo.CARGO_ESCOLARIDADE" class="form-input">
                       <option value="">Selecione</option>
@@ -286,9 +315,14 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Data de Vigência (início)</label>
-                    <input v-model="formCargo.CARGO_DATA_INICIO" type="date" class="form-input" />
-                    <span class="field-hint">Histórico imutável por período no eSocial</span>
+                    <label>Data de vigência (início) <span class="req">*</span></label>
+                    <input v-model="formCargo.CARGO_DATA_INICIO" type="date" class="form-input" required />
+                    <span class="field-hint">Obrigatório para rastreabilidade (eSocial S-1030). Evita sobreposição com outro registro da mesma sigla/nome.</span>
+                  </div>
+                  <div class="form-group">
+                    <label>Data fim de vigência</label>
+                    <input v-model="formCargo.CARGO_DATA_FIM" type="date" class="form-input" />
+                    <span class="field-hint">Opcional. Vazio = vigência em aberto. Use para encerrar o período sem inativar o registro (histórico).</span>
                   </div>
                 </div>
               </div>
@@ -381,10 +415,24 @@ const loadingFuncoes = ref(true)
 const buscaCargo   = ref('')
 const buscaFuncao  = ref('')
 const filtroAtivoCargo = ref('1')
+const filtroCbo = ref('')
+const filtroEscolaridade = ref('')
+const filtroGestao = ref('')
+const filtroVigencia = ref('')
 
 const totalCargos  = computed(() => cargos.value.length)
 const totalFuncoes = computed(() => funcoes.value.length)
 const cargosPccs   = computed(() => cargos.value.filter(c => c.ativo))
+const cargosFiltrados = computed(() => cargos.value.filter((c) => {
+  if (filtroCbo.value === 'com' && !c.cbo) return false
+  if (filtroCbo.value === 'sem' && c.cbo) return false
+  if (filtroEscolaridade.value !== '' && String(c.escolaridade ?? '') !== String(filtroEscolaridade.value)) return false
+  if (filtroGestao.value === '1' && !c.gestao) return false
+  if (filtroGestao.value === '0' && c.gestao) return false
+  if (filtroVigencia.value === 'com' && !c.data_inicio) return false
+  if (filtroVigencia.value === 'sem' && c.data_inicio) return false
+  return true
+}))
 
 // ── Modal Cargo ───────────────────────────────────────────
 const modalCargo = ref(false)
@@ -393,12 +441,14 @@ const salvando   = ref(false)
 const erroModal  = ref('')
 const okModal    = ref('')
 
+const hojeISODate = () => new Date().toISOString().slice(0, 10)
+
 const formCargoVazio = () => ({
   _id: null,
   CARGO_NOME: '', CARGO_SIGLA: '',
   CARGO_DESCRICAO: '',
-  CARGO_REMUNERACAO: '', CARGO_ESCOLARIDADE: '',
-  CARGO_GESTAO: '0', CARGO_DATA_INICIO: '',
+  CARGO_REMUNERACAO: '', CARGO_VALOR_HORA_DESCONTO: '', CARGO_ESCOLARIDADE: '',
+  CARGO_GESTAO: '0', CARGO_DATA_INICIO: hojeISODate(), CARGO_DATA_FIM: '',
 })
 const formFuncaoVazio = () => ({
   _id: null, nome: '', cbo: '', tipo: '', gratificacao: '',
@@ -453,18 +503,32 @@ const abrirModalCargo = (c = null) => {
     CARGO_SIGLA: c.sigla ?? '',
     CARGO_DESCRICAO: c.descricao ?? '',
     CARGO_REMUNERACAO: c.remuneracao ?? '',
+    CARGO_VALOR_HORA_DESCONTO: c.valor_hora_desconto ?? '',
     CARGO_ESCOLARIDADE: c.escolaridade ?? '',
     CARGO_GESTAO: c.gestao ? '1' : '0',
     CARGO_DATA_INICIO: c.data_inicio ?? '',
+    CARGO_DATA_FIM: c.data_fim ? String(c.data_fim).slice(0, 10) : '',
   } : formCargoVazio()
   modalCargo.value = true
 }
 
 const salvarCargo = async () => {
   if (!formCargo.value.CARGO_NOME) { erroModal.value = 'O nome do cargo é obrigatório.'; return }
+  if (!formCargo.value.CARGO_DATA_INICIO || !String(formCargo.value.CARGO_DATA_INICIO).trim()) {
+    erroModal.value = 'A data de início de vigência (CARGO_DATA_INICIO) é obrigatória para alinhamento ao eSocial.'
+    return
+  }
   salvando.value = true; erroModal.value = ''
   try {
-    const payload = { ...formCargo.value }
+    const { _id, ...rest } = formCargo.value
+    const payload = { ...rest }
+    if (formCargo.value._id) {
+      if (payload.CARGO_DATA_FIM === '' || payload.CARGO_DATA_FIM == null) {
+        payload.CARGO_DATA_FIM = null
+      }
+    } else if (payload.CARGO_DATA_FIM === '' || payload.CARGO_DATA_FIM == null) {
+      delete payload.CARGO_DATA_FIM
+    }
     if (formCargo.value._id) {
       await api.put(`/api/v3/cargos/${formCargo.value._id}`, payload)
       okModal.value = 'Cargo atualizado!'
@@ -487,6 +551,14 @@ const inativarCargo = async (c) => {
     await api.delete(`/api/v3/cargos/${c.cargo_id}`)
     await fetchCargos()
   } catch (e) { alert(e.response?.data?.erro || 'Erro ao inativar.') }
+}
+
+const reativarCargo = async (c) => {
+  if (!confirm(`Reativar o cargo "${c.nome}"?`)) return
+  try {
+    await api.patch(`/api/v3/cargos/${c.cargo_id}/reativar`)
+    await fetchCargos()
+  } catch (e) { alert(e.response?.data?.erro || 'Erro ao reativar.') }
 }
 
 // ── Modal Função ──────────────────────────────────────────
@@ -586,8 +658,9 @@ const formatDate  = (d) => {
 .search-ico { width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0; }
 .search-input { flex: 1; border: none; font-size: 13px; color: #1e293b; outline: none; background: transparent; font-family: inherit; }
 .search-input::placeholder { color: #cbd5e1; }
-.toolbar-right { display: flex; align-items: center; gap: 10px; }
+.toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .filter-select { border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 12px; font-size: 13px; font-family: inherit; color: #475569; outline: none; cursor: pointer; }
+.result-count { font-size: 12px; color: #94a3b8; font-weight: 700; white-space: nowrap; }
 
 .btn-novo { display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; border-radius: 12px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .btn-novo:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.4); }
@@ -605,7 +678,28 @@ code { font-family: monospace; font-size: 11px; background: rgba(0,0,0,0.08); bo
 .tab-content.loaded { opacity: 1; transform: none; }
 
 /* TABLE */
-.table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; }
+.table-card {
+  position: relative;
+  background:
+    linear-gradient(130deg, rgba(226, 240, 252, 0.45), rgba(214, 247, 242, 0.28)),
+    rgba(255,255,255,0.96);
+  border: 1px solid #c7deef;
+  border-radius: 22px;
+  overflow: hidden;
+}
+.table-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 22px;
+  border: 8px solid transparent;
+  background: repeating-linear-gradient(-45deg, rgba(56,189,248,0.16) 0 6px, rgba(56,189,248,0.06) 6px 12px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 6px;
+}
 .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; color: #94a3b8; gap: 12px; }
 .state-box p { font-size: 14px; font-weight: 500; margin: 0; }
 .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -613,10 +707,10 @@ code { font-family: monospace; font-size: 11px; background: rgba(0,0,0,0.08); bo
 .spinner.teal   { border-top-color: #0d9488; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .cs-table { width: 100%; border-collapse: collapse; }
-.cs-table thead tr { background: #f8fafc; border-bottom: 1px solid #f1f5f9; }
+.cs-table thead tr { background: rgba(248, 250, 252, 0.82); backdrop-filter: blur(2px); border-bottom: 1px solid #f1f5f9; }
 .cs-table th { padding: 11px 16px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; text-align: left; white-space: nowrap; }
-.cs-row { border-bottom: 1px solid #f8fafc; transition: background 0.12s; }
-.cs-row:hover { background: #f8fafc; }
+.cs-row { border-bottom: 1px solid rgba(226,232,240,0.65); transition: background 0.2s, transform 0.2s, box-shadow 0.2s; }
+.cs-row:hover { background: rgba(255,255,255,0.86); transform: translateY(-1px); box-shadow: inset 0 0 0 1px rgba(186,230,253,0.7); }
 .cs-row:last-child { border-bottom: none; }
 .cs-table td { padding: 13px 16px; font-size: 13px; color: #334155; vertical-align: middle; }
 .item-nome { display: block; font-weight: 700; color: #1e293b; }
@@ -640,6 +734,7 @@ code { font-family: monospace; font-size: 11px; background: rgba(0,0,0,0.08); bo
 .act-btn:hover { transform: translateY(-1px); }
 .act-btn.act-purple:hover { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }
 .act-btn.act-red:hover    { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+.act-btn.act-green:hover  { background: #ecfdf5; border-color: #6ee7b7; color: #047857; }
 
 /* PCCS */
 .pccs-header { padding: 18px 20px 0; }

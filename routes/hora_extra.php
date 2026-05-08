@@ -81,6 +81,10 @@ Route::post('/hora-extra', function (\Illuminate\Http\Request $request) {
             ->select('l.SETOR_ID', 's.UNIDADE_ID')
             ->first();
 
+        $statusRaw = strtoupper((string) ($request->status_inicial ?? $request->status ?? 'PENDENTE'));
+        $statusPermitidos = ['PENDENTE', 'APROVADA', 'REJEITADA'];
+        $status = in_array($statusRaw, $statusPermitidos, true) ? $statusRaw : 'PENDENTE';
+
         $id = DB::table('HORA_EXTRA')->insertGetId([
             'FUNCIONARIO_ID' => $funcId,
             'UNIDADE_ID' => $request->unidade_id ?? $lot?->UNIDADE_ID,
@@ -95,12 +99,34 @@ Route::post('/hora-extra', function (\Illuminate\Http\Request $request) {
             'VALOR_HORA_BASE' => round($valorHora, 4),
             'VALOR_CALCULADO' => $valorCalc,
             'AUTORIZADO_POR' => $user?->USUARIO_ID,
-            'STATUS' => 'PENDENTE',
+            'STATUS' => $status,
             'OBSERVACAO' => $request->observacao,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        return response()->json(['ok' => true, 'id' => $id, 'valor_calculado' => $valorCalc]);
+
+        if (Schema::hasTable('NOTIFICACAO')) {
+            $destUserId = DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcId)->value('USUARIO_ID');
+            if ($destUserId) {
+                $titulo = 'Hora extra registrada';
+                $body = match ($status) {
+                    'APROVADA' => 'Sua hora extra foi lançada e aprovada.',
+                    'REJEITADA' => 'Uma hora extra foi lançada já como rejeitada. Verifique os detalhes.',
+                    default => 'Sua hora extra foi lançada e está pendente de aprovação.',
+                };
+                DB::table('NOTIFICACAO')->insert([
+                    'USUARIO_ID' => (int) $destUserId,
+                    'NOTIFICACAO_TITULO' => $titulo,
+                    'NOTIFICACAO_BODY' => $body,
+                    'NOTIFICACAO_TIPO' => 'hora_extra',
+                    'NOTIFICACAO_ICONE' => '⏱️',
+                    'NOTIFICACAO_URL' => '/hora-extra',
+                    'NOTIFICACAO_LIDA' => 0,
+                    'NOTIFICACAO_DT_CRIACAO' => now(),
+                ]);
+            }
+        }
+        return response()->json(['ok' => true, 'id' => $id, 'valor_calculado' => $valorCalc, 'status' => $status]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
@@ -109,7 +135,24 @@ Route::post('/hora-extra', function (\Illuminate\Http\Request $request) {
 // ── PATCH: Aprovar/Rejeitar hora extra ────────────────────────────
 Route::patch('/hora-extra/{id}/status', function (\Illuminate\Http\Request $request, $id) {
     try {
-        $novoStatus = $request->status; // APROVADA | REJEITADA
+        $statusRaw = strtoupper((string) ($request->status ?? ''));
+        $map = [
+            'APROVADA' => 'APROVADA',
+            'APROVADO' => 'APROVADA',
+            'REJEITADA' => 'REJEITADA',
+            'REJEITADO' => 'REJEITADA',
+            'PENDENTE' => 'PENDENTE',
+        ];
+        $novoStatus = $map[$statusRaw] ?? null;
+        if (!$novoStatus) {
+            return response()->json(['erro' => 'Status inválido.'], 422);
+        }
+
+        $registro = DB::table('HORA_EXTRA')->where('HORA_EXTRA_ID', $id)->first();
+        if (!$registro) {
+            return response()->json(['erro' => 'Registro de hora extra não encontrado ou sem alterações.'], 404);
+        }
+
         $updated = DB::table('HORA_EXTRA')->where('HORA_EXTRA_ID', $id)->update([
             'STATUS' => $novoStatus,
             'updated_at' => now(),
@@ -117,7 +160,48 @@ Route::patch('/hora-extra/{id}/status', function (\Illuminate\Http\Request $requ
         if (!$updated) {
             return response()->json(['erro' => 'Registro de hora extra não encontrado ou sem alterações.'], 404);
         }
-        return response()->json(['ok' => true]);
+        if (Schema::hasTable('NOTIFICACAO')) {
+            $destUserId = DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $registro->FUNCIONARIO_ID)->value('USUARIO_ID');
+            if ($destUserId) {
+                $body = $novoStatus === 'APROVADA'
+                    ? 'Sua hora extra foi aprovada.'
+                    : ($novoStatus === 'REJEITADA' ? 'Sua hora extra foi rejeitada.' : 'Sua hora extra voltou para pendente.');
+                DB::table('NOTIFICACAO')->insert([
+                    'USUARIO_ID' => (int) $destUserId,
+                    'NOTIFICACAO_TITULO' => 'Atualização de hora extra',
+                    'NOTIFICACAO_BODY' => $body,
+                    'NOTIFICACAO_TIPO' => 'hora_extra',
+                    'NOTIFICACAO_ICONE' => $novoStatus === 'APROVADA' ? '✅' : ($novoStatus === 'REJEITADA' ? '❌' : '⏳'),
+                    'NOTIFICACAO_URL' => '/hora-extra',
+                    'NOTIFICACAO_LIDA' => 0,
+                    'NOTIFICACAO_DT_CRIACAO' => now(),
+                ]);
+            }
+        }
+
+        // Sincroniza o status do plantão extra quando a hora extra foi originada dessa solicitação.
+        if (Schema::hasTable('PLANTAO_EXTRA')) {
+            $obs = (string) ($registro->OBSERVACAO ?? '');
+            if (preg_match('/ORIGEM_PLANTAO_EXTRA:(\d+)/', $obs, $m)) {
+                $plantaoId = (int) ($m[1] ?? 0);
+                if ($plantaoId > 0) {
+                    $colsPlantao = Schema::getColumnListing('PLANTAO_EXTRA');
+                    $novoStatusPlantao = $novoStatus;
+                    $updatePlantao = [];
+                    if (in_array('PLANTAO_STATUS', $colsPlantao, true)) {
+                        $updatePlantao['PLANTAO_STATUS'] = $novoStatusPlantao;
+                    }
+                    if (in_array('STATUS', $colsPlantao, true)) {
+                        $updatePlantao['STATUS'] = $novoStatusPlantao;
+                    }
+                    if (!empty($updatePlantao)) {
+                        DB::table('PLANTAO_EXTRA')->where('PLANTAO_ID', $plantaoId)->update($updatePlantao);
+                    }
+                }
+            }
+        }
+
+        return response()->json(['ok' => true, 'status' => $novoStatus]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
@@ -141,7 +225,15 @@ Route::get('/hora-extra/relatorio-secretaria', function (\Illuminate\Http\Reques
                 DB::raw("SUM(CASE WHEN he.TIPO_HORA_EXTRA = '50_PORCENTO' THEN he.TOTAL_HORAS ELSE 0 END) as horas_50"),
                 DB::raw("SUM(CASE WHEN he.TIPO_HORA_EXTRA = '100_PORCENTO' THEN he.TOTAL_HORAS ELSE 0 END) as horas_100"),
                 DB::raw("SUM(CASE WHEN he.TIPO_HORA_EXTRA = 'FERIADO' THEN he.TOTAL_HORAS ELSE 0 END) as horas_feriado")
-            )->get();
+            )->get()->map(function ($r) {
+                $r->qtd_servidores = (int) ($r->qtd_servidores ?? 0);
+                $r->total_horas = round((float) ($r->total_horas ?? 0), 2);
+                $r->total_valor = round((float) ($r->total_valor ?? 0), 2);
+                $r->horas_50 = round((float) ($r->horas_50 ?? 0), 2);
+                $r->horas_100 = round((float) ($r->horas_100 ?? 0), 2);
+                $r->horas_feriado = round((float) ($r->horas_feriado ?? 0), 2);
+                return $r;
+            });
         return response()->json(['competencia' => $competencia, 'dados' => $dados]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);

@@ -40,11 +40,6 @@ class CheckPerfil
 
         $user = Auth::user();
 
-        // Em ambiente não-produtivo, libera o admin local para teste total de rotas.
-        if (!app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
-            return $next($request);
-        }
-
         $user->load('usuarioPerfis.perfil');
 
         $temAcesso = false;

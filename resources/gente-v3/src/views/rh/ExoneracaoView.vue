@@ -23,6 +23,21 @@
       </div>
     </div>
 
+    <div class="purpose-strip" :class="{ loaded }">
+      <div class="purpose-item">
+        <span class="pi-idx">1</span>
+        <div><strong>Registrar desligamento</strong><small>Seleciona servidor, motivo e data oficial do ato.</small></div>
+      </div>
+      <div class="purpose-item">
+        <span class="pi-idx">2</span>
+        <div><strong>Validar cálculo</strong><small>Sistema calcula verbas, descontos e total líquido por regime.</small></div>
+      </div>
+      <div class="purpose-item">
+        <span class="pi-idx">3</span>
+        <div><strong>Incluir em folha</strong><small>Despacha individual ou em lote para folha rescisória.</small></div>
+      </div>
+    </div>
+
     <!-- ABAS ──────────────────────────────────────────────────── -->
     <div class="tabs-bar" :class="{ loaded }">
       <button class="tab-btn" :class="{ active: aba === 'registrar' }" @click="aba = 'registrar'">
@@ -31,6 +46,10 @@
       <button class="tab-btn" :class="{ active: aba === 'elegiveis' }" @click="aba = 'elegiveis'; carregarElegiveis()">
         📬 Elegíveis para Folha Rescisória
         <span v-if="elegiveis.length" class="badge-count">{{ elegiveis.length }}</span>
+      </button>
+      <button class="tab-btn" :class="{ active: aba === 'historico' }" @click="aba = 'historico'; carregarHistorico()">
+        🗂️ Histórico de Rescisões
+        <span v-if="historico.length" class="badge-count">{{ historico.length }}</span>
       </button>
     </div>
 
@@ -79,6 +98,7 @@
         <div class="form-group">
           <label>Data do Ato ★</label>
           <input type="date" v-model="form.data_exoneracao" @change="calcularPreview" class="form-input" />
+          <p v-if="erroPreview" class="preview-erro" role="alert">{{ erroPreview }}</p>
         </div>
         <div class="form-group">
           <label>Nº da Portaria</label>
@@ -156,9 +176,17 @@
         <button class="btn-secondary" @click="calcularPreview" :disabled="loadingCalc">
           {{ loadingCalc ? '⏳ Calculando...' : '🧮 Recalcular' }}
         </button>
-        <button class="btn-primary" @click="registrarExoneracao" :disabled="!calculo || salvando">
+        <button
+          class="btn-primary"
+          @click="registrarExoneracao"
+          :disabled="!calculo || salvando || !portariaOk"
+          :title="!portariaOk ? 'Informe o número da portaria (mín. 3 caracteres) para carimbo legal.' : ''"
+        >
           {{ salvando ? '⏳ Registrando...' : '✅ Confirmar Exoneração' }}
         </button>
+        <p v-if="servidor && form.data_exoneracao && calculo && !portariaOk" class="preview-erro">
+          Informe a portaria (mín. 3 caracteres) para habilitar a confirmação.
+        </p>
       </div>
 
       <div v-if="sucesso" class="success-msg">
@@ -237,7 +265,8 @@
           </tbody>
         </table>
         <div v-else-if="!loadingEleg" class="empty-state">
-          🎉 Nenhum servidor elegível pendente para folha rescisória.
+          <p>🎉 Nenhum servidor elegível pendente para folha rescisória.</p>
+          <button class="btn-secondary" @click="aba = 'registrar'">Registrar nova exoneração</button>
         </div>
         <div v-if="loadingEleg" class="spinner-wrap"><div class="spinner"></div></div>
       </div>
@@ -245,11 +274,52 @@
       <div v-if="msgLote" class="success-msg">{{ msgLote }}</div>
     </div>
 
+    <div v-if="aba === 'historico'" class="section-card" :class="{ loaded }">
+      <div class="section-hdr">
+        <h2 class="section-title">🗂️ Histórico de Rescisões Processadas</h2>
+        <button class="btn-secondary" @click="carregarHistorico" :disabled="loadingHistorico">
+          {{ loadingHistorico ? '⏳ Atualizando...' : 'Atualizar' }}
+        </button>
+      </div>
+
+      <div class="table-scroll">
+        <table class="eleg-table" v-if="historico.length">
+          <thead>
+            <tr>
+              <th>Servidor</th>
+              <th>Matrícula</th>
+              <th>Data Exon.</th>
+              <th>Motivo</th>
+              <th>Status</th>
+              <th>Total Líquido</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="h in historico" :key="h.RESCISAO_ID || `${h.FUNCIONARIO_ID}-${h.DATA_EXONERACAO}`">
+              <td>
+                <span class="nome-cell">{{ h.nome }}</span>
+              </td>
+              <td>{{ h.matricula || '—' }}</td>
+              <td>{{ formatData(h.DATA_EXONERACAO) }}</td>
+              <td><span class="motivo-badge" :class="String(h.MOTIVO_SAIDA || '').toLowerCase()">{{ h.MOTIVO_SAIDA || '—' }}</span></td>
+              <td><span class="status-chip" :class="statusClass(h.STATUS)">{{ statusLabel(h.STATUS) }}</span></td>
+              <td class="money liquido">{{ formatMoney(h.TOTAL_LIQUIDO) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-else-if="!loadingHistorico" class="empty-state">
+          <p>Sem rescisões registradas até o momento.</p>
+          <small>Assim que uma exoneração for confirmada, ela aparecerá aqui com rastreabilidade.</small>
+        </div>
+        <div v-if="loadingHistorico" class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/plugins/axios'
 
 const aba          = ref('registrar')
@@ -262,6 +332,7 @@ const servidor     = ref(null)
 const form         = ref({ motivo_saida: 'EXONERACAO', data_exoneracao: '', portaria_num: '' })
 const calculo      = ref(null)
 const loadingCalc  = ref(false)
+const erroPreview  = ref('')
 const salvando     = ref(false)
 const sucesso      = ref(false)
 
@@ -272,6 +343,8 @@ const selecionados = ref([])
 const filtroUnidade = ref('')
 const loadingEleg  = ref(false)
 const msgLote      = ref('')
+const historico    = ref([])
+const loadingHistorico = ref(false)
 
 // ── KPIs ──────────────────────────────────────────────
 const totalRescisorio = computed(() => elegiveis.value.reduce((s, e) => s + (e.total_liquido || 0), 0))
@@ -282,6 +355,12 @@ const totalSelecionados = computed(() => {
 })
 const todosSelecionados = computed(() =>
   elegiveis.value.length > 0 && elegiveis.value.every(e => selecionados.value.includes(e.rescisao_id)))
+
+const portariaOk = computed(() => String(form.value.portaria_num || '').trim().length >= 3)
+
+watch([() => form.value.data_exoneracao, () => form.value.portaria_num], () => {
+  erroPreview.value = ''
+})
 
 let buscarTimer = null
 function buscarServidor() {
@@ -304,17 +383,31 @@ async function calcularPreview() {
   if (!servidor.value || !form.value.data_exoneracao) return
   loadingCalc.value = true
   calculo.value = null
+  erroPreview.value = ''
   try {
     const d = (await api.post('/api/v3/exoneracao/preview', {
       funcionario_id: servidor.value.id,
       data_exoneracao: form.value.data_exoneracao
     })).data
+    if (d.erro) {
+      erroPreview.value = String(d.erro)
+      return
+    }
     if (d.calculo) calculo.value = d.calculo
-  } catch (e) { console.error(e) } finally { loadingCalc.value = false }
+    else erroPreview.value = 'O servidor não retornou dados de cálculo. Verifique a data e tente novamente.'
+  } catch (e) {
+    const msg = e?.response?.data?.erro || e?.response?.data?.message || e?.message || 'Falha ao calcular preview.'
+    erroPreview.value = String(msg)
+  } finally { loadingCalc.value = false }
 }
 
 async function registrarExoneracao() {
+  if (!portariaOk.value) {
+    erroPreview.value = 'A portaria é obrigatória (mín. 3 caracteres) antes de confirmar o desligamento.'
+    return
+  }
   salvando.value = true
+  erroPreview.value = ''
   try {
     const d = (await api.post('/api/v3/exoneracao/registrar', { funcionario_id: servidor.value.id, ...form.value })).data
     if (d.ok) {
@@ -324,8 +417,13 @@ async function registrarExoneracao() {
       busca.value = ''
       form.value = { motivo_saida: 'EXONERACAO', data_exoneracao: '', portaria_num: '' }
       await carregarElegiveis()
+      await carregarHistorico()
+    } else if (d.erro) {
+      erroPreview.value = String(d.erro)
     }
-  } catch (e) { console.error(e) } finally { salvando.value = false }
+  } catch (e) {
+    erroPreview.value = e?.response?.data?.erro || e?.response?.data?.message || 'Falha ao registrar exoneração.'
+  } finally { salvando.value = false }
 }
 
 async function carregarElegiveis() {
@@ -367,6 +465,15 @@ async function incluirIndividual(e) {
   await api.post('/api/v3/exoneracao/incluir-folha', { rescisao_ids: [e.rescisao_id], competencia })
   msgLote.value = `✅ ${e.nome} incluído(a) em folha rescisória.`
   await carregarElegiveis()
+  await carregarHistorico()
+}
+
+async function carregarHistorico() {
+  loadingHistorico.value = true
+  try {
+    const d = (await api.get('/api/v3/rescisao')).data
+    historico.value = d.rescisoes || []
+  } catch (e) { console.error(e) } finally { loadingHistorico.value = false }
 }
 
 function formatMoney(v) {
@@ -376,9 +483,23 @@ function formatData(d) {
   if (!d) return '—'
   return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
 }
+function statusLabel(s) {
+  const v = String(s || '').toUpperCase()
+  if (v === 'INCLUIDO_FOLHA') return 'Incluído em folha'
+  if (v === 'VALIDADO') return 'Validado'
+  if (v === 'CALCULADO') return 'Calculado'
+  return v || '—'
+}
+function statusClass(s) {
+  const v = String(s || '').toUpperCase()
+  if (v === 'INCLUIDO_FOLHA') return 'ok'
+  if (v === 'VALIDADO') return 'warn'
+  return 'muted'
+}
 
 onMounted(async () => {
   await carregarElegiveis()
+  await carregarHistorico()
   setTimeout(() => loaded.value = true, 80)
 })
 </script>
@@ -408,6 +529,12 @@ onMounted(async () => {
 /* TABS */
 .tabs-bar { display: flex; gap: .5rem; opacity: 0; transform: translateY(-8px); transition: opacity .4s .15s, transform .4s .15s; }
 .tabs-bar.loaded { opacity: 1; transform: none; }
+.purpose-strip { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: .75rem; opacity: 0; transform: translateY(-6px); transition: opacity .4s .08s, transform .4s .08s; }
+.purpose-strip.loaded { opacity: 1; transform: none; }
+.purpose-item { display: flex; gap: .65rem; align-items: flex-start; padding: .75rem .85rem; border-radius: 12px; border: 1px solid #dbe5f0; background: linear-gradient(135deg, rgba(248,250,252,.94), rgba(241,245,249,.88)); }
+.purpose-item strong { display: block; font-size: .82rem; color: #0f172a; }
+.purpose-item small { display: block; color: #64748b; font-size: .72rem; margin-top: .15rem; }
+.pi-idx { width: 24px; height: 24px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: #0f3460; color: #fff; font-size: .72rem; font-weight: 800; }
 .tab-btn { padding: .6rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; background: #f1f5f9; color: #475569; font-weight: 600; font-size: .85rem; transition: all .2s; position: relative; }
 .tab-btn.active { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; }
 .badge-count { position: absolute; top: -6px; right: -6px; background: #e74c3c; color: #fff; border-radius: 999px; padding: 0 5px; font-size: .65rem; font-weight: 800; }
@@ -470,6 +597,7 @@ onMounted(async () => {
 .btn-lote { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; padding: .6rem 1.2rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: opacity .2s; }
 .btn-lote:disabled { opacity: .4; cursor: not-allowed; }
 .success-msg { margin-top: 1rem; background: #dcfce7; color: #15803d; border-radius: 8px; padding: .75rem 1rem; font-weight: 600; font-size: .88rem; }
+.preview-erro { margin-top: .5rem; font-size: .82rem; color: #b91c1c; font-weight: 600; }
 
 /* Elegíveis */
 .sel-controls { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: .75rem; background: #f8fafc; border-radius: 8px; }
@@ -488,8 +616,15 @@ onMounted(async () => {
 .motivo-badge.demissao { background: #fce7f3; color: #9d174d; }
 .act-btn { background: #f1f5f9; border: none; border-radius: 6px; padding: .35rem .7rem; font-size: .78rem; cursor: pointer; font-weight: 600; transition: background .2s; }
 .act-btn:hover { background: #e0e7ef; }
+.status-chip { display: inline-flex; border-radius: 999px; padding: .18rem .55rem; font-size: .69rem; font-weight: 800; letter-spacing: .02em; }
+.status-chip.ok { background: #dcfce7; color: #166534; }
+.status-chip.warn { background: #fef3c7; color: #92400e; }
+.status-chip.muted { background: #e2e8f0; color: #475569; }
 .empty-state { text-align: center; padding: 3rem; color: #94a3b8; font-size: .95rem; }
+.empty-state p { margin: 0 0 .65rem; }
+.empty-state small { color: #94a3b8; }
 .spinner-wrap { display: flex; justify-content: center; padding: 2rem; }
 .spinner { width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #e74c3c; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 900px) { .purpose-strip { grid-template-columns: 1fr; } }
 </style>

@@ -96,7 +96,7 @@ export default function HomeScreen() {
             <TouchableOpacity
                 style={[s.btnPonto, !proximaLabel && s.btnPontoDisabled]}
                 disabled={!proximaLabel}
-                onPress={() => router.push('/bater-ponto')}
+                onPress={() => router.push({ pathname: '/bater-ponto', params: { tipo: status?.proxima } })}
             >
                 <Text style={s.btnPontoIcon}>✋</Text>
                 <Text style={s.btnPontoText}>
