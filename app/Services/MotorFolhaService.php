@@ -2,7 +2,15 @@
 
 namespace App\Services;
 
+use App\Jobs\ProcessarLoteFolhaJob;
+use App\Models\Funcionario;
+use App\Services\MotorFolha\MotorFolhaLoteContext;
+use Illuminate\Bus\Batch;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * MotorFolhaService — Motor de Cálculo de Folha de Pagamento GENTE v3
@@ -12,33 +20,251 @@ use Illuminate\Support\Facades\DB;
  *   C2 — Adicionais permanentes (ADICIONAL_SERVIDOR)
  *   C3 — Lançamentos variáveis mensais (LANCAMENTO_FOLHA)
  *
- * Princípios: ZERO queries dentro do loop — batch em memória antes do cálculo.
- * Sprint 3 GENTE v3 — Prefeitura de São Luís / RR TECNOL
+ * Fase 13: lotes por FUNCIONARIO_ID + {@see MotorFolhaLoteContext} injectado (sem N+1 em AFASTAMENTO /
+ * AVALIACAO_DESEMPENHO / CARGO). Persistência por lote em {@see DB::transaction} + upsert.
+ *
+ * Produção assíncrona: QUEUE_CONNECTION=database|redis + worker (ver PERFORMANCE_BACKLOG / comentários na API).
  */
 class MotorFolhaService
 {
+    private const CHUNK_SIZE = 500;
+
     // Salário mínimo 2025 (idealmente buscar de CONFIGURACAO_SISTEMA)
     private const SALARIO_MIN_2025 = 1518.00;
 
     // Vínculos que têm direito ao piso salarial mínimo
     private const VINCULOS_PISO = ['servico_prestado', 'pss', 'comissao_puro'];
 
-    // =========================================================================
-    // MÉTODO PRINCIPAL
-    // =========================================================================
+    /**
+     * Filtro de servidores elegíveis ao motor: usa FUNCIONARIO_ATIVO apenas se a coluna existir;
+     * senão, replica a primeira parte de {@see Funcionario::scopeAtivosNoEscopo} (DATA_FIM / DATA_DEMISSAO),
+     * sem filtro territorial de lotação. Se nenhuma coluna existir, não restringe (esquema legado).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\Funcionario>|\Illuminate\Database\Query\Builder  $query
+     */
+    private static function aplicarFiltroServidorAtivoParaMotor($query, string $tablePrefix = ''): void
+    {
+        if (Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_ATIVO')) {
+            $query->where($tablePrefix.'FUNCIONARIO_ATIVO', 1);
 
+            return;
+        }
+
+        $hoje = now()->toDateString();
+        $temFim = Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM');
+        $temDemissao = Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_DEMISSAO');
+        if (! $temFim && ! $temDemissao) {
+            return;
+        }
+
+        $colFim = $tablePrefix.'FUNCIONARIO_DATA_FIM';
+        $colDem = $tablePrefix.'FUNCIONARIO_DATA_DEMISSAO';
+
+        $query->where(function ($outer) use ($hoje, $temFim, $temDemissao, $colFim, $colDem) {
+            if ($temFim) {
+                $outer->where(function ($w) use ($hoje, $colFim) {
+                    $w->whereNull($colFim)
+                        ->orWhere($colFim, '>', $hoje);
+                });
+            }
+            if ($temDemissao) {
+                $outer->where(function ($w) use ($hoje, $colDem) {
+                    $w->whereNull($colDem)
+                        ->orWhere($colDem, '>', $hoje);
+                });
+            }
+        });
+    }
+
+    /**
+     * Pré-carrega relações por lote (uma query com eager load) para injectar no motor.
+     */
+    public static function prepararContextoLote(int $folhaId, array $funcionarioIds): MotorFolhaLoteContext
+    {
+        $folha = DB::table('FOLHA')->where('FOLHA_ID', $folhaId)->first();
+        if (! $folha) {
+            throw new \InvalidArgumentException("Folha {$folhaId} não encontrada.");
+        }
+        $competencia = (string) $folha->FOLHA_COMPETENCIA;
+
+        $ids = array_values(array_unique(array_map('intval', $funcionarioIds)));
+        if ($ids === []) {
+            return new MotorFolhaLoteContext($competencia, [], [], []);
+        }
+
+        $eager = [];
+        if (Schema::hasTable('AFASTAMENTO')) {
+            $eager[] = 'afastamentos';
+        }
+        if (Schema::hasTable('CARGO')) {
+            $eager[] = 'cargo';
+        }
+        if (Schema::hasTable('AVALIACAO_DESEMPENHO')) {
+            $eager[] = 'avaliacoesDesempenho';
+        }
+
+        $funcionarios = Funcionario::query()
+            ->whereIn('FUNCIONARIO_ID', $ids)
+            ->with($eager)
+            ->get()
+            ->keyBy('FUNCIONARIO_ID');
+
+        $cargoSalario = [];
+        $temSalario = Schema::hasColumn('CARGO', 'CARGO_SALARIO');
+        $temSalarioBase = Schema::hasColumn('CARGO', 'CARGO_SALARIO_BASE');
+
+        foreach ($ids as $fid) {
+            /** @var Funcionario|null $f */
+            $f = $funcionarios->get($fid);
+            $valor = 0.0;
+            if ($f && $f->relationLoaded('cargo')) {
+                $c = $f->getRelation('cargo');
+                if ($c) {
+                    if ($temSalario) {
+                        $valor = (float) ($c->CARGO_SALARIO ?? 0);
+                    } elseif ($temSalarioBase) {
+                        $valor = (float) ($c->CARGO_SALARIO_BASE ?? 0);
+                    }
+                }
+            }
+            $cargoSalario[$fid] = $valor;
+        }
+
+        $afastMap = [];
+        $avalMap = [];
+        $datasContratuais = []; // GAP-MF-03: snapshot de DATA_INICIO/FIM para pró-rata
+        foreach ($ids as $fid) {
+            /** @var Funcionario|null $f */
+            $f = $funcionarios->get($fid);
+            $afastMap[$fid] = ($f && $f->relationLoaded('afastamentos')) ? $f->afastamentos : collect();
+            $avalMap[$fid] = ($f && $f->relationLoaded('avaliacoesDesempenho')) ? $f->avaliacoesDesempenho : collect();
+            $datasContratuais[$fid] = [
+                'inicio' => $f?->FUNCIONARIO_DATA_INICIO,
+                'fim' => $f?->FUNCIONARIO_DATA_FIM,
+            ];
+        }
+
+        return new MotorFolhaLoteContext($competencia, $cargoSalario, $afastMap, $avalMap, $datasContratuais);
+    }
+
+    /**
+     * Despacha um batch de jobs (500 servidores por job). Requer driver de fila não-sync para 202 real.
+     */
+    public function despacharProcessamentoAssincrono(int $folhaId, ?int $createdByUsuarioId = null): Batch
+    {
+        $folha = DB::table('FOLHA')->where('FOLHA_ID', $folhaId)->first();
+        if (! $folha) {
+            throw new \InvalidArgumentException("Folha {$folhaId} não encontrada.");
+        }
+        $competencia = (string) $folha->FOLHA_COMPETENCIA;
+
+        $jobs = [];
+        $q = Funcionario::query();
+        self::aplicarFiltroServidorAtivoParaMotor($q);
+        $q->orderBy('FUNCIONARIO_ID')
+            ->chunkById(self::CHUNK_SIZE, function (Collection $chunk) use ($folhaId, &$jobs) {
+                $ids = $chunk->pluck('FUNCIONARIO_ID')->map(fn ($v) => (int) $v)->values()->all();
+                if ($ids !== []) {
+                    $jobs[] = new ProcessarLoteFolhaJob($folhaId, $ids);
+                }
+            });
+
+        if ($jobs === []) {
+            throw new \RuntimeException('Nenhum servidor ativo encontrado para processar a folha.');
+        }
+
+        $pending = Bus::batch($jobs)
+            ->name('Fecho de Folha - ' . $competencia);
+
+        if ($createdByUsuarioId !== null) {
+            $pending->withOption('created_by', $createdByUsuarioId);
+        }
+
+        return $pending->allowFailures(false)->dispatch();
+    }
+
+    /**
+     * Caminho síncrono legado: processa por chunk em memória + mesmo {@see prepararContextoLote} que o Job.
+     */
     public function calcularFolha(int $folhaId): array
     {
         $folha = DB::table('FOLHA')->where('FOLHA_ID', $folhaId)->first();
-        if (!$folha) {
+        if (! $folha) {
             return ['ok' => false, 'erro' => "Folha {$folhaId} não encontrada."];
         }
-        $competencia = $folha->FOLHA_COMPETENCIA; // AAAA-MM
+        $competencia = $folha->FOLHA_COMPETENCIA;
 
-        // ── PASSO 1: Carregar TUDO em memória antes do loop ──────────────────
+        $totalServidores = 0;
+        $sumProv = 0.0;
+        $sumDesc = 0.0;
+        $sumLiq = 0.0;
+        $sumSm = 0.0;
+        $algum = false;
 
-        // Servidores ativos com vínculo e tabela salarial
-        $servidores = DB::table('FUNCIONARIO as f')
+        $q = Funcionario::query();
+        self::aplicarFiltroServidorAtivoParaMotor($q);
+        $q->orderBy('FUNCIONARIO_ID')
+            ->chunkById(self::CHUNK_SIZE, function (Collection $chunk) use (
+                $folhaId,
+                &$totalServidores,
+                &$sumProv,
+                &$sumDesc,
+                &$sumLiq,
+                &$sumSm,
+                &$algum
+            ) {
+                $ids = $chunk->pluck('FUNCIONARIO_ID')->map(fn ($v) => (int) $v)->values()->all();
+                if ($ids === []) {
+                    return;
+                }
+                $ctx = self::prepararContextoLote($folhaId, $ids);
+                $out = $this->calcularLoteParaFuncionarios($folhaId, $ids, $ctx);
+                if (! ($out['ok'] ?? false)) {
+                    throw new \RuntimeException($out['erro'] ?? 'Erro ao calcular lote da folha.');
+                }
+                $algum = true;
+                $totalServidores += (int) ($out['servidores'] ?? 0);
+                $sumProv += (float) ($out['total_proventos'] ?? 0);
+                $sumDesc += (float) ($out['total_descontos'] ?? 0);
+                $sumLiq += (float) ($out['total_liquido'] ?? 0);
+                $sumSm += (float) ($out['total_comp_sm'] ?? 0);
+            });
+
+        if (! $algum) {
+            return ['ok' => false, 'erro' => 'Nenhum servidor ativo encontrado.'];
+        }
+
+        return [
+            'ok' => true,
+            'folha_id' => $folhaId,
+            'competencia' => $competencia,
+            'servidores' => $totalServidores,
+            'total_proventos' => round($sumProv, 2),
+            'total_descontos' => round($sumDesc, 2),
+            'total_liquido' => round($sumLiq, 2),
+            'total_comp_sm' => round($sumSm, 2),
+        ];
+    }
+
+    /**
+     * Calcula e persiste um lote; leitura de AFASTAMENTO / avaliação / cargo apenas via $contexto.
+     *
+     * @return array{ok: bool, erro?: string, servidores?: int, total_proventos?: float, total_descontos?: float, total_liquido?: float, total_comp_sm?: float}
+     */
+    public function calcularLoteParaFuncionarios(int $folhaId, array $funcionarioIds, MotorFolhaLoteContext $contexto): array
+    {
+        $folha = DB::table('FOLHA')->where('FOLHA_ID', $folhaId)->first();
+        if (! $folha) {
+            return ['ok' => false, 'erro' => "Folha {$folhaId} não encontrada."];
+        }
+        $competencia = (string) $folha->FOLHA_COMPETENCIA;
+
+        $ids = array_values(array_unique(array_map('intval', $funcionarioIds)));
+        if ($ids === []) {
+            return ['ok' => true, 'servidores' => 0, 'total_proventos' => 0.0, 'total_descontos' => 0.0, 'total_liquido' => 0.0, 'total_comp_sm' => 0.0];
+        }
+
+        $servidoresQuery = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('VINCULO as v', 'v.VINCULO_ID', '=', 'f.VINCULO_ID')
             ->leftJoin('TABELA_SALARIAL as ts', function ($j) {
@@ -46,8 +272,10 @@ class MotorFolhaService
                     ->on('ts.TABELA_CLASSE', '=', 'f.FUNCIONARIO_CLASSE')
                     ->on('ts.TABELA_REFERENCIA', '=', 'f.FUNCIONARIO_REFERENCIA');
             })
-            ->leftJoin('PROGRESSAO_CONFIG as pc', 'pc.CARREIRA_ID', '=', 'f.CARREIRA_ID')
-            ->where('f.FUNCIONARIO_ATIVO', 1)
+            ->leftJoin('PROGRESSAO_CONFIG as pc', 'pc.CARREIRA_ID', '=', 'f.CARREIRA_ID');
+        self::aplicarFiltroServidorAtivoParaMotor($servidoresQuery, 'f.');
+        $servidores = $servidoresQuery
+            ->whereIn('f.FUNCIONARIO_ID', $ids)
             ->select([
                 'f.FUNCIONARIO_ID',
                 'f.FUNCIONARIO_DATA_INICIO',
@@ -66,12 +294,11 @@ class MotorFolhaService
             ->keyBy('FUNCIONARIO_ID');
 
         if ($servidores->isEmpty()) {
-            return ['ok' => false, 'erro' => 'Nenhum servidor ativo encontrado.'];
+            return ['ok' => true, 'servidores' => 0, 'total_proventos' => 0.0, 'total_descontos' => 0.0, 'total_liquido' => 0.0, 'total_comp_sm' => 0.0];
         }
 
-        $funcIds = $servidores->keys()->toArray();
+        $funcIds = $servidores->keys()->map(fn ($k) => (int) $k)->all();
 
-        // Adicionais permanentes ativos (C2)
         $adicionais = DB::table('ADICIONAL_SERVIDOR as ads')
             ->whereIn('ads.FUNCIONARIO_ID', $funcIds)
             ->where(function ($q) {
@@ -82,15 +309,13 @@ class MotorFolhaService
             ->get()
             ->groupBy('FUNCIONARIO_ID');
 
-        // Lançamentos variáveis desta competência (C3)
         $lancamentos = DB::table('LANCAMENTO_FOLHA')
             ->where('FOLHA_ID', $folhaId)
             ->whereIn('FUNCIONARIO_ID', $funcIds)
             ->get()
             ->groupBy('FUNCIONARIO_ID');
 
-        // Consignações ativas na competência
-        $compFormatada = substr($competencia, 0, 7); // AAAA-MM
+        $compFormatada = substr($competencia, 0, 7);
         $consignacoes = DB::table('CONSIG_PARCELA as cp')
             ->join('CONSIG_CONTRATO as cc', 'cc.CONTRATO_ID', '=', 'cp.CONTRATO_ID')
             ->where('cp.COMPETENCIA', $compFormatada)
@@ -102,74 +327,74 @@ class MotorFolhaService
             ->get()
             ->keyBy('FUNCIONARIO_ID');
 
-        // Alíquota RPPS — tenta buscar config, usa 14% como fallback (SQLite não tem RPPS_CONFIG)
-        try {
-            $aliqRPPS = DB::table('RPPS_CONFIG')
-                ->orderByDesc('VIGENCIA_INICIO')
-                ->value('ALIQUOTA_SERVIDOR') ?? 14;
-        } catch (\Throwable $e) {
-            $aliqRPPS = 14;
-        }
-        $aliqRPPS = $aliqRPPS / 100;
-
+        $aliqRPPS = $this->resolverAliquotaRpps();
         $salarioMin = self::SALARIO_MIN_2025;
 
-        // ── PASSO 2: Loop de cálculo — ZERO queries adicionais ───────────────
         $resultados = [];
 
         foreach ($servidores as $funcId => $s) {
+            $funcId = (int) $funcId;
             $vinculoTipo = $s->VINCULO_TIPO ?? 'efetivo';
-            $vencBase = (float) ($s->TABELA_VENCIMENTO_BASE ?? 0);
+            $vencBaseIntegral = (float) ($s->TABELA_VENCIMENTO_BASE ?? 0);
+            $cargoSal = $contexto->getCargoSalario($funcId);
+            if ($vencBaseIntegral <= 0 && $cargoSal > 0) {
+                $vencBaseIntegral = $cargoSal;
+            }
 
-            // C1 — Provênto base diferenciado por modalidade de vínculo
+            // GAP-MF-01/03: aplicar pró-rata por dias contratuais no mês (admissão/exoneração).
+            // GAP-MF-06 (parcial): denominador = dias reais do mês de competência (28/29/30/31).
+            $razao = $contexto->razaoProporcionalVencimento($funcId);
+            $vencBase = $vencBaseIntegral * $razao;
+
+            // GAP-MF-02: dias abonados (LM/LMA/etc.) — informativo, já contabilizados em dias trabalhados.
+            $diasAbonados = $contexto->diasAbonadosNoMes($funcId);
+
+            // Dados injectados (sem query): competência × afastamento / desempenho
+            $contexto->possuiAfastamentoSobrepostoNaCompetencia($funcId);
+            $contexto->melhorNotaFinal($funcId);
+            $fatorDesempenho = $contexto->fatorProgressaoPorDesempenho($funcId);
+
             switch ($vinculoTipo) {
                 case 'comissao_puro':
-                    // Recebe apenas o valor do CC — sem progressão, sem anuênio
                     $provC1 = $vencBase;
                     $anuenioVal = 0.0;
                     break;
 
                 case 'efetivo_cc_m1':
-                    // Recebe o MAIOR entre vencimento efetivo e CC — nunca os dois
-                    // TODO Sprint 4 avançado: buscar valor do CC e comparar
                     $provC1 = $vencBase;
-                    $anuenioVal = 0.0; // progressão suspensa enquanto em CC
+                    $anuenioVal = 0.0;
                     break;
 
                 case 'efetivo_cc_m2':
-                    // Vencimento efetivo + 55% do CC via ADICIONAL_SERVIDOR (C2)
                     $aliqAnuenio = (float) ($s->VINCULO_ANUENIO_PCT ?? $s->CONFIG_ANUENIO_PCT ?? 1.00) / 100;
                     $anoServ = $s->FUNCIONARIO_DATA_INICIO
                         ? now()->diffInYears(\Carbon\Carbon::parse($s->FUNCIONARIO_DATA_INICIO))
                         : 0;
-                    $anuenioVal = $vencBase * $aliqAnuenio * $anoServ;
+                    $anuenioVal = $vencBase * $aliqAnuenio * $anoServ * $fatorDesempenho;
                     $provC1 = $vencBase + $anuenioVal;
                     break;
 
                 case 'funcao_confianca':
-                    // Efetivo + gratificação de função (gratificação entra via C2)
                     $aliqAnuenio = (float) ($s->VINCULO_ANUENIO_PCT ?? $s->CONFIG_ANUENIO_PCT ?? 1.00) / 100;
                     $anoServ = $s->FUNCIONARIO_DATA_INICIO
                         ? now()->diffInYears(\Carbon\Carbon::parse($s->FUNCIONARIO_DATA_INICIO))
                         : 0;
-                    $anuenioVal = $vencBase * $aliqAnuenio * $anoServ;
+                    $anuenioVal = $vencBase * $aliqAnuenio * $anoServ * $fatorDesempenho;
                     $provC1 = $vencBase + $anuenioVal;
                     break;
 
                 default:
-                    // efetivo, servico_prestado, pss, professor, guarda — regra padrão
                     $aliqAnuenio = (float) ($s->VINCULO_ANUENIO_PCT ?? $s->CONFIG_ANUENIO_PCT ?? 1.00) / 100;
                     $anoServ = $s->FUNCIONARIO_DATA_INICIO
                         ? now()->diffInYears(\Carbon\Carbon::parse($s->FUNCIONARIO_DATA_INICIO))
                         : 0;
-                    $anuenioVal = $vencBase * $aliqAnuenio * $anoServ;
+                    $anuenioVal = $vencBase * $aliqAnuenio * $anoServ * $fatorDesempenho;
                     $provC1 = $vencBase + $anuenioVal;
                     break;
             }
 
-            // C2 — Adicionais permanentes
             $provC2 = 0.0;
-            $basePrev = $provC1; // começa com C1
+            $basePrev = $provC1;
             foreach (($adicionais[$funcId] ?? collect()) as $ad) {
                 $val = match ($ad->ADICIONAL_TIPO) {
                     'fixo' => (float) $ad->ADICIONAL_VALOR,
@@ -179,21 +404,20 @@ class MotorFolhaService
                 };
                 $provC2 += $val;
 
-                // Acumula base previdência apenas se o adicional incide
                 if ($ad->ADICIONAL_INCIDE_PREV) {
                     $basePrev += $val;
                 }
             }
 
-            // C3 — Lançamentos variáveis
             $provC3 = 0.0;
             $descC3 = 0.0;
             foreach (($lancamentos[$funcId] ?? collect()) as $lanc) {
                 $total = (float) $lanc->LANCAMENTO_VALOR_TOTAL;
                 if ($lanc->LANCAMENTO_TIPO === 'P') {
                     $provC3 += $total;
-                    if ($lanc->LANCAMENTO_INCIDE_PREV)
+                    if ($lanc->LANCAMENTO_INCIDE_PREV) {
                         $basePrev += $total;
+                    }
                 } else {
                     $descC3 += $total;
                 }
@@ -201,14 +425,12 @@ class MotorFolhaService
 
             $bruto = $provC1 + $provC2 + $provC3;
 
-            // Piso salarial — ANTES de calcular descontos
             $complementoSM = 0.0;
             if (in_array($vinculoTipo, self::VINCULOS_PISO) && $bruto < $salarioMin) {
                 $complementoSM = round($salarioMin - $bruto, 2);
                 $bruto = $salarioMin;
             }
 
-            // Desconto previdência
             $descPrev = 0.0;
             $incideInss = $s->VINCULO_INSS ?? true;
             if ($incideInss) {
@@ -218,18 +440,26 @@ class MotorFolhaService
                     : $this->calcularInssRgps($basePrev);
             }
 
-            // Base IRRF = bruto − INSS − dependentes
             $dep = (int) ($s->PESSOA_DEPENDENTES_IRRF ?? 0);
-            $baseIrrf = $bruto - $descPrev - ($dep * 226.86); // dedução 2025
+            $baseIrrf = $bruto - $descPrev - ($dep * 226.86);
             $descIRRF = ($s->VINCULO_IRRF ?? true) ? $this->calcularIrrf($baseIrrf) : 0.0;
 
-            // Consignações
             $descConsig = (float) ($consignacoes[$funcId]->total_consig ?? 0);
 
             $descOutros = $descC3 + $descConsig;
             $liquido = $bruto - $descPrev - $descIRRF - $descOutros;
 
-            // DETALHE_FOLHA não tem timestamps — omitir updated_at/created_at
+            \Illuminate\Support\Facades\Log::info('[MotorFolha] cálculo lote', [
+                'folha_id' => $folhaId,
+                'funcionario_id' => $funcId,
+                'razao_proporcional' => round($razao, 4),
+                'dias_abonados' => $diasAbonados,
+                'venc_base_integral' => round($vencBaseIntegral, 2),
+                'venc_base_proporcional' => round($vencBase, 2),
+                'bruto' => round($bruto, 2),
+                'liquido' => round($liquido, 2),
+            ]);
+
             $resultados[$funcId] = [
                 'FUNCIONARIO_ID' => $funcId,
                 'FOLHA_ID' => $folhaId,
@@ -246,31 +476,12 @@ class MotorFolhaService
             ];
         }
 
-        // ── PASSO 3: Gravar em batch (chunks de 500) ─────────────────────────
-        foreach (array_chunk($resultados, 500) as $chunk) {
-            // Tenta upsert; se não suportado (SQLite antigo), faz merge manual
-            try {
-                DB::table('DETALHE_FOLHA')->upsert(
-                    $chunk,
-                    ['FUNCIONARIO_ID', 'FOLHA_ID'],
-                    array_diff(array_keys(reset($chunk)), ['FUNCIONARIO_ID', 'FOLHA_ID'])
-                );
-            } catch (\Exception $e) {
-                // Fallback: updateOrInsert individual
-                foreach ($chunk as $row) {
-                    DB::table('DETALHE_FOLHA')->updateOrInsert(
-                        ['FUNCIONARIO_ID' => $row['FUNCIONARIO_ID'], 'FOLHA_ID' => $row['FOLHA_ID']],
-                        $row
-                    );
-                }
-            }
-        }
+        $this->persistirDetalhesLoteEmTransacao($resultados);
 
         $col = collect($resultados);
+
         return [
             'ok' => true,
-            'folha_id' => $folhaId,
-            'competencia' => $competencia,
             'servidores' => count($resultados),
             'total_proventos' => round($col->sum('DETALHE_FOLHA_PROVENTOS'), 2),
             'total_descontos' => round($col->sum('DETALHE_FOLHA_DESCONTOS'), 2),
@@ -279,14 +490,48 @@ class MotorFolhaService
         ];
     }
 
-    // =========================================================================
-    // TABELAS FISCAIS 2025
-    // =========================================================================
+    /**
+     * @param  array<int, array<string, mixed>>  $resultados
+     */
+    private function persistirDetalhesLoteEmTransacao(array $resultados): void
+    {
+        if ($resultados === []) {
+            return;
+        }
 
-    /** INSS RGPS 2025 — progressivo por faixa */
+        $chunks = array_chunk($resultados, self::CHUNK_SIZE);
+
+        DB::transaction(function () use ($chunks) {
+            foreach ($chunks as $chunk) {
+                $first = reset($chunk);
+                if ($first === false) {
+                    continue;
+                }
+                $update = array_values(array_diff(array_keys($first), ['FUNCIONARIO_ID', 'FOLHA_ID']));
+                DB::table('DETALHE_FOLHA')->upsert(
+                    $chunk,
+                    ['FUNCIONARIO_ID', 'FOLHA_ID'],
+                    $update
+                );
+            }
+        });
+    }
+
+    private function resolverAliquotaRpps(): float
+    {
+        try {
+            $aliqRPPS = DB::table('RPPS_CONFIG')
+                ->orderByDesc('VIGENCIA_INICIO')
+                ->value('ALIQUOTA_SERVIDOR') ?? 14;
+        } catch (\Throwable $e) {
+            $aliqRPPS = 14;
+        }
+
+        return $aliqRPPS / 100;
+    }
+
     private function calcularInssRgps(float $base): float
     {
-        // [teto da faixa, alíquota]
         $faixas = [
             [1518.00, 0.075],
             [2666.68, 0.09],
@@ -296,30 +541,38 @@ class MotorFolhaService
         $desconto = 0.0;
         $anterior = 0.0;
         foreach ($faixas as [$teto, $aliq]) {
-            if ($base <= $anterior)
+            if ($base <= $anterior) {
                 break;
+            }
             $faixa = min($base, $teto) - $anterior;
             $desconto += $faixa * $aliq;
             $anterior = $teto;
-            if ($base <= $teto)
+            if ($base <= $teto) {
                 break;
+            }
         }
+
         return round(min($desconto, $base * 0.14), 2);
     }
 
-    /** IRRF 2025 — tabela progressiva (MP 1.206/2024 + Lei 14.848/2024) */
     private function calcularIrrf(float $base): float
     {
-        if ($base <= 0)
+        if ($base <= 0) {
             return 0.0;
-        if ($base <= 2824.00)
-            return 0.0;           // isento
-        if ($base <= 3751.05)
+        }
+        if ($base <= 2824.00) {
+            return 0.0;
+        }
+        if ($base <= 3751.05) {
             return round($base * 0.075 - 211.80, 2);
-        if ($base <= 4664.68)
+        }
+        if ($base <= 4664.68) {
             return round($base * 0.15 - 493.05, 2);
-        if ($base <= 7083.49)
+        }
+        if ($base <= 7083.49) {
             return round($base * 0.225 - 843.16, 2);
+        }
+
         return round($base * 0.275 - 1197.58, 2);
     }
 }
