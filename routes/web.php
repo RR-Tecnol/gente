@@ -1377,6 +1377,12 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::put('alterar', [UsuarioPerfilController::class, "alterar"]);
     });
 
+    /*
+     * FASE-4-COMENTADO 08/05/2026 (decisão 7.a do MAPA): rotas tabela_generica legadas comentadas.
+     * SPA Vue 3 consome /api/v3/tabelas-genericas/* (definido em api_v3_*.php).
+     * TabelaGenericaController preservado em app/Http/Controllers/ para reaproveitamento futuro.
+     * Para reativar, descomentar este bloco.
+     *
     Route::prefix('tabela_generica')->group(function () {
         Route::get('/', [TabelaGenericaController::class, "view"]);
         Route::get('view', [TabelaGenericaController::class, "view"]);
@@ -1394,6 +1400,7 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::post('inserir_tabela', [TabelaGenericaController::class, "inserirTabela"]);
         Route::put('alterar_tabela', [TabelaGenericaController::class, "alterarTabela"]);
     });
+    */
 
     Route::prefix('uf')->group(function () {
         $controller = UfController::class;
