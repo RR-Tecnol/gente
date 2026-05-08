@@ -1650,11 +1650,9 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
     // CepController preservado em app/Http/Controllers/CepController.php para uso futuro.
     // Route::get('cep/{cep}', [CepController::class, 'service']);
 
-    Route::prefix('comentario')->group(function () {
-        Route::get('listar', [ComentarioController::class, "listar"])->name('comentario.list');
-        Route::post('inserir', [ComentarioController::class, "inserir"])->name('comentario.create');
-        Route::put('alterar', [ComentarioController::class, "alterar"]);
-    });
+    // FASE-4-REMOVIDO 08/05/2026 (decisão 7.f do MAPA): bloco Route::prefix('comentario') removido.
+    // Comentários de Escala v1 (Vue 2) — substituídos por /api/v3/escalas/{id}/comentarios.
+    // ComentarioController preservado em app/Http/Controllers/.
 
     Route::prefix('usuario_setor')->group(function () {
         Route::post('inserir', [UsuarioSetorController::class, "inserir"]);
