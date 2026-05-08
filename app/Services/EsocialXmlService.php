@@ -17,21 +17,108 @@ class EsocialXmlService
     }
 
     /**
-     * Helper para buscar dados básicos do funcionário
+     * Helper para buscar dados básicos do funcionário.
+     *
+     * Schema real (auditado por Claude via MCP):
+     *   - PESSOA tem PESSOA_DATA_NASCIMENTO (não PESSOA_NASCIMENTO)
+     *   - PESSOA tem PESSOA_GENERO/PESSOA_RACA/PESSOA_ESTADO_CIVIL/PESSOA_ESCOLARIDADE (integers → mapear)
+     *   - PESSOA tem PESSOA_ENDERECO/PESSOA_CEP/BAIRRO_ID/CIDADE_ID
+     *   - PESSOA NÃO TEM PIS_PASEP no schema atual (Schema::hasColumn check defensivo)
      */
     private function getFuncionarioDados(int $funcionarioId)
     {
+        $temPisPasep = \Illuminate\Support\Facades\Schema::hasColumn('PESSOA', 'PIS_PASEP');
+
+        $cols = [
+            'f.*',
+            'p.PESSOA_NOME',
+            'p.PESSOA_CPF_NUMERO',
+            'p.PESSOA_DATA_NASCIMENTO',
+            'p.PESSOA_GENERO',
+            'p.PESSOA_RACA',
+            'p.PESSOA_ESTADO_CIVIL',
+            'p.PESSOA_ESCOLARIDADE',
+            'p.PESSOA_ENDERECO',
+            'p.PESSOA_CEP',
+            'p.BAIRRO_ID',
+            'p.CIDADE_ID',
+            'c.CARGO_NOME',
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('CARGO', 'CBO')) {
+            $cols[] = 'c.CBO';
+        }
+        if ($temPisPasep) {
+            $cols[] = 'p.PIS_PASEP';
+        }
+
         $func = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
             ->where('f.FUNCIONARIO_ID', $funcionarioId)
-            ->select('f.*', 'p.PESSOA_NOME', 'p.PESSOA_CPF_NUMERO', 'p.PESSOA_NASCIMENTO', 'p.PIS_PASEP', 'c.CARGO_NOME', 'c.CBO')
+            ->select($cols)
             ->first();
 
         if (!$func) {
             throw new \Exception("Funcionário $funcionarioId não encontrado.");
         }
+
+        // Compat: se PIS_PASEP não existe, garantir property null (evitar undefined property warning)
+        if (!$temPisPasep) {
+            $func->PIS_PASEP = null;
+        }
+
         return $func;
+    }
+
+    /**
+     * Helper para buscar bairro, cidade e UF de uma PESSOA — necessário em S-2200 (endereço).
+     * Schema-tolerante: se BAIRRO/CIDADE/UF não existirem, retorna defaults.
+     *
+     * @return array{bairro: string, cidade: string, uf: string, cod_munic: ?string}
+     */
+    private function getEnderecoExpandido($func): array
+    {
+        $bairro = 'Centro';
+        $cidade = 'São Luís';
+        $uf = 'MA';
+        $codMunic = '2111300'; // IBGE São Luís default
+
+        if ($func->BAIRRO_ID && \Illuminate\Support\Facades\Schema::hasTable('BAIRRO')) {
+            $b = DB::table('BAIRRO')->where('BAIRRO_ID', $func->BAIRRO_ID)->first();
+            if ($b && isset($b->BAIRRO_NOME)) {
+                $bairro = (string) $b->BAIRRO_NOME;
+            }
+        }
+
+        if ($func->CIDADE_ID && \Illuminate\Support\Facades\Schema::hasTable('CIDADE')) {
+            $c = DB::table('CIDADE')
+                ->leftJoin('UF', 'UF.UF_ID', '=', 'CIDADE.UF_ID')
+                ->where('CIDADE.CIDADE_ID', $func->CIDADE_ID)
+                ->select('CIDADE.CIDADE_NOME', 'UF.UF_SIGLA', 'CIDADE.CIDADE_CODIGO_IBGE')
+                ->first();
+            if ($c) {
+                $cidade = (string) ($c->CIDADE_NOME ?? $cidade);
+                $uf = (string) ($c->UF_SIGLA ?? $uf);
+                $codMunic = $c->CIDADE_CODIGO_IBGE ? (string) $c->CIDADE_CODIGO_IBGE : $codMunic;
+            }
+        }
+
+        return ['bairro' => $bairro, 'cidade' => $cidade, 'uf' => $uf, 'cod_munic' => $codMunic];
+    }
+
+    /**
+     * Mapeia integer de domínio (PESSOA_GENERO/RACA/EST_CIVIL/ESCOLARIDADE) para código eSocial.
+     */
+    private function mapearDominio(string $tipo, $valor, string $default): string
+    {
+        if ($valor === null) {
+            return $default;
+        }
+        $map = config('esocial.mapeamento.' . $tipo, []);
+        $key = (int) $valor;
+
+        return (string) ($map[$key] ?? $default);
     }
 
     /**
