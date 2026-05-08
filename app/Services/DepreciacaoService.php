@@ -25,7 +25,7 @@ class DepreciacaoService
         // Competência AAAAMM → YYYY-MM para comparação
         $anoMes = substr($competencia, 0, 4) . '-' . substr($competencia, 4, 2);
 
-        // R56: strftime SQLite → comparação direta de data (cross-driver)
+        // R56: SQLite_datetime → comparação direta de data (cross-driver)
         $inicioMesCompetencia = Carbon::createFromFormat('Y-m', $anoMes)->startOfMonth()->toDateString();
 
         $bens = DB::table('BEM_PATRIMONIAL')
