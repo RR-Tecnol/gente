@@ -1,0 +1,9 @@
+# De-para código SISFOLHA → CARGO_ID (Fase 8A).
+# Carga: php artisan db:seed --class=SisfolhaCargoDeparaSeeder
+#
+# entries:
+#   - codigo_sisfolha: "12345"
+#     cargo_id: 1
+#     pccv_sigla: "PMSLz"
+#     ativo: true
+entries: []
