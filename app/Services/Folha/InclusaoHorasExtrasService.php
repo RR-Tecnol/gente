@@ -25,10 +25,21 @@ final class InclusaoHorasExtrasService
      * RUBRICA_ID padrão para hora extra (50%, 100%, feriado).
      * Buscado por código RUBRICA_CODIGO. Se não existir, cria via fallback.
      */
-    private const RUBRICA_HE_50_CODIGO = 'HE_50';
-    private const RUBRICA_HE_100_CODIGO = 'HE_100';
-    private const RUBRICA_HE_FERIADO_CODIGO = 'HE_FER';
-    private const RUBRICA_PLANTAO_CODIGO = 'PLANTAO_EXTRA';
+    /**
+     * RUBRICA_CODIGO do catálogo PCCV São Luís (RubricasCatalogoSeeder.php).
+     * Confirmado por Claude via MCP em 08/05/2026.
+     *
+     *   '030' → Hora Extra 50%        (camada 3, percentual_base, incide_prev=1)
+     *   '031' → Hora Extra 100%       (camada 3, percentual_base, incide_prev=1)
+     *   '032' → Plantão Extra         (camada 3, fixo, incide_prev=1)
+     *
+     * Não há rubrica específica de "Hora Extra Feriado" no catálogo PCCV — usamos '031' (100%) como fallback,
+     * pois feriado trabalhado historicamente é remunerado com adicional de 100%.
+     */
+    private const RUBRICA_HE_50_CODIGO = '030';
+    private const RUBRICA_HE_100_CODIGO = '031';
+    private const RUBRICA_HE_FERIADO_CODIGO = '031'; // fallback — não há rubrica específica para feriado
+    private const RUBRICA_PLANTAO_CODIGO = '032';
 
     /**
      * Inclui HE + Plantão aprovados como LANCAMENTO_FOLHA para um lote de funcionários.
