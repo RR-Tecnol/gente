@@ -20,7 +20,6 @@
         "jaspersoft/rest-client": "^v2.0.0",
         "laravel/framework": "^8.12",
         "laravel/tinker": "^2.5",
-        "laravel/ui": "^3.2",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "symfony/yaml": "^6.0"
     },
