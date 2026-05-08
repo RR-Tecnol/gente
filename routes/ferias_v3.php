@@ -7,23 +7,153 @@ if (!function_exists('resolveFuncionarioComFallbackDev')) {
     {
         if (!$user)
             return null;
-        $func = \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
-        if ($func)
-            return $func;
-
-        if (!app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
-            $livre = \App\Models\Funcionario::whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
-            if ($livre) {
-                \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
-                    ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
-                    ->update(['USUARIO_ID' => $user->USUARIO_ID]);
-                return \App\Models\Funcionario::where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
-            }
-        }
-
-        return null;
+        return \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
     }
 }
+
+// ── Saldo de férias — GET /ferias/saldo/{funcionario_id} (FeriasLicencasView: saldo do servidor) ──
+if (!function_exists('ferias_v3_dias_uteis_gozo')) {
+    function ferias_v3_dias_uteis_gozo($row): int
+    {
+        $d = (int) ($row->FERIAS_DIAS ?? 0);
+        if ($d > 0) {
+            return $d;
+        }
+        if (!empty($row->FERIAS_DATA_INICIO) && !empty($row->FERIAS_DATA_FIM)) {
+            $i = strtotime((string) $row->FERIAS_DATA_INICIO);
+            $f = strtotime((string) $row->FERIAS_DATA_FIM);
+            if ($i && $f && $f >= $i) {
+                return (int) round(($f - $i) / 86400);
+            }
+        }
+        return 0;
+    }
+}
+
+if (!function_exists('ferias_v3_periodos_aquisitivos')) {
+    function ferias_v3_periodos_aquisitivos(int $funcionarioId): array
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('FUNCIONARIO') || !\Illuminate\Support\Facades\Schema::hasTable('FERIAS')) {
+            return [[
+                'periodo' => '—',
+                'direito_dias' => 30,
+                'usados_dias' => 0,
+                'saldo_dias' => 0,
+                'vencido' => false,
+            ]];
+        }
+        $func = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcionarioId)->first();
+        if (!$func) {
+            return [[
+                'periodo' => '—',
+                'direito_dias' => 30,
+                'usados_dias' => 0,
+                'saldo_dias' => 0,
+                'vencido' => false,
+            ]];
+        }
+        $feriasRows = \Illuminate\Support\Facades\DB::table('FERIAS')
+            ->where('FUNCIONARIO_ID', $funcionarioId)
+            ->where(function ($q) {
+                $q->whereNull('FERIAS_STATUS')->orWhere('FERIAS_STATUS', '!=', 'CANCELADA');
+            })
+            ->get();
+        $totalUsados = 0;
+        foreach ($feriasRows as $fr) {
+            $status = strtoupper((string) ($fr->FERIAS_STATUS ?? 'AGENDADA'));
+            if ($status === 'CANCELADA') {
+                continue;
+            }
+            $totalUsados += ferias_v3_dias_uteis_gozo($fr);
+        }
+        $admissao = $func->FUNCIONARIO_DATA_INICIO ?? null;
+        if (!$admissao) {
+            $direito = 30;
+            $usados = min($direito, $totalUsados);
+            $saldo = max(0, $direito - $usados);
+            return [[
+                'periodo' => 'Aquisitivo (sem data admissão)',
+                'direito_dias' => $direito,
+                'usados_dias' => $usados,
+                'saldo_dias' => $saldo,
+                'vencido' => false,
+            ]];
+        }
+        $ini = new \DateTime((string) $admissao);
+        $hoje = new \DateTime('today');
+        $anoIni = (int) $ini->format('Y');
+        $rawBlocos = max(0, (int) floor($ini->diff($hoje)->days / 365.25));
+        $blocos = min(4, min(8, max(1, $rawBlocos + 1)));
+        $periodos = [];
+        $restanteUsar = $totalUsados;
+        for ($b = 0; $b < $blocos; $b++) {
+            $a = $anoIni + $b;
+            $direito = 30;
+            $usados = min($direito, $restanteUsar);
+            $restanteUsar -= $usados;
+            $fimAqui = (clone $ini)->modify('+' . (12 * ($b + 1)) . ' month');
+            $vencPrazo = (clone $fimAqui)->modify('+12 month');
+            $saldoCard = max(0, $direito - $usados);
+            $vencido = ($saldoCard > 0 && $hoje > $vencPrazo);
+            $periodos[] = [
+                'periodo' => $a . '–' . ($a + 1),
+                'direito_dias' => $direito,
+                'usados_dias' => $usados,
+                'saldo_dias' => $saldoCard,
+                'vencido' => $vencido,
+            ];
+        }
+        if (!count($periodos)) {
+            $periodos[] = [
+                'periodo' => (string) $anoIni,
+                'direito_dias' => 30,
+                'usados_dias' => min(30, $totalUsados),
+                'saldo_dias' => max(0, 30 - $totalUsados),
+                'vencido' => false,
+            ];
+        }
+        return $periodos;
+    }
+}
+
+Route::get('/ferias/saldo/{funcionario_id}', function (int $funcionarioId) {
+    try {
+        $periodosAquisitivos = ferias_v3_periodos_aquisitivos($funcionarioId);
+        $totalSaldoDias = (int) array_sum(array_column($periodosAquisitivos, 'saldo_dias'));
+        return response()->json([
+            'ok' => true,
+            'funcionario_id' => $funcionarioId,
+            'periodos_aquisitivos' => $periodosAquisitivos,
+            'total_saldo_dias' => $totalSaldoDias,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'ok' => true,
+            'funcionario_id' => $funcionarioId,
+            'periodos_aquisitivos' => [],
+            'total_saldo_dias' => 0,
+            'aviso' => $e->getMessage(),
+        ], 200);
+    }
+});
+
+// ── Anexo de férias — POST /ferias/{ferias_id}/anexo (FeriasLicencasView: pedido específico) ──
+Route::post('/ferias/{ferias_id}/anexo', function (int $feriasId, \Illuminate\Http\Request $request) {
+    try {
+        $ferias = \App\Models\Ferias::find($feriasId);
+        if (!$ferias) {
+            return response()->json(['erro' => 'Férias não encontradas.'], 404);
+        }
+        if (!$request->hasFile('anexo') && !$request->hasFile('arquivo') && !$request->hasFile('file')) {
+            return response()->json(['erro' => 'Nenhum arquivo enviado (anexo, arquivo ou file).'], 422);
+        }
+        $file = $request->file('anexo') ?? $request->file('arquivo') ?? $request->file('file');
+        $path = $file->store("ferias/{$feriasId}/anexos", 'local');
+        return response()->json(['ok' => true, 'path' => $path, 'ferias_id' => $feriasId], 201);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => 'Falha no upload: ' . $e->getMessage()], 500);
+    }
+});
 
 //  Criar agendamento de férias
 Route::post('/ferias', function (\Illuminate\Http\Request $request) {
@@ -54,15 +184,13 @@ Route::put('/ferias/{id}', function ($id, \Illuminate\Http\Request $request) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
         $funcionario = resolveFuncionarioComFallbackDev($user);
-        $isAdminDev = !app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin';
-
         $ferias = \App\Models\Ferias::find($id);
         if (!$ferias) {
             return response()->json(['erro' => 'Férias não encontradas.'], 404);
         }
 
         // Verifica se as férias pertencem ao funcionário logado (ou é admin)
-        if (!$isAdminDev && $funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
+        if (!$funcionario || $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
             return response()->json(['erro' => 'Sem permissão para editar estas férias.'], 403);
         }
 
@@ -90,14 +218,12 @@ Route::delete('/ferias/{id}', function ($id) {
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
         $funcionario = resolveFuncionarioComFallbackDev($user);
-        $isAdminDev = !app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin';
-
         $ferias = \App\Models\Ferias::find($id);
         if (!$ferias) {
             return response()->json(['erro' => 'Férias não encontradas.'], 404);
         }
 
-        if (!$isAdminDev && $funcionario && $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
+        if (!$funcionario || $ferias->FUNCIONARIO_ID !== $funcionario->FUNCIONARIO_ID) {
             return response()->json(['erro' => 'Sem permissão para cancelar estas férias.'], 403);
         }
 
@@ -157,3 +283,13 @@ Route::post('/ferias/{id}/aprovar', function (int $id) {
         return response()->json(['erro' => $e->getMessage()], 422);
     }
 });
+
+// ═════════════════════════════════════════════════════════════════════
+// GAP-ALERT (Fase 4 T4.8 — 08/05/2026): Migração da rota legada
+// /ferias/alerta-vencer (web.php, bloco autenticado) → /api/v3/ferias/alerta-vencer
+// Lógica idêntica delegada ao FeriasController::alertaVencer (já Auth-aware).
+// Filtro: COORD_DE_SETOR vê apenas seu setor; demais perfis veem todos.
+// ═════════════════════════════════════════════════════════════════════
+Route::get('/ferias/alerta-vencer', [\App\Http\Controllers\FeriasController::class, 'alertaVencer'])
+    ->name('api.v3.ferias.alerta-vencer');
+

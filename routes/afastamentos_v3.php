@@ -16,16 +16,6 @@ if (!function_exists('resolveFuncionarioAfastamentosV3')) {
             return $func;
         }
 
-        if (!app()->isProduction() && strtolower((string) ($user->USUARIO_LOGIN ?? '')) === 'admin') {
-            $livre = DB::table('FUNCIONARIO')->whereNull('USUARIO_ID')->orderBy('FUNCIONARIO_ID')->first();
-            if ($livre) {
-                DB::table('FUNCIONARIO')
-                    ->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)
-                    ->update(['USUARIO_ID' => $user->USUARIO_ID]);
-                return DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $livre->FUNCIONARIO_ID)->first();
-            }
-        }
-
         return null;
     }
 }
@@ -87,17 +77,9 @@ if (!function_exists('resolveTipoAfastamentoV3')) {
 if (!function_exists('ensureAnexoAfastamentoTableV3')) {
     function ensureAnexoAfastamentoTableV3(): void
     {
-        if (Schema::hasTable('ANEXO_AFASTAMENTO')) {
-            return;
+        if (!Schema::hasTable('ANEXO_AFASTAMENTO')) {
+            throw new \RuntimeException('Tabela ANEXO_AFASTAMENTO não encontrada. Execute migrations canônicas.');
         }
-        Schema::create('ANEXO_AFASTAMENTO', function (\Illuminate\Database\Schema\Blueprint $table) {
-            $table->increments('ANEXO_AFASTAMENTO_ID');
-            $table->integer('AFASTAMENTO_ID');
-            $table->longText('ANEXO_AFASTAMENTO_ARQUIVO');
-            $table->string('ANEXO_AFASTAMENTO_DESCRICAO', 255)->nullable();
-            $table->string('ANEXO_AFASTAMENTO_NOME', 255)->nullable();
-            $table->string('ANEXO_AFASTAMENTO_EXTENSAO', 20)->nullable();
-        });
     }
 }
 
@@ -247,7 +229,7 @@ Route::post('/afastamentos', function (\Illuminate\Http\Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['erro' => 'Erro ao registrar afastamento: ' . $e->getMessage()], 500);
     }
-});
+})->middleware('perfil:SERVIDOR,ADMINISTRADOR,Administrador,GESTOR');
 
 Route::post('/afastamentos/{id}/anexo', function (int $id, \Illuminate\Http\Request $request) {
     try {
@@ -302,7 +284,7 @@ Route::post('/afastamentos/{id}/anexo', function (int $id, \Illuminate\Http\Requ
     } catch (\Throwable $e) {
         return response()->json(['erro' => 'Erro ao anexar documento: ' . $e->getMessage()], 500);
     }
-});
+})->middleware('perfil:SERVIDOR,ADMINISTRADOR,Administrador,GESTOR');
 
 Route::get('/afastamentos/{id}/anexo/{anexoId}/download', function (int $id, int $anexoId) {
     try {
@@ -360,3 +342,14 @@ Route::get('/afastamentos/{id}/anexo/{anexoId}/download', function (int $id, int
         return response()->json(['erro' => 'Erro ao baixar anexo: ' . $e->getMessage()], 500);
     }
 });
+
+// ═════════════════════════════════════════════════════════════════════
+// GAP-ALERT (Fase 4 T4.8 — 08/05/2026): Migração da rota legada
+// /afastamento/alerta-expirar (web.php, bloco autenticado) → /api/v3/afastamentos/alerta-expirar
+// Mudança de naming: singular → plural para alinhar com restante deste arquivo.
+// Lógica idêntica delegada ao AfastamentoController::alertaExpirar (já Auth-aware).
+// Filtro: COORD_DE_SETOR vê apenas seu setor; demais perfis veem todos.
+// ═════════════════════════════════════════════════════════════════════
+Route::get('/afastamentos/alerta-expirar', [\App\Http\Controllers\AfastamentoController::class, 'alertaExpirar'])
+    ->name('api.v3.afastamentos.alerta-expirar');
+
