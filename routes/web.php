@@ -1717,8 +1717,9 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
 });
 
 
-Route::get('registrar', [PessoaController::class, "registro_view"]);
-Route::post('registrar', [PessoaController::class, "registro"]);
+// FASE-4-REMOVIDO 08/05/2026 (decisão 7.g do MAPA): rotas /registrar legadas removidas.
+// Substituídas por /autocadastro/{token} (rota pública mantida no início do web.php).
+// PessoaController::registro_view e ::registro preservados para uso futuro.
 
 // â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?â•?
 //  API v3 â€” Vue SPA (autenticado via sessÃ£o Web do Laravel)
