@@ -1605,17 +1605,9 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::match(['get', 'post'], 'listar', [FaltaAtrasoController::class, "listar"]);
     });
 
-    Route::prefix('programa')->group(function () {
-        Route::get('/', [ProgramaController::class, 'view'])->name('view.programa');
-        ;
-        Route::get('view', [ProgramaController::class, "view"]);
-        Route::post('inserir', [ProgramaController::class, "inserir"]);
-        Route::put('alterar', [ProgramaController::class, "alterar"]);
-        Route::delete('deletar', [ProgramaController::class, "deletar"]);
-        Route::match(['get', 'post'], 'listar', [ProgramaController::class, "listar"]);
-        Route::post('pesquisar', [ProgramaController::class, "pesquisar"]);
-        Route::get('buscar/{id}', [ProgramaController::class, "buscar"]);
-    });
+    // FASE-4-REMOVIDO 08/05/2026 (decisão 7.c do MAPA): bloco Route::prefix('programa') removido.
+    // Tabela PROGRAMA criada apenas para import legado. Sem view, sem consumer SPA.
+    // ProgramaController preservado em app/Http/Controllers/ caso surja necessidade futura.
 
     Route::prefix('pre-cadastro')->group(function () {
         Route::get('/', [PreCadastroController::class, 'view'])->name('view.pre-cadastro');
@@ -1625,13 +1617,9 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::put('alterar', [PreCadastroController::class, "alterar"]);
     });
 
-    Route::prefix('script')->group(function () {
-        Route::get('/', [ScriptController::class, 'view'])->name('view.script');
-        ;
-        Route::get('view', [ScriptController::class, "view"]);
-        Route::post('executar', [ScriptController::class, "executarQuery"]);
-        Route::match(['get', 'post'], 'listar', [ScriptController::class, "listar"]);
-    });
+    // FASE-4-REMOVIDO 08/05/2026 (decisão 7.d do MAPA): bloco Route::prefix('script') removido.
+    // Editor SQL ad-hoc legado — vetor de SQL injection sem ACL nova.
+    // Decisão de segurança: remover endpoint mesmo mantendo ScriptController.
 
     Route::prefix('termo')->group(function () {
         Route::get('/', [TermoController::class, 'view'])->name('view.termo');
