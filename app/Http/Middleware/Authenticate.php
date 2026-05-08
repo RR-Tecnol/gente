@@ -15,7 +15,10 @@ class Authenticate extends Middleware
     protected function redirectTo($request)
     {
         if (! $request->expectsJson()) {
-            return route('login');
+            // Rota raiz '/' agora serve o SPA Vue 3 que resolve /login via Vue Router
+            return '/';
         }
+        // JSON requests: retorna 401 sem redirect (SPA trata via axios interceptor)
+        return null;
     }
 }
