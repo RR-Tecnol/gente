@@ -346,6 +346,12 @@ class MotorFolhaService
 
         $resultados = [];
 
+        // GAP-MF-07: coletar rubricas detalhadas por funcionário durante o cálculo,
+        // para persistir em EVENTO_DETALHE_FOLHA após a persistência do agregado.
+        // Estrutura: [funcId => [['descricao' => string, 'valor' => float], ...]]
+        $rubricasPorFuncionario = [];
+        $persistenciaRubricas = app(\App\Services\Folha\PersistenciaRubricasService::class);
+
         foreach ($servidores as $funcId => $s) {
             $funcId = (int) $funcId;
             $vinculoTipo = $s->VINCULO_TIPO ?? 'efetivo';
@@ -362,6 +368,41 @@ class MotorFolhaService
 
             // GAP-MF-02: dias abonados (LM/LMA/etc.) — informativo, já contabilizados em dias trabalhados.
             $diasAbonados = $contexto->diasAbonadosNoMes($funcId);
+
+            // GAP-MF-05: detectar jornada financeira informal e registrar em audit chain F4.
+            // Acordo informal: servidor trabalha menos horas mas recebe salário cheio.
+            // O motor NÃO desconta — apenas registra para rastreabilidade TCE-MA.
+            if ($contexto->temJornadaFinanceiraInformal($funcId)) {
+                $jf = $contexto->jornadaFinanceiraInformal($funcId);
+                try {
+                    \App\Models\AuditLogModel::create([
+                        'ACAO' => 'motor_folha.jornada_financeira_aplicada',
+                        'TABELA' => 'PONTO_CONFIG_FUNCIONARIO',
+                        'DADOS_NOVOS' => json_encode([
+                            'folha_id' => $folhaId,
+                            'funcionario_id' => $funcId,
+                            'jornada_horas' => $jf['horas'] ?? null,
+                            'jornada_obs' => $jf['obs'] ?? null,
+                            'venc_base_integral' => round($vencBaseIntegral, 2),
+                            'venc_base_aplicado' => round($vencBase, 2),
+                            'competencia' => $competencia,
+                        ], JSON_UNESCAPED_UNICODE),
+                        'USUARIO_ID' => \Illuminate\Support\Facades\Auth::id(),
+                    ]);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('[MotorFolha] falha ao registrar audit GAP-MF-05', [
+                        'funcionario_id' => $funcId,
+                        'erro' => $e->getMessage(),
+                    ]);
+                    // Não fail-fast: motor segue calculando.
+                }
+
+                \Illuminate\Support\Facades\Log::info('[MotorFolha][GAP-MF-05] jornada financeira informal aplicada', [
+                    'folha_id' => $folhaId,
+                    'funcionario_id' => $funcId,
+                    'jornada_horas' => $jf['horas'] ?? null,
+                ]);
+            }
 
             // Dados injectados (sem query): competência × afastamento / desempenho
             $contexto->possuiAfastamentoSobrepostoNaCompetencia($funcId);
@@ -407,6 +448,22 @@ class MotorFolhaService
                     break;
             }
 
+            // GAP-MF-07: registrar componentes C1 (vencimento estrutural + anuênio)
+            $rubricasPorFuncionario[$funcId] = [];
+            if ($vencBase > 0) {
+                // O "vencimento base aplicado" já está proporcionalizado por (dias_contratuais / dias_mes)
+                $rubricasPorFuncionario[$funcId][] = [
+                    'descricao' => \App\Services\Folha\PersistenciaRubricasService::EVENTO_VENCIMENTO_BASE,
+                    'valor' => round($vencBase, 2),
+                ];
+            }
+            if (($anuenioVal ?? 0) > 0) {
+                $rubricasPorFuncionario[$funcId][] = [
+                    'descricao' => \App\Services\Folha\PersistenciaRubricasService::EVENTO_ANUENIO,
+                    'valor' => round($anuenioVal, 2),
+                ];
+            }
+
             $provC2 = 0.0;
             $basePrev = $provC1;
             foreach (($adicionais[$funcId] ?? collect()) as $ad) {
@@ -421,6 +478,17 @@ class MotorFolhaService
                 if ($ad->ADICIONAL_INCIDE_PREV) {
                     $basePrev += $val;
                 }
+
+                // GAP-MF-07: registrar adicional C2 — descrição via RUBRICA
+                if ($val > 0 && isset($ad->RUBRICA_ID)) {
+                    $eventoId = $persistenciaRubricas->resolverEventoIdPorRubrica((int) $ad->RUBRICA_ID);
+                    if ($eventoId !== null) {
+                        $rubricasPorFuncionario[$funcId][] = [
+                            'descricao' => '__POR_EVENTO_ID__:' . $eventoId,
+                            'valor' => round($val, 2),
+                        ];
+                    }
+                }
             }
 
             $provC3 = 0.0;
@@ -434,6 +502,17 @@ class MotorFolhaService
                     }
                 } else {
                     $descC3 += $total;
+                }
+
+                // GAP-MF-07: registrar lançamento C3 (provento OU desconto)
+                if ($total > 0 && isset($lanc->RUBRICA_ID)) {
+                    $eventoId = $persistenciaRubricas->resolverEventoIdPorRubrica((int) $lanc->RUBRICA_ID);
+                    if ($eventoId !== null) {
+                        $rubricasPorFuncionario[$funcId][] = [
+                            'descricao' => '__POR_EVENTO_ID__:' . $eventoId,
+                            'valor' => round($total, 2),
+                        ];
+                    }
                 }
             }
 
@@ -455,13 +534,45 @@ class MotorFolhaService
             }
 
             $dep = (int) ($s->PESSOA_DEPENDENTES_IRRF ?? 0);
-            $baseIrrf = $bruto - $descPrev - ($dep * 226.86);
-            $descIRRF = ($s->VINCULO_IRRF ?? true) ? $this->calcularIrrf($baseIrrf) : 0.0;
+            // GAP-MF-08: usar dedução IRRF dependente correta 2026 (R$ 189,59) via TabelasImpostoService.
+            // Trocamos o cálculo manual por delegação ao serviço, que já trata dependente internamente.
+            $tabelas = app(\App\Services\TabelasImpostoService::class);
+            $baseIrrf = $bruto - $descPrev; // dependentes deduzidos dentro do tabelas service
+            $descIRRF = ($s->VINCULO_IRRF ?? true) ? $tabelas->calcularIrrf($baseIrrf, $dep) : 0.0;
 
             $descConsig = (float) ($consignacoes[$funcId]->total_consig ?? 0);
 
             $descOutros = $descC3 + $descConsig;
             $liquido = $bruto - $descPrev - $descIRRF - $descOutros;
+
+            // GAP-MF-07: registrar descontos previdenciários, IRRF, consignações e complemento SM
+            if ($descPrev > 0) {
+                $regimeRPPS = ($s->VINCULO_REGIME ?? $s->FUNCIONARIO_REGIME_PREV ?? 'RPPS') === 'RPPS';
+                $rubricasPorFuncionario[$funcId][] = [
+                    'descricao' => $regimeRPPS
+                        ? \App\Services\Folha\PersistenciaRubricasService::EVENTO_INSS_RPPS
+                        : \App\Services\Folha\PersistenciaRubricasService::EVENTO_INSS_RGPS,
+                    'valor' => round($descPrev, 2),
+                ];
+            }
+            if ($descIRRF > 0) {
+                $rubricasPorFuncionario[$funcId][] = [
+                    'descricao' => \App\Services\Folha\PersistenciaRubricasService::EVENTO_IRRF,
+                    'valor' => round($descIRRF, 2),
+                ];
+            }
+            if ($descConsig > 0) {
+                $rubricasPorFuncionario[$funcId][] = [
+                    'descricao' => \App\Services\Folha\PersistenciaRubricasService::EVENTO_CONSIGNACOES,
+                    'valor' => round($descConsig, 2),
+                ];
+            }
+            if ($complementoSM > 0) {
+                $rubricasPorFuncionario[$funcId][] = [
+                    'descricao' => \App\Services\Folha\PersistenciaRubricasService::EVENTO_COMPLEMENTO_SM,
+                    'valor' => round($complementoSM, 2),
+                ];
+            }
 
             \Illuminate\Support\Facades\Log::info('[MotorFolha] cálculo lote', [
                 'folha_id' => $folhaId,
@@ -491,6 +602,35 @@ class MotorFolhaService
         }
 
         $this->persistirDetalhesLoteEmTransacao($resultados);
+
+        // GAP-MF-07: persistir EVENTO_DETALHE_FOLHA — precisa dos DETALHE_FOLHA_IDs
+        // que acabaram de ser persistidos. Recuperar via consulta usando (FUNCIONARIO_ID, FOLHA_ID).
+        try {
+            $funcIdsPersistidos = array_keys($resultados);
+            $detalheFolhaIdMap = DB::table('DETALHE_FOLHA')
+                ->where('FOLHA_ID', $folhaId)
+                ->whereIn('FUNCIONARIO_ID', $funcIdsPersistidos)
+                ->pluck('DETALHE_FOLHA_ID', 'FUNCIONARIO_ID')
+                ->all();
+
+            $rubricasPorDetalheFolha = [];
+            foreach ($rubricasPorFuncionario as $funcIdK => $rubricas) {
+                $dfId = $detalheFolhaIdMap[$funcIdK] ?? null;
+                if ($dfId !== null) {
+                    $rubricasPorDetalheFolha[(int) $dfId] = $rubricas;
+                }
+            }
+
+            if ($rubricasPorDetalheFolha !== []) {
+                $persistenciaRubricas->persistirRubricasLote($rubricasPorDetalheFolha);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[MotorFolha][GAP-MF-07] falha ao persistir rubricas', [
+                'folha_id' => $folhaId,
+                'erro' => $e->getMessage(),
+            ]);
+            // Não fail-fast: motor já calculou DETALHE_FOLHA com sucesso.
+        }
 
         $col = collect($resultados);
 
@@ -544,49 +684,23 @@ class MotorFolhaService
         return $aliqRPPS / 100;
     }
 
+    /**
+     * GAP-MF-08: delegação para TabelasImpostoService (autoridade única de tabelas fiscais 2026).
+     */
     private function calcularInssRgps(float $base): float
     {
-        $faixas = [
-            [1518.00, 0.075],
-            [2666.68, 0.09],
-            [4000.03, 0.12],
-            [7786.02, 0.14],
-        ];
-        $desconto = 0.0;
-        $anterior = 0.0;
-        foreach ($faixas as [$teto, $aliq]) {
-            if ($base <= $anterior) {
-                break;
-            }
-            $faixa = min($base, $teto) - $anterior;
-            $desconto += $faixa * $aliq;
-            $anterior = $teto;
-            if ($base <= $teto) {
-                break;
-            }
-        }
-
-        return round(min($desconto, $base * 0.14), 2);
+        return app(\App\Services\TabelasImpostoService::class)->calcularInssRgps($base);
     }
 
+    /**
+     * GAP-MF-08: delegação para TabelasImpostoService (autoridade única de tabelas fiscais 2026).
+     *
+     * @deprecated A partir de GAP-MF-08, o motor chama TabelasImpostoService diretamente no cálculo
+     *             principal (com dependentes). Este método permanece apenas como fallback para callers
+     *             externos que possam existir.
+     */
     private function calcularIrrf(float $base): float
     {
-        if ($base <= 0) {
-            return 0.0;
-        }
-        if ($base <= 2824.00) {
-            return 0.0;
-        }
-        if ($base <= 3751.05) {
-            return round($base * 0.075 - 211.80, 2);
-        }
-        if ($base <= 4664.68) {
-            return round($base * 0.15 - 493.05, 2);
-        }
-        if ($base <= 7083.49) {
-            return round($base * 0.225 - 843.16, 2);
-        }
-
-        return round($base * 0.275 - 1197.58, 2);
+        return app(\App\Services\TabelasImpostoService::class)->calcularIrrf($base, 0);
     }
 }

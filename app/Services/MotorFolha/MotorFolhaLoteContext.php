@@ -30,18 +30,23 @@ final class MotorFolhaLoteContext
     /** @var array<int, array{inicio: ?string, fim: ?string}> Datas de admissão/exoneração por funcionário (GAP-MF-03) */
     private array $datasContratuaisPorFuncionario = [];
 
+    /** @var array<int, array{horas: float, obs: ?string}> Jornada financeira informal por funcionário (GAP-MF-05) */
+    private array $jornadaFinanceiraPorFuncionario = [];
+
     /**
      * @param  array<int, float>  $cargoSalarioPorFuncionario
      * @param  array<int, Collection>  $afastamentosPorFuncionario
      * @param  array<int, Collection>  $avaliacoesPorFuncionario
      * @param  array<int, array{inicio: ?string, fim: ?string}>  $datasContratuaisPorFuncionario
+     * @param  array<int, array{horas: float, obs: ?string}>  $jornadaFinanceiraPorFuncionario
      */
     public function __construct(
         string $competenciaYm,
         array $cargoSalarioPorFuncionario,
         array $afastamentosPorFuncionario,
         array $avaliacoesPorFuncionario,
-        array $datasContratuaisPorFuncionario = []
+        array $datasContratuaisPorFuncionario = [],
+        array $jornadaFinanceiraPorFuncionario = []
     ) {
         $this->competenciaYm = substr($competenciaYm, 0, 7);
         $this->competenciaInicio = Carbon::parse($this->competenciaYm . '-01')->startOfDay();
@@ -50,6 +55,7 @@ final class MotorFolhaLoteContext
         $this->afastamentosPorFuncionario = $afastamentosPorFuncionario;
         $this->avaliacoesPorFuncionario = $avaliacoesPorFuncionario;
         $this->datasContratuaisPorFuncionario = $datasContratuaisPorFuncionario;
+        $this->jornadaFinanceiraPorFuncionario = $jornadaFinanceiraPorFuncionario;
     }
 
     public function competenciaYm(): string
@@ -294,5 +300,29 @@ final class MotorFolhaLoteContext
         }
 
         return $this->diasTrabalhadosNoMes($funcionarioId) / $diasMes;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GAP-MF-05 — Jornada financeira informal
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Retorna a jornada financeira informal configurada para o funcionário, ou null se não houver.
+     *
+     * @return array{horas: float, obs: ?string}|null
+     */
+    public function jornadaFinanceiraInformal(int $funcionarioId): ?array
+    {
+        return $this->jornadaFinanceiraPorFuncionario[$funcionarioId] ?? null;
+    }
+
+    /**
+     * Indica se o funcionário tem acordo informal de jornada financeira (jornada reduzida com salário cheio).
+     */
+    public function temJornadaFinanceiraInformal(int $funcionarioId): bool
+    {
+        $jf = $this->jornadaFinanceiraInformal($funcionarioId);
+
+        return $jf !== null && (float) $jf['horas'] > 0;
     }
 }

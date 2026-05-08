@@ -13,14 +13,22 @@ namespace App\Services;
  */
 class TabelasImpostoService
 {
-    // ── INSS RGPS 2024 (alíquotas progressivas — DOU 29/12/2023) ─────────────
+    // ── INSS RGPS 2026 (alíquotas progressivas — Portaria Interministerial MPS/MF nº 13, de 09/01/2026) ─────────────
+    // Faixas oficiais:
+    //   até R$ 1.621,00         → 7,5%
+    //   R$ 1.621,01 a 2.902,84  → 9%
+    //   R$ 2.902,85 a 4.354,27  → 12%
+    //   R$ 4.354,28 a 8.475,55  → 14% (teto)
     private const INSS_RGPS = [
-        // [limite superior, alíquota, parcela a deduzir]
-        [1412.00, 0.075, 0.00],
-        [2666.68, 0.09, 21.18],
-        [4000.03, 0.12, 101.18],
-        [7786.02, 0.14, 181.18],
+        // [limite superior, alíquota, parcela a deduzir (calculada para o regime simplificado)]
+        [1621.00, 0.075, 0.00],
+        [2902.84, 0.09, 24.32],   // (2902,84 × 0,09) − (1621,00 × 0,075) acumulado
+        [4354.27, 0.12, 111.40],
+        [8475.55, 0.14, 198.49],
     ];
+
+    // Teto INSS RGPS 2026
+    private const INSS_RGPS_TETO = 8475.55;
 
     // ── INSS RPPS 2024 ────────────────────────────────────────────────────────
     private const INSS_RPPS_ALIQUOTA = 0.14;   // 14% — Lei 9.717/98, portaria local
@@ -36,7 +44,10 @@ class TabelasImpostoService
         [INF, 0.275, 1197.58],
     ];
 
-    private const DEDUCAO_DEPENDENTE = 226.86;  // por dependente, 2025
+    // Dedução por dependente IRRF mensal: R$ 189,59 (mantida desde 2024 — IN RFB 2.020/2021).
+    // Atenção: O valor R$ 226,86 que aparecia anteriormente NÃO é dedução por dependente — pode ter
+    // sido confusão com desconto simplificado mensal (R$ 564,80) ou erro de transcrição. Corrigido.
+    private const DEDUCAO_DEPENDENTE = 189.59;
 
     // =========================================================================
     // INSS
@@ -66,8 +77,8 @@ class TabelasImpostoService
                 break;
         }
 
-        // Teto do salário de contribuição RGPS 2024: R$ 7.786,02
-        return round(min($desconto, 7786.02 * 0.14), 2);
+        // Teto INSS RGPS 2026: R$ 8.475,55 × 14% ≈ R$ 1.186,58 (limite efetivo de desconto)
+        return round(min($desconto, self::INSS_RGPS_TETO * 0.14), 2);
     }
 
     /**
