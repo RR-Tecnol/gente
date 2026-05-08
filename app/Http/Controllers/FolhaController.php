@@ -116,12 +116,25 @@ class FolhaController extends Controller
 
     public function alterar(FolhaUpdateRequest $request)
     {
+        // Fase 3: aposentado Folha::reprocessarFolha() (T-SQL sp_gera_folha SQL Server-only).
+        // Reaproveitamos ProcessarFolhaJob (assíncrono) que internamente chama MotorFolhaService::calcularFolha().
+        // Isso garante:
+        //   - Mesmo motor canônico em ambas as rotas (insert e update)
+        //   - Idempotência R7-R10 (lançamentos contábeis re-gerados sem duplicar)
+        //   - Audit trail F4 da jornada financeira informal (GAP-MF-05) também é registrado em re-processo
+        //   - Compatibilidade SQL Server / SQLite cross-driver
         DB::beginTransaction();
         $folha = Folha::buscar($request->FOLHA_ID);
         $folha->fill($request->post());
-        $folha->reprocessarFolha();
-        // HistoricoFolha::setHistorico($folha);
+        $folha->save(); // persistir alterações de cabeçalho ANTES de re-processar
         DB::commit();
+
+        // Despachar reprocessamento assíncrono — payload deve conter FOLHA_ID
+        // para que o Job carregue a folha corretamente.
+        ProcessarFolhaJob::dispatch(
+            ['FOLHA_ID' => $folha->FOLHA_ID] + $request->post(),
+            auth()->id()
+        )->afterCommit();
 
         return response($folha, 200);
     }
