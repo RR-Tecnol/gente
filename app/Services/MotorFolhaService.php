@@ -264,6 +264,20 @@ class MotorFolhaService
             return ['ok' => true, 'servidores' => 0, 'total_proventos' => 0.0, 'total_descontos' => 0.0, 'total_liquido' => 0.0, 'total_comp_sm' => 0.0];
         }
 
+        // GAP-MF-04: incluir HE/Plantão aprovados como LANCAMENTO_FOLHA antes de ler.
+        // Idempotente: re-execução não duplica (verifica STATUS).
+        try {
+            app(\App\Services\Folha\InclusaoHorasExtrasService::class)
+                ->incluirParaFolha($folhaId, $ids, (string) $competencia);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[MotorFolha] falha ao incluir HE/Plantão', [
+                'folha_id' => $folhaId,
+                'erro' => $e->getMessage(),
+            ]);
+            // Não fail-fast: prosseguir o cálculo da folha mesmo se a inclusão de HE falhar.
+            // O auditor (Claude) vai detectar pelo log e abrir bug separado.
+        }
+
         $servidoresQuery = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('VINCULO as v', 'v.VINCULO_ID', '=', 'f.VINCULO_ID')
