@@ -102,18 +102,16 @@ use App\Http\Controllers\VinculoController;
 */
 
 Route::get('/', function (Request $request) {
-
-    $loginWebKey = null;
+    // Limpeza de chaves de sessão legadas do Vue 2 (login_web_*)
     $sessionData = $request->session()->all();
     foreach ($sessionData as $key => $value) {
         if (str_starts_with($key, 'login_web_')) {
-            $loginWebKey = $key;
-            $request->session()->forget($loginWebKey);
-            break;
+            $request->session()->forget($key);
         }
     }
 
-    return view('auth.login');
+    // Vue 3 SPA — Vue Router redireciona / → /login internamente
+    return view('v3.app');
 })->name('login');
 
 // Verificação pública da autenticidade de Portarias (Fase 1: hash + QR).
@@ -896,7 +894,17 @@ Route::prefix('ponto')->middleware(['auth', 'web', 'CompartilharVariaveis', 'usu
 Route::get('/quiosque/{token}', [App\Http\Controllers\PontoEletronicoController::class, "quiosqueView"])->name('quiosque.view');
 Route::post('/quiosque/{token}/bater', [App\Http\Controllers\PontoEletronicoController::class, "registrarQuiosque"]);
 
-Auth::routes();
+// Auth::routes() do Laravel UI removido em Fase 6 D10 — autenticação 100% via /api/auth/* (SPA)
+// Compatibilidade: rota nomeada 'login' apontando pra raiz para Authenticate middleware funcionar
+// (já definida acima em Route::get('/')->name('login'))
+
+// Logout HTTP nativo (Laravel UI tinha POST /logout): redireciona pra rota /api/auth/logout do SPA
+Route::post('/logout', function (\Illuminate\Http\Request $request) {
+    \Illuminate\Support\Facades\Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/');
+})->name('logout');
 
 Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->group(function () {
     // Rota legado /home removida 15/03/2026
