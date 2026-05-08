@@ -25,3 +25,8 @@ routes.txt
 .cursorrules
 temp.diff
 commit.txt
+
+# Vite build logs
+resources/gente-v3/build_log*.txt
+resources/gente-v3/vite_log.txt
+resources/gente-v3/dist/
