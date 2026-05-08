@@ -1,0 +1,8 @@
+{
+  "tenant": "slz-homolog-smoke",
+  "ambiente": "smoke-e2e",
+  "operador": "fixture-automatizado",
+  "branch": "gente/plano-p3",
+  "limiar_divergencia": "0.03",
+  "gerado_em": "2026-04-28T00:00:00Z"
+}
