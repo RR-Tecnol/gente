@@ -147,7 +147,7 @@ final class MotorFolhaLoteContext
      * GAP-MF-02: total de dias abonados por afastamento remunerado dentro da competência.
      *
      * Conta dias entre AFASTAMENTO_DATA_INICIO e AFASTAMENTO_DATA_FIM cobertos por LM/LMA/LP/etc.,
-     * limitado ao mês de competência (sem strftime/julianday — só Carbon).
+     * limitado ao mês de competência (sem sqlite_functions — só Carbon).
      *
      * Tipos abonados (compatível com o que o FolhaParserService listava):
      *   LICENCA_MEDICA, LICENCA_SAUDE, LICENCA_MATERNIDADE, LICENCA_PATERNIDADE,
