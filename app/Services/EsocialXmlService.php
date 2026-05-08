@@ -230,52 +230,118 @@ XML;
     }
 
     /**
-     * S-2200 - Cadastramento Inicial do Vínculo e Admissão/Ingresso de Trabalhador
+     * S-2200 — Cadastramento Inicial do Vínculo e Admissão.
+     *
+     * Correções Fase 5:
+     *   - R54: dados pessoais lidos de PESSOA com fallback defensivo (sexo/raça/estCiv/grauInstr via mapeamento config).
+     *   - R54: endereço lido de PESSOA + JOIN BAIRRO/CIDADE/UF (não "Rua Nao Informado" hardcoded).
+     *   - R54: salário lido de TABELA_SALARIAL/CARGO real (não 1412.00 hardcoded).
+     *   - R53: tpAmb via config('esocial.ambiente').
+     *   - R59: CNPJ via config('esocial.cnpj_empregador').
+     *   - R60: indRetif via parâmetro ou config.
+     *
+     * Observação eSocial: S-2200 não usa `<perApur>`. Removido. Usa `<dtAdm>` dentro de `<infoRegimeTrab>`.
+     *
+     * @param  int     $funcionarioId
+     * @param  int     $indRetif      1=original, 2=retificação, 3=exclusão (default config)
      */
-    public function gerarS2200(int $funcionarioId): string
+    public function gerarS2200(int $funcionarioId, int $indRetif = 0): string
     {
         $func = $this->getFuncionarioDados($funcionarioId);
-        
-        $cnpj = '06205244000149';
-        $idEvento = $this->gerarIdEvento('1', $cnpj, $funcionarioId);
+
+        // R59: CNPJ via config
+        $cnpj = (string) config('esocial.cnpj_empregador');
+        $tpInsc = (string) config('esocial.tipo_inscricao', '1');
+        $idEvento = $this->gerarIdEvento($tpInsc, $cnpj, $funcionarioId);
+
+        // R53: ambiente via config
+        $tpAmb = (int) config('esocial.ambiente', 2);
+        // R60: indRetif via parâmetro ou config
+        $indRetif = $indRetif > 0 ? $indRetif : (int) config('esocial.ind_retif_default', 1);
+        $verProc = (string) config('esocial.versao_proc', 'GENTE-v3');
+
         $cpfLimpo = preg_replace('/\D/', '', $func->PESSOA_CPF_NUMERO ?? '00000000000');
-        $pisLimpo = preg_replace('/\D/', '', $func->PIS_PASEP ?? '');
-        
-        // Minimalistic valid structure for S-2200
+        $pisLimpo = preg_replace('/\D/', '', (string) ($func->PIS_PASEP ?? ''));
+
+        // R54: dados pessoais via mapeamento (PESSOA_GENERO/RACA/ESTADO_CIVIL/ESCOLARIDADE → códigos eSocial)
+        $sexo = $this->mapearDominio('sexo', $func->PESSOA_GENERO ?? null, 'M');
+        $racaCor = $this->mapearDominio('raca_cor', $func->PESSOA_RACA ?? null, '6'); // 6 = Não informado
+        $estCiv = $this->mapearDominio('estado_civil', $func->PESSOA_ESTADO_CIVIL ?? null, '1');
+        $grauInstr = $this->mapearDominio('grau_instrucao', $func->PESSOA_ESCOLARIDADE ?? null, '01');
+
+        // R54: endereço real via JOIN BAIRRO + CIDADE + UF (com fallback defensivo)
+        $endereco = $this->getEnderecoExpandido($func);
+        $bairro = htmlspecialchars($endereco['bairro'], ENT_XML1, 'UTF-8');
+        $cidadeCodMunic = htmlspecialchars($endereco['cod_munic'] ?? '2111300', ENT_XML1, 'UTF-8');
+        $uf = htmlspecialchars($endereco['uf'], ENT_XML1, 'UTF-8');
+
+        $cep = preg_replace('/\D/', '', (string) ($func->PESSOA_CEP ?? ''));
+        if (strlen($cep) !== 8) {
+            $cep = '65000000'; // fallback final apenas se CEP inválido — log warning
+            \Illuminate\Support\Facades\Log::warning('[EsocialXmlService] CEP inválido para funcionário', [
+                'funcionario_id' => $funcionarioId,
+                'cep_bruto' => $func->PESSOA_CEP ?? null,
+            ]);
+        }
+
+        $enderecoBruto = trim((string) ($func->PESSOA_ENDERECO ?? ''));
+        $tpLograd = 'Rua';
+        $dscLograd = 'Não Informado';
+        $nrLograd = 'S/N';
+        if ($enderecoBruto !== '') {
+            // Tentar separar tipo + descrição + número (heurística simples)
+            // Ex: "Rua das Flores, 123" → tpLograd="Rua", dscLograd="das Flores", nrLograd="123"
+            if (preg_match('/^(Rua|Av\.?|Avenida|Travessa|Praça|Rod\.?|Rodovia|Alameda|Estrada|Ladeira|Beco)\s+(.+?)(?:,\s*(\S+))?$/iu', $enderecoBruto, $m)) {
+                $tpLograd = $m[1];
+                $dscLograd = trim($m[2]);
+                $nrLograd = $m[3] ?? 'S/N';
+            } else {
+                $dscLograd = $enderecoBruto;
+            }
+        }
+        $tpLograd = htmlspecialchars($tpLograd, ENT_XML1, 'UTF-8');
+        $dscLograd = htmlspecialchars(mb_substr($dscLograd, 0, 100), ENT_XML1, 'UTF-8');
+        $nrLograd = htmlspecialchars(mb_substr($nrLograd, 0, 10), ENT_XML1, 'UTF-8');
+
+        // R54: salário real via TABELA_SALARIAL (com fallback para CARGO_SALARIO)
+        $salario = $this->resolverSalarioFunc($funcionarioId);
+        $vrSalFx = number_format($salario, 2, '.', '');
+
+        $dtAdm = $func->FUNCIONARIO_DATA_INICIO ?? now()->format('Y-m-d');
+        $nome = htmlspecialchars((string) ($func->PESSOA_NOME ?? ''), ENT_XML1, 'UTF-8');
+        $matricula = htmlspecialchars((string) ($func->FUNCIONARIO_MATRICULA ?? ''), ENT_XML1, 'UTF-8');
+
         $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtAdmissao/v02_01_00">
   <evtAdmissao Id="{$idEvento}">
     <ideEvento>
-      <indRetif>1</indRetif>
-      <perApur>{$func->FUNCIONARIO_DATA_INICIO}</perApur>
-      <indApuracao>1</indApuracao>
-      <indGuia>1</indGuia>
-      <tpAmb>1</tpAmb>
+      <indRetif>{$indRetif}</indRetif>
+      <tpAmb>{$tpAmb}</tpAmb>
       <procEmi>1</procEmi>
-      <verProc>GENTE-v3</verProc>
+      <verProc>{$verProc}</verProc>
     </ideEvento>
     <ideEmpregador>
-      <tpInsc>1</tpInsc>
+      <tpInsc>{$tpInsc}</tpInsc>
       <nrInsc>{$cnpj}</nrInsc>
     </ideEmpregador>
     <trabalhador>
       <cpfTrab>{$cpfLimpo}</cpfTrab>
-      <nmTrab>{$func->PESSOA_NOME}</nmTrab>
-      <sexo>M</sexo>
-      <racaCor>1</racaCor>
-      <estCiv>1</estCiv>
-      <grauInstr>01</grauInstr>
-      <dataNascimento>{$func->PESSOA_NASCIMENTO}</dataNascimento>
+      <nmTrab>{$nome}</nmTrab>
+      <sexo>{$sexo}</sexo>
+      <racaCor>{$racaCor}</racaCor>
+      <estCiv>{$estCiv}</estCiv>
+      <grauInstr>{$grauInstr}</grauInstr>
+      <dataNascimento>{$func->PESSOA_DATA_NASCIMENTO}</dataNascimento>
       <endereco>
         <brasil>
-          <tpLograd>Rua</tpLograd>
-          <dscLograd>Nao Informado</dscLograd>
-          <nrLograd>S/N</nrLograd>
-          <bairro>Centro</bairro>
-          <cep>65000000</cep>
-          <codMunic>2111300</codMunic>
-          <uf>MA</uf>
+          <tpLograd>{$tpLograd}</tpLograd>
+          <dscLograd>{$dscLograd}</dscLograd>
+          <nrLograd>{$nrLograd}</nrLograd>
+          <bairro>{$bairro}</bairro>
+          <cep>{$cep}</cep>
+          <codMunic>{$cidadeCodMunic}</codMunic>
+          <uf>{$uf}</uf>
         </brasil>
       </endereco>
       <documentos>
@@ -283,14 +349,19 @@ XML;
       </documentos>
     </trabalhador>
     <vinculo>
-      <matricula>{$func->FUNCIONARIO_MATRICULA}</matricula>
+      <matricula>{$matricula}</matricula>
       <tpRegTrab>2</tpRegTrab>
       <tpRegPrev>2</tpRegPrev>
       <cadIni>S</cadIni>
+      <infoRegimeTrab>
+        <infoCeletista>
+          <dtAdm>{$dtAdm}</dtAdm>
+        </infoCeletista>
+      </infoRegimeTrab>
       <infoContrato>
         <codCateg>301</codCateg>
         <remuneracao>
-          <vrSalFx>1412.00</vrSalFx>
+          <vrSalFx>{$vrSalFx}</vrSalFx>
           <undSalFixo>5</undSalFixo>
         </remuneracao>
         <duracao>
@@ -298,7 +369,7 @@ XML;
         </duracao>
         <localTrabalho>
           <localTrabGeral>
-            <tpInsc>1</tpInsc>
+            <tpInsc>{$tpInsc}</tpInsc>
             <nrInsc>{$cnpj}</nrInsc>
           </localTrabGeral>
         </localTrabalho>
@@ -307,7 +378,42 @@ XML;
   </evtAdmissao>
 </eSocial>
 XML;
+
         return $xml;
+    }
+
+    /**
+     * Resolve salário base do funcionário com fallback (TABELA_SALARIAL → CARGO_SALARIO → 0).
+     */
+    private function resolverSalarioFunc(int $funcionarioId): float
+    {
+        try {
+            $row = DB::table('FUNCIONARIO as f')
+                ->leftJoin('TABELA_SALARIAL as ts', function ($j) {
+                    $j->on('ts.CARREIRA_ID', '=', 'f.CARREIRA_ID')
+                        ->on('ts.TABELA_CLASSE', '=', 'f.FUNCIONARIO_CLASSE')
+                        ->on('ts.TABELA_REFERENCIA', '=', 'f.FUNCIONARIO_REFERENCIA');
+                })
+                ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
+                ->where('f.FUNCIONARIO_ID', $funcionarioId)
+                ->select('ts.TABELA_VENCIMENTO_BASE', 'c.CARGO_SALARIO')
+                ->first();
+
+            if ($row) {
+                $sal = (float) ($row->TABELA_VENCIMENTO_BASE ?? 0);
+                if ($sal > 0) {
+                    return $sal;
+                }
+                return (float) ($row->CARGO_SALARIO ?? 0);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[EsocialXmlService] falha ao resolver salário', [
+                'funcionario_id' => $funcionarioId,
+                'erro' => $e->getMessage(),
+            ]);
+        }
+
+        return 0.0;
     }
 
     /**
