@@ -19,6 +19,21 @@ class ContabilidadeService
             throw new \RuntimeException("Folha #{$folhaId} não encontrada.");
         }
 
+        // R7-R10: idempotência — remove lançamentos prévios da mesma folha antes de re-inserir.
+        // Chave natural: (ORIGEM_TIPO='FOLHA_PAGAMENTO', ORIGEM_ID=$folhaId).
+        // Reprocessar a mesma folha N vezes resulta nos mesmos N lançamentos (não acumula).
+        $deletados = DB::table('LANCAMENTO_CONTABIL')
+            ->where('ORIGEM_TIPO', 'FOLHA_PAGAMENTO')
+            ->where('ORIGEM_ID', $folhaId)
+            ->delete();
+
+        if ($deletados > 0) {
+            Log::info('ContabilidadeService: lançamentos prévios removidos antes de re-lançar folha', [
+                'folha_id' => $folhaId,
+                'deletados' => $deletados,
+            ]);
+        }
+
         $totais = DB::table('DETALHE_FOLHA')
             ->where('FOLHA_ID', $folhaId)
             ->selectRaw('
@@ -46,41 +61,44 @@ class ContabilidadeService
         $ano = (int) now()->format('Y');
         $mes = (int) now()->format('n');
         $historico = "Folha de pagamento — competência {$competencia}";
-
-        // Lançamento 1: D 3.1.1.1.01 / C 2.1.3.1.01 (vencimentos brutos)
-        if ($totalProventos > 0 && isset($contas['3.1.1.1.01'], $contas['2.1.3.1.01'])) {
-            $lancamentos[] = DB::table('LANCAMENTO_CONTABIL')->insertGetId([
-                'LANCAMENTO_DATA'      => $dt,
-                'LANCAMENTO_ANO'       => $ano,
-                'LANCAMENTO_MES'       => $mes,
-                'LANCAMENTO_HISTORICO' => $historico . ' — vencimentos',
-                'LANCAMENTO_VALOR'     => $totalProventos,
-                'CONTA_DEBITO_ID'      => $contas['3.1.1.1.01'],
-                'CONTA_CREDITO_ID'     => $contas['2.1.3.1.01'],
-                'ORIGEM_TIPO'          => 'FOLHA_PAGAMENTO',
-                'ORIGEM_ID'            => $folhaId,
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ]);
-        }
-
-        // Lançamento 2: D 3.1.2.1.01 / C 2.1.3.2.01 (patronal IPAM — estimativa 14%)
         $patronal = round($totalProventos * 0.14, 2);
-        if ($patronal > 0 && isset($contas['3.1.2.1.01'], $contas['2.1.3.2.01'])) {
-            $lancamentos[] = DB::table('LANCAMENTO_CONTABIL')->insertGetId([
-                'LANCAMENTO_DATA'      => $dt,
-                'LANCAMENTO_ANO'       => $ano,
-                'LANCAMENTO_MES'       => $mes,
-                'LANCAMENTO_HISTORICO' => $historico . ' — contribuição patronal IPAM',
-                'LANCAMENTO_VALOR'     => $patronal,
-                'CONTA_DEBITO_ID'      => $contas['3.1.2.1.01'],
-                'CONTA_CREDITO_ID'     => $contas['2.1.3.2.01'],
-                'ORIGEM_TIPO'          => 'FOLHA_PAGAMENTO',
-                'ORIGEM_ID'            => $folhaId,
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ]);
-        }
+
+        // R7-R10: inserts dentro de transação para garantir atomicidade (se 1 falhar, nenhum entra)
+        DB::transaction(function () use ($folhaId, $totalProventos, $patronal, $contas, &$lancamentos, $dt, $ano, $mes, $historico) {
+            // Lançamento 1: D 3.1.1.1.01 / C 2.1.3.1.01 (vencimentos brutos)
+            if ($totalProventos > 0 && isset($contas['3.1.1.1.01'], $contas['2.1.3.1.01'])) {
+                $lancamentos[] = DB::table('LANCAMENTO_CONTABIL')->insertGetId([
+                    'LANCAMENTO_DATA'      => $dt,
+                    'LANCAMENTO_ANO'       => $ano,
+                    'LANCAMENTO_MES'       => $mes,
+                    'LANCAMENTO_HISTORICO' => $historico . ' — vencimentos',
+                    'LANCAMENTO_VALOR'     => $totalProventos,
+                    'CONTA_DEBITO_ID'      => $contas['3.1.1.1.01'],
+                    'CONTA_CREDITO_ID'     => $contas['2.1.3.1.01'],
+                    'ORIGEM_TIPO'          => 'FOLHA_PAGAMENTO',
+                    'ORIGEM_ID'            => $folhaId,
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
+                ]);
+            }
+
+            // Lançamento 2: D 3.1.2.1.01 / C 2.1.3.2.01 (patronal IPAM — estimativa 14%)
+            if ($patronal > 0 && isset($contas['3.1.2.1.01'], $contas['2.1.3.2.01'])) {
+                $lancamentos[] = DB::table('LANCAMENTO_CONTABIL')->insertGetId([
+                    'LANCAMENTO_DATA'      => $dt,
+                    'LANCAMENTO_ANO'       => $ano,
+                    'LANCAMENTO_MES'       => $mes,
+                    'LANCAMENTO_HISTORICO' => $historico . ' — contribuição patronal IPAM',
+                    'LANCAMENTO_VALOR'     => $patronal,
+                    'CONTA_DEBITO_ID'      => $contas['3.1.2.1.01'],
+                    'CONTA_CREDITO_ID'     => $contas['2.1.3.2.01'],
+                    'ORIGEM_TIPO'          => 'FOLHA_PAGAMENTO',
+                    'ORIGEM_ID'            => $folhaId,
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
+                ]);
+            }
+        });
 
         Log::info('ContabilidadeService: folha lançada', [
             'folha_id'    => $folhaId,
