@@ -1742,3 +1742,20 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
     require __DIR__ . '/api_v3_autocadastro_public_legacy.php';
 });
 
+// =============================================================================
+// SPA CATCH-ALL — Vue Router resolve deep links em /qualquer/coisa
+// IMPORTANTE: precisa ser a ÚLTIMA rota do arquivo. Qualquer rota Laravel real
+// (/api/*, /login, /v3, /autocadastro/{token}) é matched ANTES dessa.
+// Esta rota só captura URLs que nenhuma outra pegou.
+// =============================================================================
+Route::fallback(function () {
+    // Em SPA, qualquer URL não mapeada vai pro Vue. O Vue Router decide o que renderizar.
+    // Excluir prefixos da API/storage/sanctum (esses devem retornar 404 puro)
+    $path = request()->path();
+    foreach (['api/', 'storage/', 'sanctum/', 'remessa/', '_debugbar'] as $prefix) {
+        if (str_starts_with($path, $prefix)) {
+            abort(404);
+        }
+    }
+    return view('v3.app');
+});
