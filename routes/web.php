@@ -1665,11 +1665,10 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
             ->name('holerite.pdf');
     });
 
-    // â”€â”€ Alertas de RH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    Route::get('ferias/alerta-vencer', [FeriasController::class, 'alertaVencer'])
-        ->name('ferias.alerta-vencer');
-    Route::get('afastamento/alerta-expirar', [AfastamentoController::class, 'alertaExpirar'])
-        ->name('afastamento.alerta-expirar');
+    // FASE-4-MIGRADO 08/05/2026 (decisão 8 do MAPA — revisada para Opção B):
+    // Endpoints alertaVencer/alertaExpirar movidos para /api/v3/ferias/alerta-vencer
+    // e /api/v3/afastamentos/alerta-expirar (ver routes/ferias_v3.php e routes/afastamentos_v3.php).
+    // Controllers FeriasController::alertaVencer e AfastamentoController::alertaExpirar preservados.
 
     // â”€â”€ Remessa BancÃ¡ria CNAB 240 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::prefix('remessa')->group(function () {
