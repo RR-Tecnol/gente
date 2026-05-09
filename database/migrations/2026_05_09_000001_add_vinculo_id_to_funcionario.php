@@ -27,9 +27,9 @@ use Illuminate\Support\Facades\Schema;
  *   Refatorar MotorFolhaService::calcularLoteParaFuncionarios() para resolver
  *   VINCULO_ID via LOTACAO.VINCULO_ID (lotação ativa para a competência),
  *   não FUNCIONARIO.VINCULO_ID. Aí esta coluna pode ser removida.
+ *   Ver docs/DIVIDA_TECNICA_POS_GOLIVE_PMSL.md (DT-MOTOR-01).
  */
-class AddVinculoIdToFuncionarioMotorFolhaPatch extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         if (! Schema::hasTable('FUNCIONARIO')) {
@@ -57,4 +57,4 @@ class AddVinculoIdToFuncionarioMotorFolhaPatch extends Migration
             $table->dropColumn('VINCULO_ID');
         });
     }
-}
+};
