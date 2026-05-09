@@ -40,6 +40,9 @@ final class PersistenciaRubricasService
     /** @var array<string, ?int> */
     private array $cacheEventoIdPorDescricao = [];
 
+    private ?string $colunaNomeEventoCache = null;
+    private bool $colunaNomeEventoDetectada = false;
+
     /**
      * Persiste rubricas detalhadas para um lote de DETALHE_FOLHA já persistidos.
      *
@@ -129,6 +132,9 @@ final class PersistenciaRubricasService
 
     /**
      * Resolve o EVENTO_ID por descrição (com cache memoizado).
+     *
+     * Schema-defensive: detecta se a coluna principal de nome do evento é
+     * EVENTO_NOME (PMSL e schemas modernos) ou EVENTO_DESCRICAO (legado).
      */
     private function resolverEventoIdPorDescricao(string $descricao): ?int
     {
@@ -136,14 +142,44 @@ final class PersistenciaRubricasService
             return $this->cacheEventoIdPorDescricao[$descricao];
         }
 
+        $colNome = $this->detectarColunaNomeEvento();
+        if ($colNome === null) {
+            $this->cacheEventoIdPorDescricao[$descricao] = null;
+            return null;
+        }
+
         $id = DB::table('EVENTO')
-            ->where('EVENTO_DESCRICAO', $descricao)
+            ->where($colNome, $descricao)
             ->where('EVENTO_ATIVO', 1)
             ->value('EVENTO_ID');
 
         $this->cacheEventoIdPorDescricao[$descricao] = $id ? (int) $id : null;
 
         return $this->cacheEventoIdPorDescricao[$descricao];
+    }
+
+    /**
+     * Detecta uma única vez (memoizado) qual a coluna de nome do EVENTO.
+     * PMSL: EVENTO_NOME. Legado: EVENTO_DESCRICAO. Erro: null.
+     */
+    private function detectarColunaNomeEvento(): ?string
+    {
+        if ($this->colunaNomeEventoDetectada) {
+            return $this->colunaNomeEventoCache;
+        }
+
+        $this->colunaNomeEventoDetectada = true;
+
+        if (Schema::hasColumn('EVENTO', 'EVENTO_NOME')) {
+            $this->colunaNomeEventoCache = 'EVENTO_NOME';
+        } elseif (Schema::hasColumn('EVENTO', 'EVENTO_DESCRICAO')) {
+            $this->colunaNomeEventoCache = 'EVENTO_DESCRICAO';
+        } else {
+            $this->colunaNomeEventoCache = null;
+            Log::warning('[PersistenciaRubricas] Tabela EVENTO sem coluna de nome (EVENTO_NOME ou EVENTO_DESCRICAO).');
+        }
+
+        return $this->colunaNomeEventoCache;
     }
 
     /**
