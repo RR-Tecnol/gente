@@ -278,6 +278,20 @@ class MotorFolhaService
             // O auditor (Claude) vai detectar pelo log e abrir bug separado.
         }
 
+        // P0-1: incluir descontos de falta da competência ANTERIOR (apurada e fechada) como LANCAMENTO_FOLHA tipo D.
+        // Idempotente: re-execução não duplica (APURACAO_STATUS='APLICADA_FOLHA').
+        // Mesma estratégia fail-soft do bloco acima.
+        try {
+            app(\App\Services\Folha\InclusaoFaltasService::class)
+                ->incluirParaFolha($folhaId, $ids, (string) $competencia);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[MotorFolha] falha ao incluir descontos de falta', [
+                'folha_id' => $folhaId,
+                'erro' => $e->getMessage(),
+            ]);
+            // Não fail-fast: motor segue calculando.
+        }
+
         $servidoresQuery = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('VINCULO as v', 'v.VINCULO_ID', '=', 'f.VINCULO_ID')
