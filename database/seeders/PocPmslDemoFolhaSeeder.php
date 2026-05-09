@@ -582,10 +582,15 @@ class PocPmslDemoFolhaSeeder extends Seeder
 
         $data = [
             'USUARIO_LOGIN' => $cpf,
-            'USUARIO_CPF' => $cpf,
             'USUARIO_NOME' => $nome,
             'USUARIO_ATIVO' => 1,
         ];
+
+        if (Schema::hasColumn('USUARIO', 'USUARIO_CPF')) {
+            $data['USUARIO_CPF'] = $cpf;
+        } elseif (Schema::hasColumn('USUARIO', 'CPF')) {
+            $data['CPF'] = $cpf;
+        }
 
         if (! $existente) {
             $data['USUARIO_SENHA'] = Hash::make(Str::random(16));
