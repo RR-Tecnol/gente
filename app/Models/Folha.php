@@ -59,6 +59,16 @@ class Folha extends Model
 
     public function historicoUltimo()
     {
+        // PMSL go-live 11/05/2026: schema-defensive — HISTORICO_FOLHA_ULTIMO nao existe
+        // no schema PMSL producao. Se a coluna nao existir, retorna relacao vazia
+        // em vez de PDOException 42S22 que cascateia para 500 em toda a tela de Folha.
+        // Pos go-live: investigar se HISTORICO_FOLHA_ULTIMO deve ser adicionado via
+        // migration ou se a relacao deve ser reestruturada (ver DT-API-01 no doc de dividas).
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('HISTORICO_FOLHA', 'HISTORICO_FOLHA_ULTIMO')) {
+            // Retorna relacao hasOne sem filtro adicional (usa apenas FOLHA_ID)
+            // O resultado pode nao ser o "ultimo" semanticamente, mas nao vai estourar.
+            return $this->hasOne(HistoricoFolha::class, 'FOLHA_ID', 'FOLHA_ID');
+        }
         return $this->hasOne(HistoricoFolha::class, 'FOLHA_ID', 'FOLHA_ID')
             ->where('HISTORICO_FOLHA_ULTIMO', 1);
     }
