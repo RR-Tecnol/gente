@@ -77,6 +77,38 @@ class ProcessarFolhaJob implements ShouldQueue
             'total_liquido'   => $resultado['total_liquido'] ?? 0,
         ]);
 
+        // PMSL go-live 11/05/2026: consolidar totais de volta na tabela FOLHA.
+        // O MotorFolhaService calcula e persiste em DETALHE_FOLHA/LANCAMENTO_FOLHA
+        // mas nao atualiza os totais agregados na cabecalho da FOLHA.
+        // Sem este update, a listagem da tela exibe 0 servidores e R$ 0,00.
+        try {
+            $updateFolha = [
+                'FOLHA_QTD_SERVIDORES' => (int) ($resultado['servidores'] ?? 0),
+                'FOLHA_VALOR_TOTAL'    => (float) ($resultado['total_liquido'] ?? 0),
+            ];
+            // Schema-defensive: so atualiza colunas que existem em PMSL
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_QTD_SERVIDORES')) {
+                unset($updateFolha['FOLHA_QTD_SERVIDORES']);
+            }
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_VALOR_TOTAL')) {
+                unset($updateFolha['FOLHA_VALOR_TOTAL']);
+            }
+            if (!empty($updateFolha)) {
+                \Illuminate\Support\Facades\DB::table('FOLHA')
+                    ->where('FOLHA_ID', (int) $folhaId)
+                    ->update($updateFolha);
+                Log::info("[ProcessarFolhaJob] Totais gravados na FOLHA.", [
+                    'folha_id' => $folhaId,
+                    'update'   => $updateFolha,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error("[ProcessarFolhaJob] Falha ao gravar totais na FOLHA — calculo nao revertido.", [
+                'folha_id' => $folhaId,
+                'erro'     => $e->getMessage(),
+            ]);
+        }
+
         // Gerar lançamentos contábeis automáticos após o processamento.
         // Falha contábil não reverte a folha — apenas loga o erro
         // (idempotência R7-R10 garante que reprocesso não duplica).

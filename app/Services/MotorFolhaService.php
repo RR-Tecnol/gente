@@ -174,7 +174,46 @@ class MotorFolhaService
         }
 
         $pending = Bus::batch($jobs)
-            ->name('Fecho de Folha - ' . $competencia);
+            ->name('Fecho de Folha - ' . $competencia)
+            ->then(function (\Illuminate\Bus\Batch $batch) use ($folhaId) {
+                // PMSL go-live 11/05/2026: consolidar totais na tabela FOLHA quando batch completa.
+                // Cada ProcessarLoteFolhaJob persiste DETALHE_FOLHA individualmente.
+                // Aqui somamos os totais de DETALHE_FOLHA para atualizar o cabecalho da FOLHA.
+                try {
+                    $totais = DB::table('DETALHE_FOLHA')
+                        ->where('FOLHA_ID', $folhaId)
+                        ->selectRaw('
+                            COUNT(DISTINCT FUNCIONARIO_ID) as qtd_servidores,
+                            SUM(DETALHE_FOLHA_PROVENTOS) as total_proventos,
+                            SUM(DETALHE_FOLHA_DESCONTOS) as total_descontos,
+                            SUM(DETALHE_FOLHA_LIQUIDO) as total_liquido
+                        ')
+                        ->first();
+
+                    $updateFolha = [];
+                    if (Schema::hasColumn('FOLHA', 'FOLHA_QTD_SERVIDORES')) {
+                        $updateFolha['FOLHA_QTD_SERVIDORES'] = (int) ($totais->qtd_servidores ?? 0);
+                    }
+                    if (Schema::hasColumn('FOLHA', 'FOLHA_VALOR_TOTAL')) {
+                        $updateFolha['FOLHA_VALOR_TOTAL'] = (float) ($totais->total_liquido ?? 0);
+                    }
+
+                    if (! empty($updateFolha)) {
+                        DB::table('FOLHA')
+                            ->where('FOLHA_ID', $folhaId)
+                            ->update($updateFolha);
+                        Log::info('[MotorFolha][Batch] Totais consolidados na FOLHA.', [
+                            'folha_id' => $folhaId,
+                            'update'   => $updateFolha,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('[MotorFolha][Batch] Falha ao consolidar totais na FOLHA.', [
+                        'folha_id' => $folhaId,
+                        'erro'     => $e->getMessage(),
+                    ]);
+                }
+            });
 
         if ($createdByUsuarioId !== null) {
             $pending->withOption('created_by', $createdByUsuarioId);
