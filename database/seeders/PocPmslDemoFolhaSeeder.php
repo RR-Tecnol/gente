@@ -739,12 +739,24 @@ class PocPmslDemoFolhaSeeder extends Seeder
             return;
         }
 
+        // Schema-defensive: ATRIBUICAO_LOTACAO em PMSL produção não tem ATRIBUICAO_LOTACAO_INICIO/FIM,
+        // só ATRIBUICAO_LOTACAO_CARGA_HORARIA + ATIVA/ATIVO. Em outros schemas pode ter as datas.
         $data = [
-            'LOTACAO_ID' => $lotacaoId,
+            'LOTACAO_ID'    => $lotacaoId,
             'ATRIBUICAO_ID' => $atribuicaoId,
-            'ATRIBUICAO_LOTACAO_INICIO' => Carbon::now()->subYears(2)->toDateString(),
-            'ATRIBUICAO_LOTACAO_CARGA_HORARIA' => 40,
         ];
+        if (Schema::hasColumn('ATRIBUICAO_LOTACAO', 'ATRIBUICAO_LOTACAO_INICIO')) {
+            $data['ATRIBUICAO_LOTACAO_INICIO'] = Carbon::now()->subYears(2)->toDateString();
+        }
+        if (Schema::hasColumn('ATRIBUICAO_LOTACAO', 'ATRIBUICAO_LOTACAO_CARGA_HORARIA')) {
+            $data['ATRIBUICAO_LOTACAO_CARGA_HORARIA'] = 40;
+        }
+        if (Schema::hasColumn('ATRIBUICAO_LOTACAO', 'ATRIBUICAO_LOTACAO_ATIVA')) {
+            $data['ATRIBUICAO_LOTACAO_ATIVA'] = 1;
+        }
+        if (Schema::hasColumn('ATRIBUICAO_LOTACAO', 'ATRIBUICAO_LOTACAO_ATIVO')) {
+            $data['ATRIBUICAO_LOTACAO_ATIVO'] = 1;
+        }
 
         DB::table('ATRIBUICAO_LOTACAO')->insert($data);
     }
