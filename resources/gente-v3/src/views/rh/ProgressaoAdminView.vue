@@ -44,7 +44,7 @@
       <div class="card-hdr">
         <h2 class="card-title">✅ Servidores Elegíveis — {{ now }}</h2>
         <div class="card-acts">
-          <select v-model="filtroSetor" class="search-input" style="width:200px" @change="onFiltroSetorChange">
+          <select v-model="filtroSetor" class="search-input" @change="onFiltroSetorChange">
             <option value="">Todos os setores</option>
             <option v-for="s in setores" :key="s.SETOR_ID ?? s.id" :value="String(s.SETOR_ID ?? s.id)">{{ s.SETOR_NOME ?? s.nome }}</option>
           </select>
@@ -122,7 +122,7 @@
         <h2 class="card-title">👥 Todos os Servidores</h2>
         <div class="card-acts">
           <!-- BUG-EST-12: filtro por setor -->
-          <select v-model="filtroSetor" class="search-input" style="width:200px" @change="onFiltroSetorChange">
+          <select v-model="filtroSetor" class="search-input" @change="onFiltroSetorChange">
             <option value="">Todos os setores</option>
             <option v-for="s in setores" :key="s.SETOR_ID ?? s.id" :value="String(s.SETOR_ID ?? s.id)">{{ s.SETOR_NOME ?? s.nome }}</option>
           </select>
@@ -993,8 +993,7 @@ const exportarLista = () => {
   justify-content: flex-end;
   flex-shrink: 0;
 }
-.card-acts .act-btn,
-.card-acts .search-input {
+.card-acts .act-btn {
   flex-shrink: 0;
 }
 .lrf-badge-seguro { color: #166534; }
@@ -1007,7 +1006,7 @@ const exportarLista = () => {
 .act-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .act-outline { background: #f8fafc; border: 1.5px solid #e2e8f0; color: #475569; }
 .act-sm { padding: 6px 12px; font-size: 12px; }
-.search-input { padding: 8px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; outline: none; }
+.search-input { padding: 8px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; outline: none; width: 240px; max-width: 100%; box-sizing: border-box; }
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .data-table th { text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; padding: 0 10px 10px; border-bottom: 2px solid #f1f5f9; background: rgba(248, 250, 252, 0.82); }
