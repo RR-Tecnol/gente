@@ -45,6 +45,15 @@
       <p>Carregando folhas...</p>
     </div>
 
+    <!-- ERRO DE CARREGAMENTO (PMSL go-live: sem mock, mostra erro real) -->
+    <div v-if="!loading && erroCarregamento" class="erro-banner">
+      <span class="erro-ico">⚠️</span>
+      <div>
+        <strong>Erro ao carregar folhas</strong>
+        <p>{{ erroCarregamento }}</p>
+      </div>
+    </div>
+
     <!-- Fase 13.5 — observabilidade Bus::batch (polling) -->
     <div v-if="batchUi.visible" class="batch-panel" :class="'batch-' + batchUi.status">
       <div class="batch-panel-hdr">
@@ -505,6 +514,8 @@ const detalhes        = ref([])
 const loadingDet      = ref(false)
 const consistencia = ref(null)
 const consistenciaLoading = ref(false)
+// PMSL go-live: estado de erro real (sem mock no fallback)
+const erroCarregamento = ref('')
 
 onMounted(async () => {
   try {
@@ -515,15 +526,13 @@ onMounted(async () => {
     folhas.value = rFol.data.folhas ?? rFol.data
     secretarias.value = rSec.data.unidades ?? []
   } catch (e) {
-    // Dados mock se endpoint falhar
-    folhas.value = [
-      { FOLHA_ID: 1, FOLHA_COMPETENCIA: '022026', FOLHA_SITUACAO: 'F', qtd_funcionarios: 87, total_proventos: 543210, total_descontos: 98432, total_liquido: 444778 },
-      { FOLHA_ID: 2, FOLHA_COMPETENCIA: '012026', FOLHA_SITUACAO: 'F', qtd_funcionarios: 85, total_proventos: 531000, total_descontos: 96000, total_liquido: 435000 },
-      { FOLHA_ID: 3, FOLHA_COMPETENCIA: '122025', FOLHA_SITUACAO: 'F', qtd_funcionarios: 84, total_proventos: 519800, total_descontos: 94100, total_liquido: 425700 },
-      { FOLHA_ID: 4, FOLHA_COMPETENCIA: '112025', FOLHA_SITUACAO: 'F', qtd_funcionarios: 83, total_proventos: 508400, total_descontos: 93000, total_liquido: 415400 },
-      { FOLHA_ID: 5, FOLHA_COMPETENCIA: '102025', FOLHA_SITUACAO: 'F', qtd_funcionarios: 82, total_proventos: 497000, total_descontos: 91000, total_liquido: 406000 },
-      { FOLHA_ID: 6, FOLHA_COMPETENCIA: '092025', FOLHA_SITUACAO: 'F', qtd_funcionarios: 80, total_proventos: 484000, total_descontos: 89000, total_liquido: 395000 },
-    ]
+    // PMSL go-live: SEM MOCKS. Endpoint /api/v3/folhas falhou — exibir lista vazia
+    // e mensagem de erro real para o operador acionar suporte.
+    console.error('[FolhaPagamento] Falha ao carregar folhas:', e)
+    folhas.value = []
+    erroCarregamento.value = e.response?.data?.erro
+      || e.message
+      || 'Nao foi possivel carregar a listagem de folhas.'
   } finally {
     loading.value = false
     await carregarConsistenciaAtual()
@@ -771,6 +780,16 @@ const confirmarFolha = async (id) => {
 .spinner { width: 48px; height: 48px; border: 3px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 14px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .state-box p { font-size: 15px; font-weight: 500; margin: 0; }
+
+/* PMSL go-live: banner de erro real (sem mock) */
+.erro-banner {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: #fef2f2; border: 1px solid #fca5a5; border-radius: 14px;
+  padding: 16px 20px; margin-bottom: 16px;
+}
+.erro-banner .erro-ico { font-size: 22px; line-height: 1; }
+.erro-banner strong { display: block; font-size: 14px; font-weight: 800; color: #991b1b; margin-bottom: 4px; }
+.erro-banner p { font-size: 13px; color: #7f1d1d; margin: 0; }
 
 /* SECTION CARD */
 .section-card {

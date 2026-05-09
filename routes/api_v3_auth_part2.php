@@ -1588,22 +1588,50 @@
     // GET /abono-faltas removido deste grupo (use /api/v3/abono-faltas).
 
     // â”€â”€ Folhas de Pagamento (listagem) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Folhas de Pagamento (listagem) ─────────────────────────────────
+    // PMSL go-live 11/05/2026: schema-defensive, sem Eloquent::with() para evitar
+    // PDOException em relacionamentos que dependem de colunas inexistentes no
+    // schema PMSL (ex.: HISTORICO_FOLHA_ULTIMO em FOLHA, statusEscala etc).
+    // Frontend FolhaPagamentoView.vue espera: FOLHA_ID, FOLHA_COMPETENCIA,
+    // FOLHA_SITUACAO, qtd_funcionarios, total_proventos, total_descontos,
+    // total_liquido. Quaisquer falhas SQL retornam 500 com array vazio (sem mock).
     Route::get('/folhas', function (\Illuminate\Http\Request $request) {
-        $folhas = \App\Models\Folha::with(['tipoFolha', 'historicoUltimo.statusEscala'])
-            ->orderByDesc('FOLHA_COMPETENCIA')
-            ->take(24)
-            ->get()
-            ->map(fn($f) => [
-                'folha_id' => $f->FOLHA_ID,
-                'descricao' => $f->FOLHA_DESCRICAO,
-                'competencia' => $f->FOLHA_COMPETENCIA,
-                'tipo' => optional($f->tipoFolha)->COLUNA_NOME ?? 'Normal',
-                'qtd_servidores' => (int) ($f->FOLHA_QTD_SERVIDORES ?? 0),
-                'valor_total' => (float) ($f->FOLHA_VALOR_TOTAL ?? 0),
-                'status' => 'FECHADA',
-            ]);
+        try {
+            $folhasRaw = \Illuminate\Support\Facades\DB::table('FOLHA')
+                ->orderByDesc('FOLHA_COMPETENCIA')
+                ->take(24)
+                ->get();
 
-        return response()->json(['folhas' => $folhas]);
+            $folhas = $folhasRaw->map(function ($f) {
+                $valorTotal = (float) ($f->FOLHA_VALOR_TOTAL ?? 0);
+                $totalProventos = isset($f->FOLHA_TOTAL_PROVENTOS) ? (float) $f->FOLHA_TOTAL_PROVENTOS : $valorTotal;
+                $totalDescontos = isset($f->FOLHA_TOTAL_DESCONTOS) ? (float) $f->FOLHA_TOTAL_DESCONTOS : 0.0;
+                $totalLiquido = isset($f->FOLHA_TOTAL_LIQUIDO) ? (float) $f->FOLHA_TOTAL_LIQUIDO : ($totalProventos - $totalDescontos);
+
+                return [
+                    'FOLHA_ID' => (int) $f->FOLHA_ID,
+                    'FOLHA_COMPETENCIA' => $f->FOLHA_COMPETENCIA,
+                    'FOLHA_DESCRICAO' => $f->FOLHA_DESCRICAO ?? '',
+                    'FOLHA_SITUACAO' => $f->FOLHA_SITUACAO ?? ($f->FOLHA_STATUS ?? 'A'),
+                    'qtd_funcionarios' => (int) ($f->FOLHA_QTD_SERVIDORES ?? 0),
+                    'total_proventos' => $totalProventos,
+                    'total_descontos' => $totalDescontos,
+                    'total_liquido' => $totalLiquido,
+                ];
+            });
+
+            return response()->json(['folhas' => $folhas]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('folhas_listagem_falhou', [
+                'error' => $e->getMessage(),
+                'trace_top' => collect($e->getTrace())->take(3)->toArray(),
+            ]);
+            // PMSL go-live: NUNCA retornar dados falsos. Cliente recebe array vazio + erro 500.
+            return response()->json([
+                'folhas' => [],
+                'erro' => 'Nao foi possivel carregar a listagem de folhas. Consulte o suporte tecnico.',
+            ], 500);
+        }
     });
 
     // â”€â”€ SubstituiÃ§Ãµes de escala â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
