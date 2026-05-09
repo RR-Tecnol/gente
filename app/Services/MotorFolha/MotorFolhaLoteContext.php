@@ -4,6 +4,8 @@ namespace App\Services\MotorFolha;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Dados pré-carregados por lote (AFASTAMENTO, AVALIACAO_DESEMPENHO, CARGO_SALARIO)
@@ -32,6 +34,13 @@ final class MotorFolhaLoteContext
 
     /** @var array<int, array{horas: float, obs: ?string}> Jornada financeira informal por funcionário (GAP-MF-05) */
     private array $jornadaFinanceiraPorFuncionario = [];
+
+    /**
+     * Cache memoizado de tipos de afastamento abonados (id_int => true).
+     * Resolvido uma vez por instância via TABELA_GENERICA. Evita N queries no loop.
+     * @var array<int, bool>|null
+     */
+    private ?array $idsTiposAfastamentoAbonadosCache = null;
 
     /**
      * @param  array<int, float>  $cargoSalarioPorFuncionario
@@ -155,21 +164,21 @@ final class MotorFolhaLoteContext
      * Conta dias entre AFASTAMENTO_DATA_INICIO e AFASTAMENTO_DATA_FIM cobertos por LM/LMA/LP/etc.,
      * limitado ao mês de competência (sem sqlite_functions — só Carbon).
      *
-     * Tipos abonados (compatível com o que o FolhaParserService listava):
+     * Tipos abonados (resolvidos via TABELA_GENERICA com TABELA_ID = RTG::TIPO_AFASTAMENTO = 5):
      *   LICENCA_MEDICA, LICENCA_SAUDE, LICENCA_MATERNIDADE, LICENCA_PATERNIDADE,
      *   LICENCA_NOJO, LICENCA_GALA, AFASTAMENTO_JUDICIAL, AFASTAMENTO_REMUNERADO
      */
     public function diasAbonadosNoMes(int $funcionarioId): int
     {
-        static $tiposAbonados = [
-            'LICENCA_MEDICA', 'LICENCA_SAUDE', 'LICENCA_MATERNIDADE', 'LICENCA_PATERNIDADE',
-            'LICENCA_NOJO', 'LICENCA_GALA', 'AFASTAMENTO_JUDICIAL', 'AFASTAMENTO_REMUNERADO',
-        ];
+        $idsAbonados = $this->resolverIdsTiposAfastamentoAbonados();
+        if ($idsAbonados === []) {
+            return 0;
+        }
 
         $totalDias = 0;
         foreach ($this->afastamentos($funcionarioId) as $a) {
-            $tipo = (string) ($a->AFASTAMENTO_TIPO ?? '');
-            if (! in_array($tipo, $tiposAbonados, true)) {
+            $tipoId = (int) ($a->AFASTAMENTO_TIPO ?? 0);
+            if ($tipoId === 0 || ! isset($idsAbonados[$tipoId])) {
                 continue;
             }
 
@@ -204,6 +213,54 @@ final class MotorFolhaLoteContext
 
         // Limitar ao número de dias no mês (defesa contra dupla contagem)
         return min($totalDias, $this->diasNoMesCompetencia());
+    }
+
+    /**
+     * Resolve os IDs (em TABELA_GENERICA) dos tipos de afastamento considerados abonados.
+     * Retorna mapa [tipo_id => true] memoizado.
+     *
+     * Schema-defensive: detecta se a coluna descritiva é COLUNA_DESCRICAO (PMSL)
+     * ou DESCRICAO (schemas legados).
+     */
+    private function resolverIdsTiposAfastamentoAbonados(): array
+    {
+        if ($this->idsTiposAfastamentoAbonadosCache !== null) {
+            return $this->idsTiposAfastamentoAbonadosCache;
+        }
+
+        $tiposAbonadosNomes = [
+            'LICENCA_MEDICA', 'LICENCA_SAUDE', 'LICENCA_MATERNIDADE', 'LICENCA_PATERNIDADE',
+            'LICENCA_NOJO', 'LICENCA_GALA', 'AFASTAMENTO_JUDICIAL', 'AFASTAMENTO_REMUNERADO',
+        ];
+
+        // Detecta nome da coluna descritiva (PMSL: COLUNA_DESCRICAO, legado: DESCRICAO)
+        $colDesc = Schema::hasColumn('TABELA_GENERICA', 'COLUNA_DESCRICAO')
+            ? 'COLUNA_DESCRICAO'
+            : (Schema::hasColumn('TABELA_GENERICA', 'DESCRICAO') ? 'DESCRICAO' : null);
+
+        if ($colDesc === null) {
+            $this->idsTiposAfastamentoAbonadosCache = [];
+            return $this->idsTiposAfastamentoAbonadosCache;
+        }
+
+        try {
+            // RTG::TIPO_AFASTAMENTO = 5
+            $rows = DB::table('TABELA_GENERICA')
+                ->where('TABELA_ID', 5)
+                ->whereIn($colDesc, $tiposAbonadosNomes)
+                ->pluck('COLUNA_ID')
+                ->all();
+
+            $map = [];
+            foreach ($rows as $id) {
+                $map[(int) $id] = true;
+            }
+            $this->idsTiposAfastamentoAbonadosCache = $map;
+        } catch (\Throwable $e) {
+            $this->idsTiposAfastamentoAbonadosCache = [];
+        }
+
+        return $this->idsTiposAfastamentoAbonadosCache;
     }
 
     /**
