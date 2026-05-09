@@ -11,14 +11,19 @@ class Feriados2026Seeder extends Seeder
     public function run(): void
     {
         if (!Schema::hasTable('FERIADO')) {
+            $this->command->warn('Tabela FERIADO não existe — seeder ignorado.');
             return;
         }
+
         $cols = Schema::getColumnListing('FERIADO');
         $colNome = in_array('FERIADO_NOME', $cols, true) ? 'FERIADO_NOME' : 'FERIADO_DESCRICAO';
         $colRecorrente = in_array('FERIADO_RECORRENTE', $cols, true);
         $colAtivo = in_array('FERIADO_ATIVO', $cols, true);
-        $tipoColType = Schema::getColumnType('FERIADO', 'FERIADO_TIPO');
-        $tipoNumerico = in_array(strtolower((string) $tipoColType), ['integer', 'bigint', 'smallint', 'tinyint'], true);
+
+        // FERIADO_TIPO pode ser int (PMSL) ou string (legado).
+        // Usa INFORMATION_SCHEMA.COLUMNS para evitar Schema::getColumnType,
+        // que quebra com Doctrine DBAL + SQL Server.
+        $tipoNumerico = self::isFeriadoTipoNumerico();
         $tipoMap = ['N' => 1, 'E' => 2, 'M' => 3, 'F' => 4];
 
         $feriados = [
@@ -54,6 +59,37 @@ class Feriados2026Seeder extends Seeder
                 $payload['FERIADO_ATIVO'] = 1;
             }
             DB::table('FERIADO')->updateOrInsert($where, $payload);
+        }
+
+        $this->command->info('Feriados2026Seeder: ' . count($feriados) . ' feriados garantidos.');
+    }
+
+    /**
+     * Detecta se a coluna FERIADO_TIPO é numérica (int/bigint/smallint/tinyint)
+     * sem usar Doctrine DBAL (que não suporta SQL Server nesta versão).
+     *
+     * Usa INFORMATION_SCHEMA.COLUMNS, que é padrão SQL ANSI e funciona em
+     * SQL Server, MySQL, PostgreSQL e SQLite >= 3.16.
+     */
+    private static function isFeriadoTipoNumerico(): bool
+    {
+        try {
+            $row = DB::selectOne(
+                "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_NAME = ? AND COLUMN_NAME = ?",
+                ['FERIADO', 'FERIADO_TIPO']
+            );
+
+            if (!$row || !isset($row->DATA_TYPE)) {
+                // Sem info de tipo: assume não-numérico (compat string)
+                return false;
+            }
+
+            $tipo = strtolower((string) $row->DATA_TYPE);
+            return in_array($tipo, ['int', 'integer', 'bigint', 'smallint', 'tinyint'], true);
+        } catch (\Throwable $e) {
+            // Em caso de erro, assume não-numérico (string legacy)
+            return false;
         }
     }
 }
