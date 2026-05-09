@@ -248,7 +248,8 @@
     gap: 6px;
 }
 
-.act-btn {
+.row-actions .act-btn,
+.actions .act-btn {
     border: 1px solid var(--border);
     border-radius: 8px;
     width: 30px;
@@ -260,15 +261,18 @@
     cursor: pointer;
 }
 
-.act-btn.act-blue {
+.row-actions .act-btn.act-blue,
+.actions .act-btn.act-blue {
     color: #2563eb;
 }
 
-.act-btn.act-green {
+.row-actions .act-btn.act-green,
+.actions .act-btn.act-green {
     color: #16a34a;
 }
 
-.act-btn.act-red {
+.row-actions .act-btn.act-red,
+.actions .act-btn.act-red {
     color: #dc2626;
 }
 
