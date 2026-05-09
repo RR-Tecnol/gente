@@ -993,7 +993,8 @@ const exportarLista = () => {
   justify-content: flex-end;
   flex-shrink: 0;
 }
-.card-acts .act-btn {
+.card-acts .act-btn,
+.card-acts .search-input {
   flex-shrink: 0;
 }
 .lrf-badge-seguro { color: #166534; }
@@ -1006,7 +1007,7 @@ const exportarLista = () => {
 .act-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .act-outline { background: #f8fafc; border: 1.5px solid #e2e8f0; color: #475569; }
 .act-sm { padding: 6px 12px; font-size: 12px; }
-.search-input { padding: 8px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; outline: none; width: 240px; max-width: 100%; box-sizing: border-box; }
+.search-input { padding: 8px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; outline: none; width: 220px; max-width: 100%; box-sizing: border-box; }
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .data-table th { text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; padding: 0 10px 10px; border-bottom: 2px solid #f1f5f9; background: rgba(248, 250, 252, 0.82); }
@@ -1117,6 +1118,5 @@ const exportarLista = () => {
   .config-grid { grid-template-columns: 1fr; }
   .hero-inner { flex-direction: column; }
   .card-acts { width: 100%; justify-content: flex-start; }
-  .act-btn { flex: 1 1 auto; }
 }
 </style>
