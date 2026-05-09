@@ -442,7 +442,7 @@ Route::get('/setores', function () {
     Route::get('/secretarias', function () {
         return response()->json([
             'unidades' => \Illuminate\Support\Facades\DB::table('UNIDADE')
-                ->where('UNIDADE_ATIVO', 1)
+                ->where('UNIDADE_ATIVA', 1)
                 ->orderBy('UNIDADE_NOME')
                 ->get(['UNIDADE_ID', 'UNIDADE_NOME'])
         ]);
