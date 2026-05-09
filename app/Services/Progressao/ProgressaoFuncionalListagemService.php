@@ -383,7 +383,14 @@ class ProgressaoFuncionalListagemService
             ->select('f.*', 'p.PESSOA_NOME', 'c.CARGO_NOME', 'c.CARGO_SALARIO', 'ca.CARREIRA_NOME', 'ca.CARREIRA_REGIME');
 
         if ($includeSetorScalar && Schema::hasTable('LOTACAO')) {
-            $q->addSelect(DB::raw('(SELECT l.SETOR_ID FROM LOTACAO l WHERE l.FUNCIONARIO_ID = f.FUNCIONARIO_ID AND l.LOTACAO_DATA_FIM IS NULL ORDER BY l.LOTACAO_ID ASC LIMIT 1) as setor_id'));
+            $q->addSelect([
+                'setor_id' => DB::table('LOTACAO as l')
+                    ->select('l.SETOR_ID')
+                    ->whereColumn('l.FUNCIONARIO_ID', 'f.FUNCIONARIO_ID')
+                    ->whereNull('l.LOTACAO_DATA_FIM')
+                    ->orderBy('l.LOTACAO_ID', 'asc')
+                    ->limit(1)
+            ]);
         }
 
         $this->applyBusca($q, $busca);
