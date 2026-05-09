@@ -75,6 +75,13 @@
         <span v-else>{{ batchUi.message }}</span>
       </div>
       <p v-if="batchUi.batchId" class="batch-id">Batch: <code>{{ batchUi.batchId }}</code></p>
+      <button
+        v-if="['done','cancelled','error'].includes(batchUi.status)"
+        class="btn-voltar-lista"
+        @click="fecharPainelBatch"
+      >
+        ← Ver lista de folhas
+      </button>
     </div>
 
     <template v-else>
@@ -908,6 +915,17 @@ const confirmarFolha = async (id) => {
 .batch-err { color: #b91c1c; }
 .batch-id { font-size: 11px; color: #64748b; margin: 0; }
 .batch-id code { font-size: 11px; background: #fff; padding: 2px 6px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.btn-voltar-lista {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
 .act-btn.act-red:hover    { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
 .btn-sm-orange { padding: 5px 11px; border-radius: 8px; border: 1px solid #fed7aa; background: #fff7ed; color: #ea580c; font-size: 12px; font-weight: 700; cursor: pointer; }
 .lanc-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
