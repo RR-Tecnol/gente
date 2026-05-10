@@ -59,10 +59,14 @@ $calcularRescisao = function ($func, $dataExoneracao, $salarioBase) {
     $feriasVencidasTercio = 0.0;
     try {
         // Conta períodos aquisitivos com 12+ meses sem férias registradas
-        $gozadas = DB::table('FERIAS_PERIODO')
-            ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-            ->whereNotNull('FERIAS_DATA_INICIO')
-            ->count();
+            // GAP-RES fix: tabela correta é FERIAS (não FERIAS_PERIODO que não existe)
+            // Status calculado pela view — não tem FERIAS_STATUS persistido
+            $gozadas = DB::table('FERIAS')
+                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
+                ->whereNotNull('FERIAS_DATA_INICIO')
+                ->whereNotNull('FERIAS_DATA_FIM')
+                ->where('FERIAS_DATA_FIM', '<', now()->toDateString())
+                ->count();
         $periodosTotais = max(0, $anosCompletos - $gozadas);
         if ($periodosTotais > 0) {
             $feriasVencidas = round($salarioBase * $periodosTotais, 2);
@@ -234,14 +238,22 @@ Route::post('/exoneracao/registrar', function (Request $request) use ($getSalari
         ]);
 
         // Atualiza o funcionário
-        DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcId)->update([
-            'FUNCIONARIO_DATA_FIM' => $dataEx,
-            'FUNCIONARIO_MOTIVO_SAIDA' => $motivo,
-            'FUNCIONARIO_DATA_EXONERACAO' => $dataEx,
-            'FUNCIONARIO_PORTARIA_SAIDA' => $portaria,
-            'FUNCIONARIO_STATUS_RESCISORIO' => 'PENDENTE',
-            'updated_at' => now(),
-        ]);
+        // Schema-defensive: só atualiza colunas que existem em PMSL
+        $updateFunc = [];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM'))
+            $updateFunc['FUNCIONARIO_DATA_FIM'] = $dataEx;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_MOTIVO_SAIDA'))
+            $updateFunc['FUNCIONARIO_MOTIVO_SAIDA'] = $motivo;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_EXONERACAO'))
+            $updateFunc['FUNCIONARIO_DATA_EXONERACAO'] = $dataEx;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_PORTARIA_SAIDA'))
+            $updateFunc['FUNCIONARIO_PORTARIA_SAIDA'] = $portaria;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_STATUS_RESCISORIO'))
+            $updateFunc['FUNCIONARIO_STATUS_RESCISORIO'] = 'PENDENTE';
+        if (!empty($updateFunc)) {
+            $updateFunc['updated_at'] = now();
+            DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcId)->update($updateFunc);
+        }
         \Illuminate\Support\Facades\Log::channel('security')->info('exoneracao_registrada', ['usuario' => $user?->USUARIO_ID, 'funcionario' => $funcId, 'rescisao_id' => $rescisaoId]);
 
         return response()->json([
@@ -327,14 +339,23 @@ Route::post('/exoneracao/incluir-folha', function (Request $request) {
             return response()->json(['erro' => 'Nenhum servidor selecionado.'], 422);
 
         // Cria ou recupera a folha rescisória da competência
-        $folhaId = DB::table('FOLHA')->insertGetId([
+        // Schema-defensive: FOLHA_TIPO_ESPECIAL não existe; usar FOLHA_TIPO_EVENTO (adicionado no GAP-13)
+        $folhaData = [
             'FOLHA_DESCRICAO' => "Folha Rescisória — $competencia",
             'FOLHA_TIPO' => 2,
-            'FOLHA_TIPO_ESPECIAL' => 'RESCISORIA',
-            'FOLHA_COMPETENCIA' => $competencia,
-            'FOLHA_SITUACAO' => 'ABERTA',
-            'FOLHA_CRIACAO' => now(),
-        ]);
+            'FOLHA_COMPETENCIA' => str_replace('-', '', substr($competencia, 0, 7)),
+            // Usar apenas ano+mes como INTEGER YYYYMM (padrão do sistema)
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_TIPO_EVENTO')) {
+            $folhaData['FOLHA_TIPO_EVENTO'] = 'RESCISORIA';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_SITUACAO')) {
+            $folhaData['FOLHA_SITUACAO'] = 'ABERTA';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_CRIACAO')) {
+            $folhaData['FOLHA_CRIACAO'] = now();
+        }
+        $folhaId = DB::table('FOLHA')->insertGetId($folhaData);
 
         $incluidos = 0;
         foreach ($rescisaoIds as $rescId) {
