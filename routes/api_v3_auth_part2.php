@@ -1634,6 +1634,56 @@
         }
     });
 
+    // ── 13º Salário (GAP-13) ──────────────────────────────────────────────
+    Route::get('/decimo-terceiro/preview/{tipo}/{ano}', function (string $tipo, int $ano) {
+        if (!in_array($tipo, ['DECIMO_TERCEIRO_1', 'DECIMO_TERCEIRO_2'])) {
+            return response()->json(['erro' => 'Tipo inválido.'], 422);
+        }
+        try {
+            $service = app(\App\Services\DecimoTerceiroService::class);
+            $ids = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_ATIVO'),
+                    fn($q) => $q->where('FUNCIONARIO_ATIVO', 1))
+                ->pluck('FUNCIONARIO_ID')->map(fn($v) => (int)$v)->take(10)->all();
+
+            $resultados = [];
+            $totalEst = 0.0;
+            foreach ($ids as $id) {
+                $calc = ($tipo === 'DECIMO_TERCEIRO_1')
+                    ? $service->calcularPrimeiraParcela($id, $ano)
+                    : $service->calcularSegundaParcela($id, $ano);
+                if ($calc['ok'] ?? false) {
+                    $resultados[] = $calc;
+                    $totalEst += $calc['valor_liquido'];
+                }
+            }
+            return response()->json([
+                'tipo' => $tipo, 'ano' => $ano,
+                'amostra' => $resultados,
+                'total_estimado_amostra' => round($totalEst, 2),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
+    });
+
+    Route::post('/decimo-terceiro/calcular', function (\Illuminate\Http\Request $request) {
+        $tipo = $request->input('tipo');
+        $ano = (int) $request->input('ano', now()->year);
+        $ids = $request->input('funcionario_ids', []);
+
+        if (!in_array($tipo, ['DECIMO_TERCEIRO_1', 'DECIMO_TERCEIRO_2'])) {
+            return response()->json(['erro' => 'Tipo inválido.'], 422);
+        }
+        try {
+            $service = app(\App\Services\DecimoTerceiroService::class);
+            return response()->json($service->processarLote($tipo, $ano, $ids));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('decimo_terceiro_erro', ['erro' => $e->getMessage()]);
+            return response()->json(['erro' => $e->getMessage()], 500);
+        }
+    });
+
     // â”€â”€ SubstituiÃ§Ãµes de escala â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Route::get('/substituicoes', function (\Illuminate\Http\Request $request) {
         try {

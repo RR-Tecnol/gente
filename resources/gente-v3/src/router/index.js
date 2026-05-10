@@ -198,6 +198,12 @@ const routes = [
                 meta: { roles: ['admin', 'rh'] }
             },
             {
+                path: 'decimo-terceiro',
+                name: 'DecimoTerceiro',
+                component: () => import('../views/financeiro/DecimoTerceiroView.vue'),
+                meta: { roles: ['admin', 'rh'] }
+            },
+            {
                 path: 'remessa-cnab',
                 name: 'RemessaCnab',
                 component: () => import('../views/financeiro/RemessaCnabView.vue'),

@@ -171,6 +171,7 @@ export const NAV_MANIFEST = [
 
   { type: 'section', label: 'Financeiro e Folha', roles: ['admin', 'rh'] },
   { type: 'item', to: '/folha-pagamento', label: 'Folha de Pagamento', icon: 'credit-card', roles: ['admin', 'rh'], ringKey: null, requiredAnySlugs: ['global.mde.25'] },
+  { type: 'item', to: '/decimo-terceiro', label: '13º Salário', icon: 'gift', roles: ['admin', 'rh'], ringKey: null, requiredAnySlugs: [] },
   { type: 'item', to: '/consignacao', label: 'Consignações', icon: 'account-balance', roles: ['admin', 'rh'], ringKey: null, requiredAnySlugs: [] },
   { type: 'item', to: '/consignatarias', label: 'Consignatárias', icon: 'building-bank', roles: ['admin'], ringKey: null, requiredAnySlugs: [] },
   { type: 'item', to: '/verba-indenizatoria', label: 'Verbas Indenizatórias', icon: 'money', roles: ['admin', 'rh'], ringKey: null, requiredAnySlugs: [] },
