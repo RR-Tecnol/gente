@@ -331,6 +331,19 @@ class MotorFolhaService
             // Não fail-fast: motor segue calculando.
         }
 
+        // GAP-FER: incluir 1/3 constitucional de férias e abono pecuniário como LANCAMENTO_FOLHA tipo P.
+        // Idempotente via FERIAS_FOLHA_APLICADA. Fail-soft: falha não interrompe a folha.
+        try {
+            app(\App\Services\Folha\InclusaoFeriasService::class)
+                ->incluirParaFolha($folhaId, $ids, (string) $competencia);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[MotorFolha] falha ao incluir 1/3 ferias', [
+                'folha_id' => $folhaId,
+                'erro' => $e->getMessage(),
+            ]);
+            // Não fail-fast: motor segue calculando.
+        }
+
         $servidoresQuery = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('VINCULO as v', 'v.VINCULO_ID', '=', 'f.VINCULO_ID')

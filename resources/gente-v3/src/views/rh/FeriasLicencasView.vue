@@ -110,6 +110,26 @@
             </div>
           </details>
 
+          <!-- GAP-FER: Abono Pecuniário -->
+          <div class="form-group">
+            <label>Abono Pecuniário <span class="opt-label">(opcional — converter dias em dinheiro)</span></label>
+            <div class="pecunia-strip">
+              <button
+                v-for="opt in [0, 5, 10]"
+                :key="opt"
+                type="button"
+                class="pecunia-btn"
+                :class="{ active: form.FERIAS_DIAS_PECUNIA === opt }"
+                @click="form.FERIAS_DIAS_PECUNIA = opt"
+              >
+                {{ opt === 0 ? 'Nenhum' : `${opt} dias` }}
+              </button>
+            </div>
+            <p v-if="form.FERIAS_DIAS_PECUNIA > 0" class="pecunia-info">
+              ℹ️ Você gozará {{ 30 - form.FERIAS_DIAS_PECUNIA }} dias e receberá {{ form.FERIAS_DIAS_PECUNIA }} dias em dinheiro (CF/88 art. 7º XVII). INSS e IRRF incidem normalmente.
+            </p>
+          </div>
+
           <!-- Upload de documentos (Frias) -->
           <div class="form-group">
             <label>Documento Anexo <span class="opt-label">(opcional)</span></label>
@@ -422,6 +442,7 @@ let sobreposicaoTimer = null
 const form = reactive({
   FERIAS_DATA_INICIO: '', FERIAS_DATA_FIM: '',
   FERIAS_AQUISITIVO_INICIO: '', FERIAS_AQUISITIVO_FIM: '',
+  FERIAS_DIAS_PECUNIA: 0,
 })
 
 // BUG-EST-14: verificar sobreposição ao mudar datas
@@ -475,6 +496,7 @@ const fetchFerias = async () => {
       FERIAS_DATA_FIM: f.FERIAS_DATA_FIM ?? f.ferias_fim ?? f.fim ?? null,
       FERIAS_AQUISITIVO_INICIO: f.FERIAS_AQUISITIVO_INICIO ?? f.aquisitivo_inicio ?? null,
       FERIAS_AQUISITIVO_FIM: f.FERIAS_AQUISITIVO_FIM ?? f.aquisitivo_fim ?? null,
+      FERIAS_DIAS_PECUNIA: f.FERIAS_DIAS_PECUNIA ?? f.dias_pecunia ?? 0,
       status: f.status ?? 'PENDENTE',
     }))
 
@@ -508,6 +530,7 @@ const solicitar = async () => {
     FERIAS_DATA_FIM:          form.FERIAS_DATA_FIM,
     FERIAS_AQUISITIVO_INICIO: form.FERIAS_AQUISITIVO_INICIO || null,
     FERIAS_AQUISITIVO_FIM:    form.FERIAS_AQUISITIVO_FIM    || null,
+    FERIAS_DIAS_PECUNIA:      form.FERIAS_DIAS_PECUNIA      || 0,
   }
   try {
     if (editandoId.value) {
@@ -539,12 +562,13 @@ const editarFerias = (s) => {
   form.FERIAS_DATA_FIM          = s.FERIAS_DATA_FIM    ?? s.fim    ?? ''
   form.FERIAS_AQUISITIVO_INICIO = s.FERIAS_AQUISITIVO_INICIO ?? ''
   form.FERIAS_AQUISITIVO_FIM    = s.FERIAS_AQUISITIVO_FIM    ?? ''
+  form.FERIAS_DIAS_PECUNIA      = s.FERIAS_DIAS_PECUNIA      ?? 0
   erroForm.value = ''; okForm.value = ''; tabFerias.value = 'solicitar'
 }
 const cancelarEdicao = () => resetForm()
 const resetForm = () => {
   editandoId.value = null
-  Object.assign(form, { FERIAS_DATA_INICIO: '', FERIAS_DATA_FIM: '', FERIAS_AQUISITIVO_INICIO: '', FERIAS_AQUISITIVO_FIM: '' })
+  Object.assign(form, { FERIAS_DATA_INICIO: '', FERIAS_DATA_FIM: '', FERIAS_AQUISITIVO_INICIO: '', FERIAS_AQUISITIVO_FIM: '', FERIAS_DIAS_PECUNIA: 0 })
 }
 const cancelarFerias = async (s) => {
   const id = s.FERIAS_ID ?? s.id ?? s.ferias_id
@@ -933,4 +957,10 @@ const toggleAfastExpand = (id) => { afastExpandido[id] = !afastExpandido[id] }
 .pct-danger   { color: #b91c1c; }
 .overlap-list { margin: 6px 0 0 16px; padding: 0; font-size: 12px; color: #92400e; }
 .overlap-list li { margin-bottom: 2px; }
+
+/* GAP-FER: Pecúnia */
+.pecunia-strip { display: flex; gap: 8px; margin-top: 4px; }
+.pecunia-btn { flex: 1; padding: 8px 12px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #f8fafc; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; font-family: inherit; transition: all 0.18s; }
+.pecunia-btn.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.pecunia-info { font-size: 12px; color: #78350f; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 8px 12px; margin-top: 6px; }
 </style>

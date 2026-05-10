@@ -1453,6 +1453,7 @@
                 'FERIAS_DATA_FIM' => $f->FERIAS_DATA_FIM,
                 'FERIAS_AQUISITIVO_INICIO' => $f->FERIAS_AQUISITIVO_INICIO,
                 'FERIAS_AQUISITIVO_FIM' => $f->FERIAS_AQUISITIVO_FIM,
+                'FERIAS_DIAS_PECUNIA' => $f->FERIAS_DIAS_PECUNIA ?? 0,
                 'ferias_id' => $f->FERIAS_ID,
                 'ferias_inicio' => $f->FERIAS_DATA_INICIO,
                 'ferias_fim' => $f->FERIAS_DATA_FIM,
@@ -1505,6 +1506,50 @@
             ->get();
         $pct = $totalSetor > 0 ? round(($emFerias->count() / $totalSetor) * 100) : 0;
         return response()->json(['sobreposicao' => $emFerias->count() > 0, 'membros' => $emFerias, 'total_setor' => $totalSetor, 'pct' => $pct]);
+    });
+
+    // GAP-FER: configurar abono pecuniário de férias
+    Route::patch('/ferias/{id}/pecunia', function (\Illuminate\Http\Request $request, int $id) {
+        $dias = (int) $request->input('dias_pecunia', 0);
+        if ($dias < 0 || $dias > 10) {
+            return response()->json(['erro' => 'Dias de pecúnia deve ser entre 0 e 10 (máximo 1/3 de 30 dias).'], 422);
+        }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('FERIAS', 'FERIAS_DIAS_PECUNIA')) {
+            return response()->json(['erro' => 'Migration FERIAS_DIAS_PECUNIA pendente.'], 500);
+        }
+
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $funcionario = optional($user)->funcionario
+            ?? \App\Models\Funcionario::where('USUARIO_ID', $user->USUARIO_ID)->first();
+
+        // Verificar que a férias pertence ao servidor logado (ou admin pode alterar qualquer um)
+        $ferias = \Illuminate\Support\Facades\DB::table('FERIAS')->find($id);
+        if (!$ferias) {
+            return response()->json(['erro' => 'Férias não encontrada.'], 404);
+        }
+
+        $isAdmin = $user && in_array($user->PERFIL_SLUG ?? '', ['admin', 'rh_folha', 'Administrador']);
+        if (!$isAdmin && $ferias->FUNCIONARIO_ID !== ($funcionario?->FUNCIONARIO_ID)) {
+            return response()->json(['erro' => 'Sem permissão para alterar este registro.'], 403);
+        }
+
+        // Não pode alterar se já foi aplicada na folha
+        if (!empty($ferias->FERIAS_FOLHA_APLICADA)) {
+            return response()->json(['erro' => "Férias já processadas na folha {$ferias->FERIAS_FOLHA_APLICADA}. Não é possível alterar."], 409);
+        }
+
+        \Illuminate\Support\Facades\DB::table('FERIAS')
+            ->where('FERIAS_ID', $id)
+            ->update(['FERIAS_DIAS_PECUNIA' => $dias]);
+
+        return response()->json([
+            'ok' => true,
+            'ferias_id' => $id,
+            'dias_pecunia' => $dias,
+            'message' => $dias > 0
+                ? "Abono pecuniário configurado: {$dias} dias serão convertidos em dinheiro."
+                : 'Abono pecuniário removido. Todas as férias serão gozadas.',
+        ]);
     });
 
     // â”€â”€ Faltas e Atrasos do usuÃ¡rio logado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

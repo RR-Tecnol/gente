@@ -170,6 +170,7 @@ Route::post('/ferias', function (\Illuminate\Http\Request $request) {
             'FERIAS_DATA_FIM' => $request->FERIAS_DATA_FIM,
             'FERIAS_AQUISITIVO_INICIO' => $request->FERIAS_AQUISITIVO_INICIO ?? null,
             'FERIAS_AQUISITIVO_FIM' => $request->FERIAS_AQUISITIVO_FIM ?? null,
+            'FERIAS_DIAS_PECUNIA' => $request->input('FERIAS_DIAS_PECUNIA', 0),
         ]);
 
         return response()->json(['message' => 'Férias agendadas com sucesso.', 'ferias_id' => $ferias->FERIAS_ID], 201);
@@ -198,6 +199,9 @@ Route::put('/ferias/{id}', function ($id, \Illuminate\Http\Request $request) {
             $ferias->FERIAS_DATA_INICIO = $request->FERIAS_DATA_INICIO;
         if ($request->has('FERIAS_DATA_FIM'))
             $ferias->FERIAS_DATA_FIM = $request->FERIAS_DATA_FIM;
+            
+        if ($request->has('FERIAS_DIAS_PECUNIA'))
+            $ferias->FERIAS_DIAS_PECUNIA = $request->input('FERIAS_DIAS_PECUNIA', 0);
         if ($request->has('FERIAS_AQUISITIVO_INICIO'))
             $ferias->FERIAS_AQUISITIVO_INICIO = $request->FERIAS_AQUISITIVO_INICIO;
         if ($request->has('FERIAS_AQUISITIVO_FIM'))
