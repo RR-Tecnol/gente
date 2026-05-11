@@ -351,13 +351,24 @@ Route::get('/funcoes', function (\Illuminate\Http\Request $request) {
         if ($request->filled('q')) {
             $query->where('ATRIBUICAO_NOME', 'like', '%' . $request->q . '%');
         }
+        $atribCols = \Illuminate\Support\Facades\Schema::getColumnListing('ATRIBUICAO');
+        $temCbo          = in_array('ATRIBUICAO_CBO', $atribCols);
+        $temComissao     = in_array('ATRIBUICAO_COMISSAO', $atribCols);
+        $temGratificacao = in_array('ATRIBUICAO_GRATIFICACAO', $atribCols);
+        $temAtivo        = in_array('ATRIBUICAO_ATIVO', $atribCols);
+        $temAtiva        = in_array('ATRIBUICAO_ATIVA', $atribCols);
+
         $funcoes = $query->orderBy('ATRIBUICAO_NOME')->get()->map(fn($a) => [
-            'funcao_id' => $a->ATRIBUICAO_ID,
-            'nome' => $a->ATRIBUICAO_NOME,
-            'cbo' => $a->ATRIBUICAO_CBO ?? null,
-            'tipo' => $a->ATRIBUICAO_COMISSAO ?? null,
-            'gratificacao' => (float) ($a->ATRIBUICAO_GRATIFICACAO ?? 0),
-            'ativo' => (bool) ($a->ATRIBUICAO_ATIVO ?? true),
+            'funcao_id'   => $a->ATRIBUICAO_ID,
+            'nome'        => $a->ATRIBUICAO_NOME,
+            'cbo'         => $temCbo ? ($a->ATRIBUICAO_CBO ?? null) : null,
+            'tipo'        => $temComissao ? ($a->ATRIBUICAO_COMISSAO ?? null) : null,
+            'gratificacao'=> $temGratificacao ? (float)($a->ATRIBUICAO_GRATIFICACAO ?? 0) : 0.0,
+            // ATRIBUICAO pode ter ATRIBUICAO_ATIVO ou ATRIBUICAO_ATIVA dependendo do schema
+            'ativo'       => (bool)(
+                $temAtivo  ? ($a->ATRIBUICAO_ATIVO  ?? true) :
+                ($temAtiva ? ($a->ATRIBUICAO_ATIVA  ?? true) : true)
+            ),
         ]);
 
         return response()->json(['funcoes' => $funcoes, 'total' => $funcoes->count()]);
@@ -369,20 +380,19 @@ Route::get('/funcoes', function (\Illuminate\Http\Request $request) {
 //  Funções  Criar
 Route::post('/funcoes', function (\Illuminate\Http\Request $request) {
     try {
+        $atribCols = \Illuminate\Support\Facades\Schema::getColumnListing('ATRIBUICAO');
         $funcao = new \App\Models\Atribuicao();
         $funcao->ATRIBUICAO_NOME = $request->nome ?? $request->ATRIBUICAO_NOME;
-        try {
+        if (in_array('ATRIBUICAO_CBO', $atribCols))
             $funcao->ATRIBUICAO_CBO = $request->cbo ?? null;
-        } catch (\Throwable $e) {
-        }
-        try {
+        if (in_array('ATRIBUICAO_COMISSAO', $atribCols))
             $funcao->ATRIBUICAO_COMISSAO = $request->tipo ?? null;
-        } catch (\Throwable $e) {
-        }
-        try {
+        if (in_array('ATRIBUICAO_GRATIFICACAO', $atribCols))
             $funcao->ATRIBUICAO_GRATIFICACAO = $request->gratificacao ?? null;
-        } catch (\Throwable $e) {
-        }
+        if (in_array('ATRIBUICAO_ATIVO', $atribCols))
+            $funcao->ATRIBUICAO_ATIVO = 1;
+        elseif (in_array('ATRIBUICAO_ATIVA', $atribCols))
+            $funcao->ATRIBUICAO_ATIVA = 1;
         $funcao->save();
 
         return response()->json(['message' => 'Função criada com sucesso.', 'funcao_id' => $funcao->ATRIBUICAO_ID], 201);
@@ -394,26 +404,15 @@ Route::post('/funcoes', function (\Illuminate\Http\Request $request) {
 //  Funções  Atualizar
 Route::put('/funcoes/{id}', function ($id, \Illuminate\Http\Request $request) {
     try {
+        $atribCols = \Illuminate\Support\Facades\Schema::getColumnListing('ATRIBUICAO');
         $funcao = \App\Models\Atribuicao::findOrFail($id);
         $funcao->ATRIBUICAO_NOME = $request->nome ?? $request->ATRIBUICAO_NOME ?? $funcao->ATRIBUICAO_NOME;
-        try {
-            if ($request->has('cbo')) {
-                $funcao->ATRIBUICAO_CBO = $request->cbo;
-            }
-        } catch (\Throwable $e) {
-        }
-        try {
-            if ($request->has('tipo')) {
-                $funcao->ATRIBUICAO_COMISSAO = $request->tipo;
-            }
-        } catch (\Throwable $e) {
-        }
-        try {
-            if ($request->has('gratificacao')) {
-                $funcao->ATRIBUICAO_GRATIFICACAO = $request->gratificacao;
-            }
-        } catch (\Throwable $e) {
-        }
+        if (in_array('ATRIBUICAO_CBO', $atribCols) && $request->has('cbo'))
+            $funcao->ATRIBUICAO_CBO = $request->cbo;
+        if (in_array('ATRIBUICAO_COMISSAO', $atribCols) && $request->has('tipo'))
+            $funcao->ATRIBUICAO_COMISSAO = $request->tipo;
+        if (in_array('ATRIBUICAO_GRATIFICACAO', $atribCols) && $request->has('gratificacao'))
+            $funcao->ATRIBUICAO_GRATIFICACAO = $request->gratificacao;
         $funcao->save();
 
         return response()->json(['message' => 'Função atualizada com sucesso.']);
