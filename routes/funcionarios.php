@@ -525,6 +525,16 @@ Route::post('/funcionarios', function (\Illuminate\Http\Request $request) {
                     $usuarioId = \Illuminate\Support\Facades\DB::table('USUARIO')
                         ->insertGetId($payloadUsuario);
 
+                    // PMSL: PERFIL_ID direto na tabela USUARIO (sem tabela USUARIO_PERFIL)
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('USUARIO', 'PERFIL_ID')) {
+                        $perfilId = \Illuminate\Support\Facades\DB::table('PERFIL')
+                            ->whereIn('PERFIL_NOME', ['Funcionario', 'Funcionário', 'Externo'])
+                            ->value('PERFIL_ID') ?? 5;
+                        \Illuminate\Support\Facades\DB::table('USUARIO')
+                            ->where('USUARIO_ID', $usuarioId)
+                            ->update(['PERFIL_ID' => $perfilId]);
+                    }
+
                     // Perfil padrão Funcionário
                     if (\Illuminate\Support\Facades\Schema::hasTable('USUARIO_PERFIL')) {
                         $upCols = \Illuminate\Support\Facades\Schema::getColumnListing('USUARIO_PERFIL');
@@ -813,12 +823,14 @@ Route::post('/funcionarios/{id}/resetar-senha', function ($id) {
 
         // Buscar usuário pelo FUNCIONARIO_ID ou pelo CPF
         $cpf = preg_replace('/\D/', '', (string) ($func->pessoa->PESSOA_CPF_NUMERO ?? ''));
+        // Em PMSL, USUARIO não tem FUNCIONARIO_ID — vínculo é pelo USUARIO_LOGIN=CPF
+        // Schema-defensive: tenta FUNCIONARIO_ID se existir, senão usa CPF
         $usuario = null;
-        if (\Illuminate\Support\Facades\Schema::hasColumn('USUARIO', 'FUNCIONARIO_ID')) {
-            $usuario = \App\Models\Usuario::where('FUNCIONARIO_ID', $id)->first();
-        }
-        if (!$usuario && $cpf) {
+        if ($cpf) {
             $usuario = \App\Models\Usuario::where('USUARIO_LOGIN', $cpf)->first();
+        }
+        if (!$usuario && \Illuminate\Support\Facades\Schema::hasColumn('USUARIO', 'FUNCIONARIO_ID')) {
+            $usuario = \App\Models\Usuario::where('FUNCIONARIO_ID', $id)->first();
         }
         if (!$usuario) {
             return response()->json(['erro' => 'Usuário de acesso não encontrado para este funcionário.'], 404);
