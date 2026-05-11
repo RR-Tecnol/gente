@@ -115,16 +115,16 @@ const declaracoes = ref([])
 const stats = ref({ permitida: 0, vedado: 0, pendente: 0 })
 const nova = ref({ funcionario_id: null, servidor_nome: '', situacao: 'LICITA', outro_cargo: '', outro_orgao: '', observacao: '' })
 
-const MOCK = [
-  { DECLARACAO_ID: 1, nome: 'Maria Silva', matricula: '20250001', cargo_atual: 'Enfermeira', OUTRO_CARGO: 'Professora', OUTRO_ORGAO: 'UFMA', SITUACAO: 'LICITA', DATA_DECLARACAO: '2026-01-15' },
-  { DECLARACAO_ID: 2, nome: 'João Costa', matricula: '20250002', cargo_atual: 'Técnico de RH', OUTRO_CARGO: 'Auxiliar Administrativo', OUTRO_ORGAO: 'DETRAN-MA', SITUACAO: 'VEDADA', DATA_DECLARACAO: '2026-02-03' },
-]
+
 
 async function carregar() {
   try {
     const { data } = await api.get('/api/v3/acumulacao')
-    declaracoes.value = data.declaracoes?.data ?? MOCK
-  } catch { declaracoes.value = MOCK }
+    declaracoes.value = data.declaracoes ?? []
+  } catch (e) {
+    console.error('Erro ao carregar acumulações:', e)
+    declaracoes.value = []
+  }
   stats.value = {
     permitida: declaracoes.value.filter(d => d.SITUACAO === 'LICITA').length,
     vedado:    declaracoes.value.filter(d => d.SITUACAO === 'VEDADA').length,
