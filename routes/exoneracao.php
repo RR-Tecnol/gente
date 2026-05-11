@@ -271,10 +271,10 @@ Route::post('/exoneracao/registrar', function (Request $request) use ($getSalari
 // ── Lista de elegíveis para folha rescisória (com filtro por secretaria) ─
 Route::get('/exoneracao/elegiveis', function (Request $request) {
     try {
+        $hoje = now()->toDateString();
         $unidadeId = $request->unidade_id;
 
-        $query = DB::table('RESCISAO_CALCULO as rc')
-            ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'rc.FUNCIONARIO_ID')
+        $query = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
             ->leftJoin('LOTACAO as l', function ($j) {
@@ -283,17 +283,29 @@ Route::get('/exoneracao/elegiveis', function (Request $request) {
             })
             ->leftJoin('SETOR as s', 's.SETOR_ID', '=', 'l.SETOR_ID')
             ->leftJoin('UNIDADE as u', 'u.UNIDADE_ID', '=', 's.UNIDADE_ID')
-            ->whereIn('rc.STATUS', ['VALIDADO', 'CALCULADO'])
-            ->whereNull('rc.FOLHA_ID');
+            ->where(function ($w) use ($hoje) {
+                $w->whereNull('f.FUNCIONARIO_DATA_FIM')
+                    ->orWhere('f.FUNCIONARIO_DATA_FIM', '>', $hoje);
+            });
 
         if ($unidadeId) {
-            // Filtro hierárquico: secretaria selecionada + todos os seus setores filhos
-            $setoresIds = DB::table('SETOR')->where('UNIDADE_ID', $unidadeId)->pluck('SETOR_ID');
+            $setoresIds = DB::table('SETOR')
+                ->where('UNIDADE_ID', $unidadeId)
+                ->pluck('SETOR_ID');
             $query->whereIn('l.SETOR_ID', $setoresIds);
         }
 
+        // Verificar se já tem rescisão calculada para cada funcionário
+        $temRescisao = [];
+        if (Schema::hasTable('RESCISAO_CALCULO')) {
+            $temRescisao = DB::table('RESCISAO_CALCULO')
+                ->whereIn('STATUS', ['VALIDADO', 'CALCULADO'])
+                ->whereNull('FOLHA_ID')
+                ->pluck('FUNCIONARIO_ID')
+                ->toArray();
+        }
+
         $elegiveis = $query->select(
-            'rc.RESCISAO_ID as rescisao_id',
             'f.FUNCIONARIO_ID as funcionario_id',
             'p.PESSOA_NOME as nome',
             'f.FUNCIONARIO_MATRICULA as matricula',
@@ -301,21 +313,18 @@ Route::get('/exoneracao/elegiveis', function (Request $request) {
             's.SETOR_NOME as setor',
             'u.UNIDADE_NOME as secretaria',
             'u.UNIDADE_ID as unidade_id',
-            'rc.DATA_EXONERACAO as data_exoneracao',
-            'rc.MOTIVO_SAIDA as motivo',
-            'rc.PORTARIA_NUM as portaria',
-            'rc.TOTAL_BRUTO as total_bruto',
-            'rc.DESCONTO_IRRF as desconto_irrf',
-            'rc.TOTAL_LIQUIDO as total_liquido',
-            'rc.REGIME_PREV as regime',
-            'rc.STATUS as status'
-        )->orderBy('rc.DATA_EXONERACAO')->get();
+            'f.FUNCIONARIO_DATA_INICIO as data_admissao'
+        )->orderBy('p.PESSOA_NOME')->get()
+        ->map(function ($f) use ($temRescisao) {
+            $f->tem_rescisao_calculada = in_array($f->funcionario_id, $temRescisao);
+            return $f;
+        });
 
-        // Agrupa por unidade para exibição no frontend
         $porSecretaria = $elegiveis->groupBy('secretaria');
-
-        // Lista de unidades disponíveis para o filtro
-        $unidades = DB::table('UNIDADE')->select('UNIDADE_ID as id', 'UNIDADE_NOME as nome')->get();
+        $unidades = DB::table('UNIDADE')
+            ->select('UNIDADE_ID as id', 'UNIDADE_NOME as nome')
+            ->orderBy('UNIDADE_NOME')
+            ->get();
 
         return response()->json([
             'total' => $elegiveis->count(),
