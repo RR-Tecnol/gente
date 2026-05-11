@@ -275,7 +275,7 @@ Route::post('/funcionarios', function (\Illuminate\Http\Request $request) {
             'FUNCIONARIO_DATA_INICIO' => 'required|date',
             'CARGO_ID' => 'required|integer',
             'PESSOA_CPF_NUMERO' => ['nullable', 'regex:/^\d{3}\.?\d{3}\.?\d{3}\-?\d{2}$/'],
-            'PESSOA_EMAIL' => 'nullable|email:rfc,dns|max:150',
+            'PESSOA_EMAIL' => 'nullable|email:rfc|max:150',
             'PESSOA_CELULAR' => 'nullable|string|max:20',
             'PESSOA_TELEFONE' => 'nullable|string|max:20',
         ], [
@@ -406,6 +406,18 @@ Route::post('/funcionarios', function (\Illuminate\Http\Request $request) {
         ]));
         $funcionario->FUNCIONARIO_DATA_INICIO = $request->FUNCIONARIO_DATA_INICIO ?? now()->toDateString();
         $funcionario->FUNCIONARIO_DATA_CADASTRO = now()->toDateString();
+
+        // Gerar matrícula automática se não informada — padrão PMSL: ANO + sequencial 3 dígitos
+        if (empty($funcionario->FUNCIONARIO_MATRICULA)) {
+            $ano = now()->year;
+            $ultimo = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+                ->where('FUNCIONARIO_MATRICULA', 'like', $ano . '%')
+                ->orderByDesc('FUNCIONARIO_MATRICULA')
+                ->value('FUNCIONARIO_MATRICULA');
+            $seq = $ultimo ? ((int) substr((string) $ultimo, 4) + 1) : 1;
+            $funcionario->FUNCIONARIO_MATRICULA = $ano . str_pad($seq, 3, '0', STR_PAD_LEFT);
+        }
+
         $funcionario->save();
 
         if (\Illuminate\Support\Facades\Schema::hasTable('PONTO_CONFIG_FUNCIONARIO')) {
@@ -506,7 +518,7 @@ Route::put('/funcionarios/{id}', function ($id, \Illuminate\Http\Request $reques
             'PESSOA_NOME' => 'nullable|string|min:3|max:150',
             'FUNCIONARIO_DATA_INICIO' => 'nullable|date',
             'PESSOA_CPF_NUMERO' => ['nullable', 'regex:/^\d{3}\.?\d{3}\.?\d{3}\-?\d{2}$/'],
-            'PESSOA_EMAIL' => 'nullable|email:rfc,dns|max:150',
+            'PESSOA_EMAIL' => 'nullable|email:rfc|max:150',
         ], [
             'PESSOA_CPF_NUMERO.regex' => 'CPF inválido.',
             'PESSOA_EMAIL.email' => 'E-mail inválido.',

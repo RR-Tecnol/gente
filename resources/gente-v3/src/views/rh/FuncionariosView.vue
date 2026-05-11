@@ -177,7 +177,7 @@
                     <input v-model="form.PESSOA_DATA_NASCIMENTO" type="date" class="form-input" />
                   </div>
                   <div class="form-group">
-                    <label>Sexo</label>
+                    <label>Sexo Biológico <span class="field-hint">(eSocial)</span></label>
                     <select v-model="form.PESSOA_SEXO" class="form-input">
                       <option value="">Selecione</option>
                       <option value="1">Masculino</option>
