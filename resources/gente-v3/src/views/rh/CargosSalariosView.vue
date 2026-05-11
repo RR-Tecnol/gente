@@ -115,7 +115,7 @@
               <td>{{ escolaridadeLabel(c.escolaridade) || '—' }}</td>
               <td>
                 <span v-if="c.remuneracao" class="money">{{ formatMoney(c.remuneracao) }}</span>
-                <span v-else class="text-muted">—</span>
+                <span v-else class="hint-sm" title="Salário definido na Tabela Salarial">— (Tab. Salarial)</span>
                 <span v-if="c.valor_hora_desconto" class="item-desc">Desc./hora: {{ formatMoney(c.valor_hora_desconto) }}</span>
               </td>
               <td>
@@ -273,6 +273,12 @@
                     <label>Sigla</label>
                     <input v-model="formCargo.CARGO_SIGLA" type="text" class="form-input" placeholder="ENF" maxlength="10" />
                   </div>
+                  <div class="form-group">
+                    <label>CBO <span class="field-hint">(6 dígitos — eSocial S-1030)</span></label>
+                    <input v-model="formCargo.CARGO_CBO" type="text" class="form-input"
+                      placeholder="Ex: 223505" maxlength="6"
+                      @input="formCargo.CARGO_CBO = formCargo.CARGO_CBO.replace(/\D/g, '').slice(0,6)" />
+                  </div>
                   <div class="form-group col-full">
                     <label>Descrição / Atribuições</label>
                     <textarea v-model="formCargo.CARGO_DESCRICAO" class="form-input" rows="2" placeholder="Descreva as atribuições e responsabilidades do cargo..."></textarea>
@@ -363,7 +369,7 @@
                     <span class="field-hint">Sobrepõe o CBO do cargo base no eSocial</span>
                   </div>
                   <div class="form-group">
-                    <label>Tipo (eSocial)</label>
+                    <label>Tipo (eSocial) — opcional</label>
                     <select v-model="formFuncao.tipo" class="form-input">
                       <option value="">Não se aplica</option>
                       <option value="1">1 — Função de Confiança</option>
@@ -371,7 +377,7 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Gratificação (R$)</label>
+                    <label>Gratificação (R$) — opcional</label>
                     <input v-model="formFuncao.gratificacao" type="number" step="0.01" min="0" class="form-input" placeholder="0,00" />
                     <span class="field-hint">Valor adicional ao salário do cargo base</span>
                   </div>
@@ -445,7 +451,7 @@ const hojeISODate = () => new Date().toISOString().slice(0, 10)
 
 const formCargoVazio = () => ({
   _id: null,
-  CARGO_NOME: '', CARGO_SIGLA: '',
+  CARGO_NOME: '', CARGO_SIGLA: '', CARGO_CBO: '',
   CARGO_DESCRICAO: '',
   CARGO_REMUNERACAO: '', CARGO_VALOR_HORA_DESCONTO: '', CARGO_ESCOLARIDADE: '',
   CARGO_GESTAO: '0', CARGO_DATA_INICIO: hojeISODate(), CARGO_DATA_FIM: '',
@@ -501,6 +507,7 @@ const abrirModalCargo = (c = null) => {
   formCargo.value = c ? {
     _id: c.cargo_id, CARGO_NOME: c.nome ?? '',
     CARGO_SIGLA: c.sigla ?? '',
+    CARGO_CBO: c.cbo ?? '',
     CARGO_DESCRICAO: c.descricao ?? '',
     CARGO_REMUNERACAO: c.remuneracao ?? '',
     CARGO_VALOR_HORA_DESCONTO: c.valor_hora_desconto ?? '',
@@ -716,6 +723,7 @@ code { font-family: monospace; font-size: 11px; background: rgba(0,0,0,0.08); bo
 .cbo-chip { background: #fefce8; color: #854d0e; border: 1px solid #fef08a; border-radius: 6px; padding: 3px 8px; font-weight: 800; font-size: 12px; font-family: monospace; letter-spacing: 0.05em; }
 .missing { font-size: 12px; color: #f59e0b; font-weight: 600; }
 .text-muted { color: #94a3b8; font-size: 12px; }
+.hint-sm { font-size: 11px; color: #94a3b8; font-style: italic; }
 .money { font-family: monospace; font-size: 13px; font-weight: 700; color: #15803d; }
 .money-big { font-family: monospace; font-size: 15px; font-weight: 900; color: #15803d; }
 .badge-gestao { display: inline-block; background: #fdf4ff; color: #7e22ce; border: 1px solid #e9d5ff; border-radius: 8px; padding: 3px 8px; font-size: 11px; font-weight: 700; }
