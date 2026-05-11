@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             PcaspSeeder::class,                 // 12º: plano mínimo de contas contábeis
             SagresDeParaSeeder::class,          // 13º: de/para SAGRES
             SidebarCoverageSeeder::class,       // 14º: massa mínima para abas críticas do sidebar
+            TurnosBaseSeeder::class,            // 15º: turnos base do sistema
         ]);
     }
 }
