@@ -129,6 +129,8 @@ Route::post('/cargos', function (\Illuminate\Http\Request $request) {
             'CARGO_CODIGO_CBO' => $request->CARGO_CBO ?? $request->CARGO_CODIGO_CBO ?? null,
             'CARGO_DESCRICAO' => $request->CARGO_DESCRICAO ?? null,
             'CARGO_REMUNERACAO' => $request->CARGO_REMUNERACAO ?? null,
+            // PMSL usa CARGO_SALARIO (campo legado) — mapear do valor enviado pelo formulário
+            'CARGO_SALARIO' => $request->CARGO_REMUNERACAO ?? $request->CARGO_SALARIO ?? null,
             'CARGO_ESCOLARIDADE' => $request->CARGO_ESCOLARIDADE ?? null,
             'CARGO_GESTAO' => (int) ($request->CARGO_GESTAO ?? 0),
             'CARGO_ATIVO' => 1,
@@ -139,7 +141,7 @@ Route::post('/cargos', function (\Illuminate\Http\Request $request) {
             'CARGO_CLASSE' => $request->CARGO_CLASSE ?? null,
             'CARGO_REFERENCIA' => $request->CARGO_REFERENCIA ?? null,
             'CARGO_NIVEL' => $request->CARGO_NIVEL ?? null,
-            'CARGO_SALARIO_BASE' => $request->CARGO_SALARIO_BASE ?? null,
+            'CARGO_SALARIO_BASE' => $request->CARGO_SALARIO_BASE ?? $request->CARGO_REMUNERACAO ?? null,
             'CARGO_CARGA_HORARIA' => $request->CARGO_CARGA_HORARIA ?? null,
         ];
         if (in_array('created_at', $cargoCols, true)) {
@@ -235,6 +237,8 @@ Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
             'CARGO_CODIGO_CBO' => $request->CARGO_CBO ?? $request->CARGO_CODIGO_CBO ?? null,
             'CARGO_DESCRICAO' => $request->CARGO_DESCRICAO ?? null,
             'CARGO_REMUNERACAO' => $request->CARGO_REMUNERACAO ?? null,
+            // PMSL usa CARGO_SALARIO (campo legado) — mapear do valor enviado pelo formulário
+            'CARGO_SALARIO' => $request->CARGO_REMUNERACAO ?? $request->CARGO_SALARIO ?? $atual->CARGO_SALARIO ?? null,
             'CARGO_ESCOLARIDADE' => $request->CARGO_ESCOLARIDADE ?? null,
             'CARGO_GESTAO' => (int) ($request->CARGO_GESTAO ?? 0),
             'CARGO_DATA_INICIO' => $inicio,
@@ -244,7 +248,7 @@ Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
             'CARGO_CLASSE' => $request->CARGO_CLASSE ?? $atual->CARGO_CLASSE ?? null,
             'CARGO_REFERENCIA' => $request->CARGO_REFERENCIA ?? $atual->CARGO_REFERENCIA ?? null,
             'CARGO_NIVEL' => $request->CARGO_NIVEL ?? $atual->CARGO_NIVEL ?? null,
-            'CARGO_SALARIO_BASE' => $request->CARGO_SALARIO_BASE ?? $atual->CARGO_SALARIO_BASE ?? null,
+            'CARGO_SALARIO_BASE' => $request->CARGO_SALARIO_BASE ?? $request->CARGO_REMUNERACAO ?? $atual->CARGO_SALARIO_BASE ?? null,
             'CARGO_CARGA_HORARIA' => $request->CARGO_CARGA_HORARIA ?? $atual->CARGO_CARGA_HORARIA ?? null,
         ];
         if (in_array('updated_at', $cargoCols, true)) {
