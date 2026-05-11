@@ -242,21 +242,18 @@ Route::post('/exoneracao/registrar', function (Request $request) use ($getSalari
         ]);
 
         // Atualiza o funcionário
-        // Schema-defensive: só atualiza colunas que existem em PMSL
-        $updateFunc = [];
-        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM'))
-            $updateFunc['FUNCIONARIO_DATA_FIM'] = $dataEx;
-        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_MOTIVO_SAIDA'))
-            $updateFunc['FUNCIONARIO_MOTIVO_SAIDA'] = $motivo;
-        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_EXONERACAO'))
-            $updateFunc['FUNCIONARIO_DATA_EXONERACAO'] = $dataEx;
-        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_PORTARIA_SAIDA'))
-            $updateFunc['FUNCIONARIO_PORTARIA_SAIDA'] = $portaria;
-        if (\Illuminate\Support\Facades\Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_STATUS_RESCISORIO'))
-            $updateFunc['FUNCIONARIO_STATUS_RESCISORIO'] = 'PENDENTE';
-        if (!empty($updateFunc)) {
-            $updateFunc['updated_at'] = now();
-            DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcId)->update($updateFunc);
+        // Schema-defensive: só atualiza colunas que existem em PMSL, incluindo updated_at
+        $colsFun = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCIONARIO');
+        $payloadFun = array_intersect_key([
+            'FUNCIONARIO_DATA_FIM'          => $dataEx,
+            'FUNCIONARIO_MOTIVO_SAIDA'      => $motivo,
+            'FUNCIONARIO_DATA_EXONERACAO'   => $dataEx,
+            'FUNCIONARIO_PORTARIA_SAIDA'    => $portaria,
+            'FUNCIONARIO_STATUS_RESCISORIO' => 'PENDENTE',
+            'updated_at'                    => now(),
+        ], array_flip($colsFun));
+        if (!empty($payloadFun)) {
+            DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcId)->update($payloadFun);
         }
         \Illuminate\Support\Facades\Log::channel('security')->info('exoneracao_registrada', ['usuario' => $user?->USUARIO_ID, 'funcionario' => $funcId, 'rescisao_id' => $rescisaoId]);
 
@@ -428,10 +425,14 @@ Route::post('/exoneracao/incluir-folha', function (Request $request) {
             ]);
 
             // Atualiza funcionário
-            DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $rc->FUNCIONARIO_ID)->update([
+            $colsFun = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCIONARIO');
+            $payloadFun = array_intersect_key([
                 'FUNCIONARIO_STATUS_RESCISORIO' => 'INCLUIDO_FOLHA',
                 'updated_at' => now(),
-            ]);
+            ], array_flip($colsFun));
+            if (!empty($payloadFun)) {
+                DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $rc->FUNCIONARIO_ID)->update($payloadFun);
+            }
 
             $incluidos++;
         }
