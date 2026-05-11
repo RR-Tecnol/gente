@@ -132,7 +132,7 @@ $calcularRescisao = function ($func, $dataExoneracao, $salarioBase) {
 // ── Buscar servidor para exoneração (autocomplete) ────────────────
 Route::get('/exoneracao/buscar', function (Request $request) {
     try {
-        $q = $request->q ?? '';
+        $q = request()->input('q', '');
         $servidores = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
@@ -342,8 +342,8 @@ Route::get('/exoneracao/elegiveis', function (Request $request) {
 Route::post('/exoneracao/incluir-folha', function (Request $request) {
     try {
         $user = Auth::user();
-        $rescisaoIds = $request->rescisao_ids ?? [];
-        $competencia = $request->competencia ?? now()->format('Y-m');
+        $rescisaoIds = request()->input('rescisao_ids', []);
+        $competencia = request()->input('competencia', now()->format('Y-m'));
 
         if (empty($rescisaoIds))
             return response()->json(['erro' => 'Nenhum servidor selecionado.'], 422);
