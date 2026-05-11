@@ -162,8 +162,8 @@ Route::get('/exoneracao/buscar', function (Request $request) {
 // ── Preview do cálculo rescisório (sem salvar) ────────────────────
 Route::post('/exoneracao/preview', function (Request $request) use ($getSalarioBase, $calcularRescisao) {
     try {
-        $funcId = $request->input('funcionario_id');
-        $dataEx = $request->input('data_exoneracao');
+        $funcId = request()->input('funcionario_id');
+        $dataEx = request()->input('data_exoneracao');
         if (!$funcId || !$dataEx)
             return response()->json(['erro' => 'funcionario_id e data_exoneracao são obrigatórios.'], 422);
 
@@ -196,10 +196,10 @@ Route::post('/exoneracao/preview', function (Request $request) use ($getSalarioB
 Route::post('/exoneracao/registrar', function (Request $request) use ($getSalarioBase, $calcularRescisao) {
     try {
         $user = Auth::user();
-        $funcId = $request->input('funcionario_id');
-        $dataEx = $request->input('data_exoneracao');
-        $motivo = $request->input('motivo_saida', 'EXONERACAO');
-        $portaria = $request->input('portaria_num');
+        $funcId = request()->input('funcionario_id');
+        $dataEx = request()->input('data_exoneracao');
+        $motivo = request()->input('motivo_saida', 'EXONERACAO');
+        $portaria = request()->input('portaria_num');
 
         if (!$funcId || !$dataEx)
             return response()->json(['erro' => 'funcionario_id e data_exoneracao são obrigatórios.'], 422);
