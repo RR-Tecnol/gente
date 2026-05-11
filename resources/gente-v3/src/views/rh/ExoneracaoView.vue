@@ -367,7 +367,7 @@ function buscarServidor() {
   clearTimeout(buscarTimer)
   if (busca.value.length < 2) { resultados.value = []; return }
   buscarTimer = setTimeout(async () => {
-    resultados.value = (await api.get(`/api/v3/servidores/buscar?q=${encodeURIComponent(busca.value)}`)).data.servidores || []
+    resultados.value = (await api.get(`/api/v3/exoneracao/buscar?q=${encodeURIComponent(busca.value)}`)).data.servidores || []
   }, 300)
 }
 
