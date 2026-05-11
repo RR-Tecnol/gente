@@ -465,6 +465,14 @@ XML;
         $dtAlt = $dtAlteracao ?: ($func->FUNCIONARIO_DATA_INICIO ?? now()->format('Y-m-d'));
         $codCargo = (int) ($func->CARGO_ID ?? 0);
 
+        // CBO do cargo — obrigatorio quando cargo muda
+        $cboCargo = preg_replace('/\D/', '', (string) ($func->CBO ?? '000000'));
+        if (strlen($cboCargo) !== 6) $cboCargo = '000000';
+        $codCargoEsocial = htmlspecialchars(
+            (string) ($func->CARGO_SIGLA ?? $func->CARGO_NOME ?? (string)$codCargo),
+            ENT_XML1, 'UTF-8'
+        );
+
         $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtAltContratual/v02_01_00">
@@ -486,7 +494,8 @@ XML;
     <altContratual>
       <dtAlteracao>{$dtAlt}</dtAlteracao>
       <infoCargo>
-        <codCargo>{$codCargo}</codCargo>
+        <codCargo>{$codCargoEsocial}</codCargo>
+        <codCBO>{$cboCargo}</codCBO>
       </infoCargo>
     </altContratual>
   </evtAltContratual>
