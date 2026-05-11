@@ -66,6 +66,14 @@ class CargoVigencia
             return 'Data fim de vigência não pode ser anterior à data de início.';
         }
 
+        // PMSL go-live 10/05/2026: CARGO_DATA_INICIO não existe no schema PMSL.
+        // Vigência pertence ao vínculo servidor↔cargo (ATRIBUICAO_LOTACAO),
+        // não ao cargo em si. eSocial S-1010 não tem dtInicio no cargo.
+        // Sem a coluna, não há sobreposição a validar.
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('CARGO', 'CARGO_DATA_INICIO')) {
+            return null;
+        }
+
         $chave = self::chaveLogica($CARGO_SIGLA, $CARGO_NOME);
         $sig = $CARGO_SIGLA !== null ? trim($CARGO_SIGLA) : '';
         $nomeN = trim($CARGO_NOME);

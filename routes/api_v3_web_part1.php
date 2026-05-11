@@ -517,15 +517,15 @@
             try {
                 if (!$request->nome)
                 return response()->json(['erro' => 'Nome obrigatório.'], 422);
-                $id = \Illuminate\Support\Facades\DB::table('FUNCAO')->insertGetId([
-                    'FUNCAO_NOME' => $request->nome,
-                    'FUNCAO_CBO' => $request->cbo ?? null,
-                    'FUNCAO_TIPO' => $request->tipo ?? null,
-                    'FUNCAO_GRATIFICACAO' => $request->gratificacao ?? null,
-                    'FUNCAO_ATIVO' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                $funcaoCols = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCAO');
+                $payloadF = ['FUNCAO_NOME' => $request->nome];
+                if (in_array('FUNCAO_CBO', $funcaoCols)) $payloadF['FUNCAO_CBO'] = $request->cbo ?? null;
+                if (in_array('FUNCAO_TIPO', $funcaoCols)) $payloadF['FUNCAO_TIPO'] = $request->tipo ?? null;
+                if (in_array('FUNCAO_GRATIFICACAO', $funcaoCols)) $payloadF['FUNCAO_GRATIFICACAO'] = $request->gratificacao ?? null;
+                if (in_array('FUNCAO_ATIVO', $funcaoCols)) $payloadF['FUNCAO_ATIVO'] = 1;
+                if (in_array('created_at', $funcaoCols)) $payloadF['created_at'] = now();
+                if (in_array('updated_at', $funcaoCols)) $payloadF['updated_at'] = now();
+                $id = \Illuminate\Support\Facades\DB::table('FUNCAO')->insertGetId($payloadF);
                 return response()->json(['ok' => true, 'funcao_id' => $id]);
             } catch (\Throwable $e) {
                 return response()->json(['erro' => $e->getMessage()], 500);
@@ -534,13 +534,13 @@
 
         Route::put('/funcoes/{id}', function (\Illuminate\Http\Request $request, $id) {
             try {
-                $updated = \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update([
-                    'FUNCAO_NOME' => $request->nome,
-                    'FUNCAO_CBO' => $request->cbo ?? null,
-                    'FUNCAO_TIPO' => $request->tipo ?? null,
-                    'FUNCAO_GRATIFICACAO' => $request->gratificacao ?? null,
-                    'updated_at' => now(),
-                ]);
+                $funcaoCols = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCAO');
+                $payloadF = ['FUNCAO_NOME' => $request->nome];
+                if (in_array('FUNCAO_CBO', $funcaoCols)) $payloadF['FUNCAO_CBO'] = $request->cbo ?? null;
+                if (in_array('FUNCAO_TIPO', $funcaoCols)) $payloadF['FUNCAO_TIPO'] = $request->tipo ?? null;
+                if (in_array('FUNCAO_GRATIFICACAO', $funcaoCols)) $payloadF['FUNCAO_GRATIFICACAO'] = $request->gratificacao ?? null;
+                if (in_array('updated_at', $funcaoCols)) $payloadF['updated_at'] = now();
+                $updated = \Illuminate\Support\Facades\DB::table('FUNCAO')->where('FUNCAO_ID', $id)->update($payloadF);
                 if (!$updated) {
                     return response()->json(['erro' => 'Função não encontrada ou sem alterações.'], 404);
                 }

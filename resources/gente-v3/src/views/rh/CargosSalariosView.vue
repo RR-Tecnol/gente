@@ -315,8 +315,8 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Data de vigência (início) <span class="req">*</span></label>
-                    <input v-model="formCargo.CARGO_DATA_INICIO" type="date" class="form-input" required />
+                    <label>Data de vigência (início)</label>
+                    <input v-model="formCargo.CARGO_DATA_INICIO" type="date" class="form-input" />
                     <span class="field-hint">Obrigatório para rastreabilidade (eSocial S-1030). Evita sobreposição com outro registro da mesma sigla/nome.</span>
                   </div>
                   <div class="form-group">
@@ -514,14 +514,11 @@ const abrirModalCargo = (c = null) => {
 
 const salvarCargo = async () => {
   if (!formCargo.value.CARGO_NOME) { erroModal.value = 'O nome do cargo é obrigatório.'; return }
-  if (!formCargo.value.CARGO_DATA_INICIO || !String(formCargo.value.CARGO_DATA_INICIO).trim()) {
-    erroModal.value = 'A data de início de vigência (CARGO_DATA_INICIO) é obrigatória para alinhamento ao eSocial.'
-    return
-  }
   salvando.value = true; erroModal.value = ''
   try {
     const { _id, ...rest } = formCargo.value
     const payload = { ...rest }
+    payload.CARGO_DATA_INICIO = payload.CARGO_DATA_INICIO || null
     if (formCargo.value._id) {
       if (payload.CARGO_DATA_FIM === '' || payload.CARGO_DATA_FIM == null) {
         payload.CARGO_DATA_FIM = null

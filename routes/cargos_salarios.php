@@ -79,6 +79,8 @@ Route::get('/cargos', function (\Illuminate\Http\Request $request) {
 Route::post('/cargos', function (\Illuminate\Http\Request $request) {
     try {
         $cargoCols = Schema::getColumnListing('CARGO');
+        $temDataInicio = in_array('CARGO_DATA_INICIO', $cargoCols, true);
+        $temDataFim = in_array('CARGO_DATA_FIM', $cargoCols, true);
         $regras = [
             'CARGO_NOME' => 'required|string|min:3|max:120',
             'CARGO_SIGLA' => 'nullable|string|max:20',
@@ -86,7 +88,9 @@ Route::post('/cargos', function (\Illuminate\Http\Request $request) {
             'CARGO_CODIGO_CBO' => ['nullable', 'regex:/^\d{6}$/'],
             'CARGO_REMUNERACAO' => 'nullable|numeric|min:0',
             'CARGO_VALOR_HORA_DESCONTO' => 'nullable|numeric|min:0',
-            'CARGO_DATA_INICIO' => 'required|date',
+            // CARGO_DATA_INICIO: obrigatório só se a coluna existir no schema.
+            // No schema PMSL não existe — vigência pertence ao vínculo, não ao cargo.
+            'CARGO_DATA_INICIO' => $temDataInicio ? 'required|date' : 'nullable|date',
             'CARGO_DATA_FIM' => 'nullable|date',
         ];
         if (in_array('CARGO_DATA_FIM', $cargoCols, true)) {
@@ -101,10 +105,14 @@ Route::post('/cargos', function (\Illuminate\Http\Request $request) {
         if ($validator->fails()) {
             return response()->json(['erro' => $validator->errors()->first()], 422);
         }
-        $inicio = (string) $request->CARGO_DATA_INICIO;
-        $fim = in_array('CARGO_DATA_FIM', $cargoCols, true) && $request->filled('CARGO_DATA_FIM')
+        $inicio = $temDataInicio && $request->filled('CARGO_DATA_INICIO')
+            ? substr((string) $request->CARGO_DATA_INICIO, 0, 10)
+            : now()->format('Y-m-d'); // fallback neutro quando coluna não existe
+        $fim = $temDataFim && $request->filled('CARGO_DATA_FIM')
             ? substr((string) $request->CARGO_DATA_FIM, 0, 10) : null;
-        $vig = CargoVigencia::assertSemSobreposicao(
+        // assertSemSobreposicao retorna null imediatamente se CARGO_DATA_INICIO
+        // não existir no schema (ver CargoVigencia.php)
+        $vig = \App\Support\CargoVigencia::assertSemSobreposicao(
             (string) $request->CARGO_NOME,
             $request->CARGO_SIGLA,
             $inicio,
@@ -167,6 +175,8 @@ Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
             return response()->json(['erro' => 'Cargo não encontrado.'], 404);
         }
         $cargoCols = Schema::getColumnListing('CARGO');
+        $temDataInicio = in_array('CARGO_DATA_INICIO', $cargoCols, true);
+        $temDataFim = in_array('CARGO_DATA_FIM', $cargoCols, true);
         $regras = [
             'CARGO_NOME' => 'required|string|min:3|max:120',
             'CARGO_SIGLA' => 'nullable|string|max:20',
@@ -174,7 +184,8 @@ Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
             'CARGO_CODIGO_CBO' => ['nullable', 'regex:/^\d{6}$/'],
             'CARGO_REMUNERACAO' => 'nullable|numeric|min:0',
             'CARGO_VALOR_HORA_DESCONTO' => 'nullable|numeric|min:0',
-            'CARGO_DATA_INICIO' => 'required|date',
+            // CARGO_DATA_INICIO: obrigatório só se a coluna existir no schema.
+            'CARGO_DATA_INICIO' => $temDataInicio ? 'required|date' : 'nullable|date',
             'CARGO_DATA_FIM' => 'nullable|date',
         ];
         if (in_array('CARGO_DATA_FIM', $cargoCols, true)) {
@@ -189,9 +200,12 @@ Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
         if ($validator->fails()) {
             return response()->json(['erro' => $validator->errors()->first()], 422);
         }
-        $inicio = (string) $request->CARGO_DATA_INICIO;
+        $inicio = $temDataInicio && $request->filled('CARGO_DATA_INICIO')
+            ? substr((string) $request->CARGO_DATA_INICIO, 0, 10)
+            : ($atual->CARGO_DATA_INICIO ? substr((string) $atual->CARGO_DATA_INICIO, 0, 10) : now()->format('Y-m-d')); // fallback neutro
+        
         $fim = null;
-        if (in_array('CARGO_DATA_FIM', $cargoCols, true)) {
+        if ($temDataFim) {
             $in = $request->all();
             if (array_key_exists('CARGO_DATA_FIM', $in)) {
                 $rawF = $in['CARGO_DATA_FIM'];
@@ -201,7 +215,8 @@ Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
                     ? substr((string) $atual->CARGO_DATA_FIM, 0, 10) : null;
             }
         }
-        $vig = CargoVigencia::assertSemSobreposicao(
+        // assertSemSobreposicao retorna null imediatamente se CARGO_DATA_INICIO não existir
+        $vig = \App\Support\CargoVigencia::assertSemSobreposicao(
             (string) $request->CARGO_NOME,
             $request->CARGO_SIGLA ?? $atual->CARGO_SIGLA ?? null,
             $inicio,
