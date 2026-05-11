@@ -496,6 +496,61 @@ Route::post('/funcionarios', function (\Illuminate\Http\Request $request) {
 
         \Illuminate\Support\Facades\DB::commit();
 
+        // 6. Criar usuário automaticamente se CPF informado
+        // Login = CPF numérico, senha = CPF, forçar troca no primeiro acesso
+        if ($cpfLimpo !== '') {
+            try {
+                $usuarioCols = \Illuminate\Support\Facades\Schema::getColumnListing('USUARIO');
+                $loginExiste = \Illuminate\Support\Facades\DB::table('USUARIO')
+                    ->where('USUARIO_LOGIN', $cpfLimpo)
+                    ->exists();
+                if (!$loginExiste) {
+                    $payloadUsuario = [
+                        'USUARIO_NOME'          => $request->PESSOA_NOME,
+                        'USUARIO_LOGIN'         => $cpfLimpo,
+                        'USUARIO_SENHA'         => bcrypt($cpfLimpo),
+                        'USUARIO_EMAIL'         => $request->PESSOA_EMAIL ?? null,
+                        'USUARIO_ATIVO'         => 1,
+                        'USUARIO_ALTERAR_SENHA' => 1, // força troca no 1o acesso
+                        'created_at'            => now(),
+                        'updated_at'            => now(),
+                    ];
+                    // FUNCIONARIO_ID se a coluna existir
+                    if (in_array('FUNCIONARIO_ID', $usuarioCols))
+                        $payloadUsuario['FUNCIONARIO_ID'] = $funcionario->FUNCIONARIO_ID;
+                    if (in_array('USUARIO_PRIMEIRO_ACESSO', $usuarioCols))
+                        $payloadUsuario['USUARIO_PRIMEIRO_ACESSO'] = 1;
+
+                    $payloadUsuario = array_intersect_key($payloadUsuario, array_flip($usuarioCols));
+                    $usuarioId = \Illuminate\Support\Facades\DB::table('USUARIO')
+                        ->insertGetId($payloadUsuario);
+
+                    // Perfil padrão Funcionário
+                    if (\Illuminate\Support\Facades\Schema::hasTable('USUARIO_PERFIL')) {
+                        $upCols = \Illuminate\Support\Facades\Schema::getColumnListing('USUARIO_PERFIL');
+                        $perfilId = \Illuminate\Support\Facades\DB::table('PERFIL')
+                            ->whereIn('PERFIL_NOME', ['Funcionario', 'Funcionário', 'Externo'])
+                            ->value('PERFIL_ID') ?? 5;
+                        $payloadUp = [
+                            'USUARIO_ID'           => $usuarioId,
+                            'PERFIL_ID'            => $perfilId,
+                            'USUARIO_PERFIL_ATIVO' => 1,
+                            'created_at'           => now(),
+                            'updated_at'           => now(),
+                        ];
+                        $payloadUp = array_intersect_key($payloadUp, array_flip($upCols));
+                        \Illuminate\Support\Facades\DB::table('USUARIO_PERFIL')->insert($payloadUp);
+                    }
+                }
+            } catch (\Throwable $eUser) {
+                // Não bloquear cadastro do funcionário se criação de usuário falhar
+                \Illuminate\Support\Facades\Log::warning('Falha ao criar usuário automático', [
+                    'funcionario_id' => $funcionario->FUNCIONARIO_ID,
+                    'erro' => $eUser->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'message' => 'FuncionÃ¡rio cadastrado com sucesso.',
             'funcionario_id' => $funcionario->FUNCIONARIO_ID,
@@ -742,7 +797,59 @@ Route::put('/funcionarios/{id}', function ($id, \Illuminate\Http\Request $reques
     }
 });
 
-// â”€â”€ Inativar funcionÃ¡rio (soft delete) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+Route::post('/funcionarios/{id}/resetar-senha', function ($id) {
+    try {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        // Só admin/RH pode resetar senha
+        $perfil = strtolower(trim((string) ($user->PERFIL
+            ?? optional($user->usuarioPerfis()->with('perfil')->first())->perfil->PERFIL_NOME
+            ?? '')));
+        if (!in_array($perfil, ['admin', 'rh', 'administrador', 'administracao'])) {
+            return response()->json(['erro' => 'Sem permissão para resetar senha.'], 403);
+        }
+
+        $func = \App\Models\Funcionario::with('pessoa')->find($id);
+        if (!$func) return response()->json(['erro' => 'Funcionário não encontrado.'], 404);
+
+        // Buscar usuário pelo FUNCIONARIO_ID ou pelo CPF
+        $cpf = preg_replace('/\D/', '', (string) ($func->pessoa->PESSOA_CPF_NUMERO ?? ''));
+        $usuario = null;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('USUARIO', 'FUNCIONARIO_ID')) {
+            $usuario = \App\Models\Usuario::where('FUNCIONARIO_ID', $id)->first();
+        }
+        if (!$usuario && $cpf) {
+            $usuario = \App\Models\Usuario::where('USUARIO_LOGIN', $cpf)->first();
+        }
+        if (!$usuario) {
+            return response()->json(['erro' => 'Usuário de acesso não encontrado para este funcionário.'], 404);
+        }
+
+        // Resetar para CPF, forçar troca no próximo login
+        $novaSenha = $cpf ?: 'Mudar@123';
+        $usuario->USUARIO_SENHA = bcrypt($novaSenha);
+        $usuario->USUARIO_ALTERAR_SENHA = 1;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('USUARIO', 'USUARIO_PRIMEIRO_ACESSO')) {
+            $usuario->USUARIO_PRIMEIRO_ACESSO = 1;
+        }
+        $usuario->save();
+
+        \Illuminate\Support\Facades\Log::channel('security')->info('senha_resetada_admin', [
+            'admin_id'      => $user->USUARIO_ID,
+            'funcionario_id'=> $id,
+            'usuario_id'    => $usuario->USUARIO_ID,
+        ]);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Senha resetada. O funcionário deverá trocar no próximo acesso.',
+            'login'   => $usuario->USUARIO_LOGIN,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+// ── Inativar funcionário (soft delete) ───────────────────────
 Route::delete('/funcionarios/{id}', function ($id, \Illuminate\Http\Request $request) {
     $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
         'FUNCIONARIO_DATA_FIM' => 'nullable|date',
