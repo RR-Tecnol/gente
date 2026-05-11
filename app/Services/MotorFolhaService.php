@@ -344,9 +344,20 @@ class MotorFolhaService
             // Não fail-fast: motor segue calculando.
         }
 
+        $primeiroDia = \Carbon\Carbon::parse($competencia)->startOfMonth()->toDateString();
+        $ultimoDia   = \Carbon\Carbon::parse($competencia)->endOfMonth()->toDateString();
+
         $servidoresQuery = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
-            ->leftJoin('VINCULO as v', 'v.VINCULO_ID', '=', 'f.VINCULO_ID')
+            ->leftJoin('LOTACAO as l', function ($j) use ($primeiroDia, $ultimoDia) {
+                $j->on('l.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')
+                    ->where('l.LOTACAO_DATA_INICIO', '<=', $primeiroDia)
+                    ->where(function ($q) use ($ultimoDia) {
+                        $q->whereNull('l.LOTACAO_DATA_FIM')
+                          ->orWhere('l.LOTACAO_DATA_FIM', '>=', $ultimoDia);
+                    });
+            })
+            ->leftJoin('VINCULO as v', 'v.VINCULO_ID', '=', 'l.VINCULO_ID')
             ->leftJoin('TABELA_SALARIAL as ts', function ($j) {
                 $j->on('ts.CARREIRA_ID', '=', 'f.CARREIRA_ID')
                     ->on('ts.TABELA_CLASSE', '=', 'f.FUNCIONARIO_CLASSE')
