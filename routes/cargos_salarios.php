@@ -202,7 +202,9 @@ Route::put('/cargos/{id}', function (\Illuminate\Http\Request $request, $id) {
         }
         $inicio = $temDataInicio && $request->filled('CARGO_DATA_INICIO')
             ? substr((string) $request->CARGO_DATA_INICIO, 0, 10)
-            : ($atual->CARGO_DATA_INICIO ? substr((string) $atual->CARGO_DATA_INICIO, 0, 10) : now()->format('Y-m-d')); // fallback neutro
+            : (isset($atual->CARGO_DATA_INICIO) && $atual->CARGO_DATA_INICIO
+                ? substr((string) $atual->CARGO_DATA_INICIO, 0, 10)
+                : now()->format('Y-m-d'));
         
         $fim = null;
         if ($temDataFim) {
