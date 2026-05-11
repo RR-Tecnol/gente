@@ -39,7 +39,10 @@ Route::get('/cargos', function (\Illuminate\Http\Request $request) {
                 'sigla' => $c->CARGO_SIGLA ?? null,
                 'cbo' => $colCbo ? ($c->{$colCbo} ?? null) : null,
                 'descricao' => $c->CARGO_DESCRICAO ?? null,
-                'remuneracao' => (float) ($c->CARGO_REMUNERACAO ?? 0) ?: null,
+                // PMSL usa CARGO_SALARIO (legado) — fallback schema-defensive
+                'remuneracao' => (float) ($c->CARGO_REMUNERACAO
+                    ?? $c->CARGO_SALARIO
+                    ?? 0) ?: null,
                 'valor_hora_desconto' => $temValorHoraDesconto ? ((float) ($c->CARGO_VALOR_HORA_DESCONTO ?? 0) ?: null) : null,
                 'escolaridade' => $c->CARGO_ESCOLARIDADE ?? null,
                 'gestao' => (bool) ($c->CARGO_GESTAO ?? false),
