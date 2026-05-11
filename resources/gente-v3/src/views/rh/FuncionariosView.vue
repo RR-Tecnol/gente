@@ -127,12 +127,6 @@
                   title="Resetar senha para o CPF"
                   @click.stop="resetarSenha(f)"
                 >🔑</button>
-                <button v-if="isFuncionarioAtivo(f)" class="act-btn act-red" title="Inativar" @click.stop="confirmarInativacao(f)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                </button>
-                <button v-else class="act-btn act-green" title="Reativar" @click.stop="reativar(f)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
-                </button>
               </div>
             </td>
           </tr>
@@ -511,30 +505,7 @@
         </div>
       </transition>
 
-      <!-- CONFIRM INATIVAÇÃO -->
-      <transition name="modal-fade">
-        <div v-if="confirmAberto" class="modal-overlay" @click.self="confirmAberto = false">
-          <div class="modal-box modal-sm">
-            <div class="modal-header">
-              <h2 class="modal-title">Inativar Funcionário</h2>
-              <button class="modal-close" @click="confirmAberto = false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>
-            <div class="modal-body">
-              <p class="confirm-text">Tem certeza que deseja inativar <strong>{{ funcParaInativar?.pessoa?.PESSOA_NOME }}</strong>?</p>
-              <div class="form-group">
-                <label>Data de Desligamento</label>
-                <input v-model="dataInativacao" type="date" class="form-input" />
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button class="btn-cancel" @click="confirmAberto = false">Cancelar</button>
-              <button class="btn-salvar btn-danger" @click="inativar" :disabled="salvando">
-                {{ salvando ? 'Inativando...' : 'Confirmar Inativação' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </transition>
+
     </teleport>
 
   </div>
@@ -574,9 +545,6 @@ const modoEdicao     = ref(false)
 const salvando       = ref(false)
 const erroModal      = ref('')
 const successoModal  = ref('')
-const confirmAberto  = ref(false)
-const funcParaInativar = ref(null)
-const dataInativacao = ref(new Date().toISOString().slice(0, 10))
 
 const formVazio = () => ({
   /* Pessoa */
@@ -876,28 +844,6 @@ const salvar = async () => {
   }
 }
 
-// ── Inativar ────────────────────────────────────────────────
-const confirmarInativacao = (f) => {
-  funcParaInativar.value = f
-  dataInativacao.value   = new Date().toISOString().slice(0, 10)
-  confirmAberto.value    = true
-}
-
-const inativar = async () => {
-  salvando.value = true
-  try {
-    await api.delete(`/api/v3/funcionarios/${funcParaInativar.value.FUNCIONARIO_ID}`, {
-      data: { FUNCIONARIO_DATA_FIM: dataInativacao.value }
-    })
-    confirmAberto.value = false
-    await fetchFuncionarios(paginaAtual.value)
-  } catch (e) {
-    alert(e.response?.data?.erro || 'Erro ao inativar.')
-  } finally {
-    salvando.value = false
-  }
-}
-
 const resetarSenha = async (f) => {
   if (!confirm(`Resetar senha de ${f.pessoa?.PESSOA_NOME}?\nO login será o CPF e a senha será o próprio CPF.\nO funcionário deverá trocar no próximo acesso.`)) return
   try {
@@ -905,17 +851,6 @@ const resetarSenha = async (f) => {
     alert(`✅ ${data.message}\nLogin: ${data.login}`)
   } catch (e) {
     alert('Erro ao resetar senha: ' + (e.response?.data?.erro || 'Tente novamente.'))
-  }
-}
-
-const reativar = async (f) => {
-  if (!f?.FUNCIONARIO_ID) return
-  if (!confirm(`Reativar o cadastro de ${f.pessoa?.PESSOA_NOME || 'este funcionário'}?`)) return
-  try {
-    await api.patch(`/api/v3/funcionarios/${f.FUNCIONARIO_ID}/reativar`)
-    await Promise.all([fetchFuncionarios(paginaAtual.value), fetchConfigsPontoFuncionarios()])
-  } catch (e) {
-    alert(e.response?.data?.erro || e.response?.data?.message || 'Erro ao reativar.')
   }
 }
 
