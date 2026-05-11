@@ -184,6 +184,10 @@ Route::post('/exoneracao/preview', function (Request $request) use ($getSalarioB
             'calculo' => $calculo,
         ]);
     } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('[ExonPreview] ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
