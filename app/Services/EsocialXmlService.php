@@ -45,8 +45,11 @@ class EsocialXmlService
             'c.CARGO_NOME',
         ];
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('CARGO', 'CBO')) {
-            $cols[] = 'c.CBO';
+        // Schema-defensive: PMSL usa CARGO_CODIGO_CBO ou CARGO_CBO
+        if (\Illuminate\Support\Facades\Schema::hasColumn('CARGO', 'CARGO_CBO')) {
+            $cols[] = 'c.CARGO_CBO as CBO';
+        } elseif (\Illuminate\Support\Facades\Schema::hasColumn('CARGO', 'CARGO_CODIGO_CBO')) {
+            $cols[] = 'c.CARGO_CODIGO_CBO as CBO';
         }
         if ($temPisPasep) {
             $cols[] = 'p.PIS_PASEP';
@@ -311,6 +314,16 @@ XML;
         $nome = htmlspecialchars((string) ($func->PESSOA_NOME ?? ''), ENT_XML1, 'UTF-8');
         $matricula = htmlspecialchars((string) ($func->FUNCIONARIO_MATRICULA ?? ''), ENT_XML1, 'UTF-8');
 
+        // CBO do cargo — obrigatorio no S-2200 (eSocial S-1030/S-2200)
+        $cboCargo = preg_replace('/\D/', '', (string) ($func->CBO ?? '000000'));
+        if (strlen($cboCargo) !== 6) {
+            $cboCargo = '000000'; // fallback — sinaliza dado ausente
+            \Illuminate\Support\Facades\Log::warning('[EsocialXmlService] CBO ausente para funcionário', [
+                'funcionario_id' => $funcionarioId,
+                'cargo_nome' => $func->CARGO_NOME ?? null,
+            ]);
+        }
+
         $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtAdmissao/v02_01_00">
@@ -360,6 +373,7 @@ XML;
       </infoRegimeTrab>
       <infoContrato>
         <codCateg>301</codCateg>
+        <codCBO>{$cboCargo}</codCBO>
         <remuneracao>
           <vrSalFx>{$vrSalFx}</vrSalFx>
           <undSalFixo>5</undSalFixo>
