@@ -16,6 +16,11 @@
           <span class="logo-name">GENTE</span>
           <span class="logo-sub">Gestão de Pessoas</span>
         </div>
+        <button class="sidebar-close-btn" @click="drawer = false" aria-label="Fechar menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
 
       <!-- Avatar -->
@@ -582,6 +587,23 @@ const handleLogout = async () => {
 }
 
 /* ─── LOGO ─────────────────────────────────────────────────────── */
+.sidebar-close-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.sidebar-close-btn:hover { background: rgba(255,255,255,0.15); }
+
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -1011,43 +1033,34 @@ const handleLogout = async () => {
 
 /* ═══ RESPONSIVE ═════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .semad-audit-banner {
-    margin: 0 12px;
-    font-size: 12px;
-  }
-  .rbac-denied-toast {
-    margin: 8px 12px 0;
-    font-size: 12px;
-  }
+  /* Sidebar: largura fluida em vez de 260px fixo */
   .sidebar {
+    width: min(300px, 85vw);
+    min-width: unset;
     transform: translateX(-100%);
   }
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  .main-content {
-    margin-left: 0 !important;
-  }
+  .sidebar.open { transform: translateX(0); }
+
+  /* Mostra o botão fechar */
+  .sidebar-close-btn { display: flex; }
+
+  .main-content { margin-left: 0 !important; }
   .overlay { display: block; }
   .overlay.active { opacity: 1; pointer-events: all; }
 
   /* Topbar compacta */
-  .topbar {
-    padding: 0 14px;
-    height: 52px;
-  }
+  .topbar { padding: 0 14px; height: 52px; }
   .breadcrumb-label { font-size: 13px; }
 
   /* Page content com menos padding */
-  .page-content {
-    padding: 14px;
-  }
+  .page-content { padding: 14px; }
 
   /* Notif panel ocupa mais espaço em telas pequenas */
-  .notif-panel {
-    width: calc(100vw - 28px);
-    right: -14px;
-  }
+  .notif-panel { width: calc(100vw - 28px); right: -14px; }
+
+  /* Banner auditoria */
+  .semad-audit-banner { margin: 0 12px; font-size: 12px; }
+  .rbac-denied-toast { margin: 8px 12px 0; font-size: 12px; }
 }
 
 @media (max-width: 480px) {
