@@ -547,6 +547,7 @@ const handleLogout = async () => {
   backdrop-filter: blur(2px);
   z-index: 40;
   opacity: 0;
+  pointer-events: none;   /* impede captura de cliques/toques quando o drawer está fechado */
   transition: opacity 0.3s;
 }
 
