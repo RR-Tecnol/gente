@@ -28,8 +28,6 @@ use App\Http\Controllers\CepController;
 use App\Http\Controllers\CidadeController;
 use App\Http\Controllers\ComentarioController;
 use App\Http\Controllers\ConselhoController;
-use App\Http\Controllers\ContatoController;
-use App\Http\Controllers\DependenteController;
 use App\Http\Controllers\DetalheEscalaAutorizaController;
 use App\Http\Controllers\DetalheEscalaController;
 use App\Http\Controllers\DetalheEscalaItemController;
@@ -672,72 +670,6 @@ if (app()->isLocal() || app()->environment('development', 'testing')) {
                 ]);
             });
 
-            // â”€â”€ Dependentes do funcionÃ¡rio (IRRF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Route::get('/funcionarios/{id}/dependentes', function ($id) {
-                try {
-                    $deps = \Illuminate\Support\Facades\DB::table('PESSOA_DEPENDENTE')
-                        ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'PESSOA_DEPENDENTE.FUNCIONARIO_ID')
-                        ->where('PESSOA_DEPENDENTE.FUNCIONARIO_ID', $id)
-                        ->orderBy('PESSOA_DEPENDENTE.PESSOA_DEPENDENTE_ID')
-                        ->select(
-                            'PESSOA_DEPENDENTE.PESSOA_DEPENDENTE_ID as id',
-                            'PESSOA_DEPENDENTE.PESSOA_DEPENDENTE_NOME as nome',
-                            'PESSOA_DEPENDENTE.PESSOA_DEPENDENTE_CPF as cpf',
-                            'PESSOA_DEPENDENTE.PESSOA_DEPENDENTE_NASCIMENTO as data_nasc',
-                            'PESSOA_DEPENDENTE.PESSOA_DEPENDENTE_PARENTESCO as parentesco',
-                            'PESSOA_DEPENDENTE.PESSOA_DEPENDENTE_DEDUCAO_IRRF as deducao_irrf'
-                        )
-                        ->get();
-                    return response()->json(['dependentes' => $deps]);
-                } catch (\Throwable $e) {
-                    // Tabela pode nÃ£o existir ainda â€” retorna vazio
-                    return response()->json(['dependentes' => []]);
-                }
-            });
-
-            Route::post('/funcionarios/{id}/dependentes', function ($id, \Illuminate\Http\Request $request) {
-                try {
-                    $newId = \Illuminate\Support\Facades\DB::table('PESSOA_DEPENDENTE')->insertGetId([
-                        'FUNCIONARIO_ID' => $id,
-                        'PESSOA_DEPENDENTE_NOME' => trim($request->nome ?? ''),
-                        'PESSOA_DEPENDENTE_CPF' => $request->cpf ?? null,
-                        'PESSOA_DEPENDENTE_NASCIMENTO' => $request->data_nasc ?? null,
-                        'PESSOA_DEPENDENTE_PARENTESCO' => $request->parentesco ?? null,
-                        'PESSOA_DEPENDENTE_DEDUCAO_IRRF' => $request->deducao_irrf ?? '1',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                    return response()->json([
-                        'ok' => true,
-                        'dependente' => [
-                            'id' => $newId,
-                            'nome' => trim($request->nome ?? ''),
-                            'cpf' => $request->cpf,
-                            'data_nasc' => $request->data_nasc,
-                            'parentesco' => $request->parentesco,
-                            'deducao_irrf' => $request->deducao_irrf ?? '1',
-                        ]
-                    ], 201);
-                } catch (\Throwable $e) {
-                    return response()->json(['erro' => $e->getMessage()], 500);
-                }
-            });
-
-            Route::delete('/funcionarios/{id}/dependentes/{depId}', function ($id, $depId) {
-                try {
-                    $deleted = \Illuminate\Support\Facades\DB::table('PESSOA_DEPENDENTE')
-                        ->where('PESSOA_DEPENDENTE_ID', $depId)
-                        ->where('FUNCIONARIO_ID', $id)
-                        ->delete();
-                    if (!$deleted) {
-                        return response()->json(['erro' => 'Dependente não encontrado para este funcionário.'], 404);
-                    }
-                    return response()->json(['ok' => true]);
-                } catch (\Throwable $e) {
-                    return response()->json(['erro' => $e->getMessage()], 500);
-                }
-            });
-
         });
 
 
@@ -979,18 +911,6 @@ Route::middleware(['auth', 'web', 'CompartilharVariaveis', 'usuario.externo'])->
         Route::match(['get', 'post'], 'listar', [BancoController::class, "listar"]);
         Route::post('pesquisar', [BancoController::class, "pesquisar"]);
         Route::get('buscar/{id}', [BancoController::class, "buscar"]);
-    });
-
-    Route::prefix('dependente')->group(function () {
-        Route::get('/', [DependenteController::class, "view"]);
-        Route::get('view', [DependenteController::class, "view"]);
-        Route::post('create', [DependenteController::class, "create"])->name('dependente.create');
-        Route::put('update', [DependenteController::class, "update"])->name('dependente.update');
-        Route::delete('delete', [DependenteController::class, "delete"])->name('dependente.delete');
-        Route::delete('deletar', [DependenteController::class, "deletar"]);
-        Route::match(['get', 'post'], 'listar', [DependenteController::class, "listar"]);
-        Route::post('pesquisar', [DependenteController::class, "pesquisar"]);
-        Route::get('buscar/{id}', [DependenteController::class, "buscar"]);
     });
 
     Route::prefix('tipo_documento')->group(function () {
@@ -1740,5 +1660,6 @@ Route::prefix('api/v3')->middleware(['web'])->group(function () {
 
 Route::prefix('api/v3')->middleware(['web'])->group(function () {
     require __DIR__ . '/api_v3_autocadastro_public_legacy.php';
+    require __DIR__ . '/dependentes.php';
 });
 

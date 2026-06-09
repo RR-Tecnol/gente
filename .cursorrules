@@ -1,0 +1,237 @@
+GENTE — Cursor Rules (canónico)
+
+> **Alinhado com:** `Obsidian-Brain-v6/_Global/GUIAS/IA/cursor.md` (guia da IDE, `.cursorrules`, @codebase, handoff, economia de tokens). Este ficheiro é a camada **estática** de “caching de contexto” do Cursor; o vault é a **verdade longa** (decisões, rotas, SEMAD, planos).
+
+
+Sempre que lidar com o módulo de Organograma ou RH:
+1. Consulte o arquivo `@docs/context/BUSINESS_RULES.md`.
+2. Garanta que nomes de novas Unidades/Diretorias sejam convertidos para UPPERCASE (Padrão SEMED).
+3. Nunca permita a criação de registros órfãos com ID 0.
+4. Ao sugerir nomes de setores, use os prefixos canônicos: SAGEP, SAFE, SAPE.
+
+
+## 0. A cada prompt do utilizador (obrigatório)
+
+- **Antes de responder:** aplicar em silêncio a tabela de leitura em `Obsidian-Brain-v6/_Global/00-Master.md` + `overview.gente.md` e, se a tarefa for Cursor/ferramentas, os pontos de `_Global/GUIAS/IA/cursor.md` (sem copiar o guia na resposta; usar só o que a decisão exige).
+- **Economia de tokens:** referir **paths** do vault, não o corpo das notas (Regras 0–1 deste ficheiro). Preferir `@codebase` a colar ficheiros inteiros.
+- **Depois de produzir ou corrigir documentação / decisão de negócio:** o **canónico é o Obsidian**; atualizar a nota certa no vault; **espelhar** no repo `gente/docs/...` só quando já existir esse padrão para a nota (nunca só no Git sem o brain).
+- **Rascunhos da IA** continuam a regra existente: só `ai-drafts/…` sem promoção mútua; notas oficiais só com revisão quando aplicável.
+
+---
+
+## 1. Brain Path (fonte de verdade)
+
+- **Guia Cursor (IDE):** `_Global/GUIAS/IA/cursor.md`
+- **Overview ativo (GENTE):** `_Global/PROJETOS/RRTECNOL/GENTE/overview.gente.md`
+- **Caminho absoluto típico (máquina DK):** `/home/DK/brain/Obsidian-Brain-v6/_Global/PROJETOS/RRTECNOL/GENTE/overview.gente.md`
+- **Rascunhos de IA (este projeto):** `_Global/PROJETOS/RRTECNOL/GENTE/ai-drafts/` — subpastas `cursor/`, `claude-code/`, `claude-web/`, `antigravity/`, `copilot/`, `alice/`, `_inbox/`. **Escrita livre da IA só aí.** Não criar nem editar notas canónicas (`overview`, `bugs-catalogados`, etc.) sem pedido explícito de promoção após revisão humana. Ver `ai-drafts/README.md` no vault.
+- **Regra:** em respostas ao utilizador, **referenciar** estes paths (vault `_Global/...` ou path absoluto se o vault estiver montado). **Não** colar o corpo inteiro das notas salvo pedido explícito e curto.
+- **MCP:** se `user-brain` / `user-workspace` só permitirem o repo, usar `@` ficheiros do vault abertos no Cursor ou ler o path absoluto do Obsidian quando existir.
+
+---
+
+## 2. Stack (real — composer.json / package.json)
+
+| Camada | Origem | Versão / nota |
+|--------|--------|-----------------|
+| PHP | `composer.json` | `^7.3` ou `^8.0` (constraint no composer) |
+| Laravel | `composer.json` | `^8.12` |
+| SQL Server | `.env` / docs | `DB_CONNECTION=sqlsrv`; Docker local |
+| Vue (SPA v3) | `resources/gente-v3/package.json` | `^3.5.25` |
+| Vite | `resources/gente-v3/package.json` | `^7.3.1` |
+| Pinia, Vue Router, Vuetify 3, Tailwind 4, Axios | `gente-v3/package.json` | conforme declarações |
+| Build legado | `package.json` (raiz) | Laravel Mix `^6.0.6`, Sass `~1.32.8` |
+| Mobile | `mobile/` | Expo (opcional) |
+| OS dev | — | Linux Fedora 43 + Docker |
+
+---
+
+## 3. Acesso local
+
+- **URL:** `http://localhost:8081`
+- **Login admin:** `admin` / `admin123`
+- **15 utilizadores PMSLz:** `gente@2026`
+
+---
+
+## 4. Status atual
+
+**BLOQUEADO PARA PRODUÇÃO** — em auditoria; não tratar como apto a deploy sem Fase 0/1 de segurança.
+
+- 30+ rotas `/api/v3/*` sem middleware `auth` explícito (crítico).
+- Credenciais sensíveis em ficheiros versionados (ex.: `.env.docker`, `scripts-debug/`).
+- `dd()` ativo em regra de autorização (`ChecarAcessoUsuarioUnidade`).
+- **BUG-004:** bypass de auth em erro com fallback para admin.
+- `.gitignore` incompleto; cópias/duplicados no repositório.
+- **BUG-017:** fallback de perfil para admin quando o banco retorna vazio.
+- Laravel 8 fora de suporte ativo (risco segurança/manutenção).
+
+---
+
+## 5. Regras de economia de tokens (Regras 0–7)
+
+> Princípio: *tokens a repetir contexto já no Obsidian são desperdiçados — referenciar path, não copiar nota inteira.*
+> Canónico completo: `_Global/Global-for-every-project/02-Prompts_Otimizados/economia-de-tokens.md`
+
+**Regra 0 — Leitura silenciosa no início**
+Seguir ordem em `_Global/00-Master.md` (tabela «Leitura por tipo de tarefa»): ler em silêncio `overview.universais`, `overview.gente` (e guia IA se aplicável). **Não** confirmar «li os ficheiros», **não** resumir esses ficheiros na mensagem, **não** perguntar «posso começar?» — aplicar nas decisões.
+
+**Regra 1 — Referenciar paths do brain, NUNCA copiar conteúdo**
+Citar path (`_Global/...` ou path absoluto do vault). Se precisar de um excerto, só o mínimo indispensável. **Excepção Claude web:** bloco compacto ≤12 linhas no início do prompt (ver economia-de-tokens).
+
+**Regra 2 — Fragmentar prompts >600 tokens**
+Dividir em entregas (ex.: API → página → acções). Um objetivo principal por mensagem.
+
+**Regra 3 — Reutilizar templates**
+Antes de inventar prompt: `_Global/Global-for-every-project/02-Prompts_Otimizados/` (`prompt-nova-tela`, `prompt-novo-componente`, `prompt-base-claude-web`, `economia-de-tokens`).
+
+**Regra 4 — Código + comentário só onde não óbvio**
+Evitar parágrafos de «contexto» sobre stack já documentada; comentários só para não-evidente.
+
+**Regra 5 — Não repetir contexto fornecido**
+Se o utilizador já disse sprint/módulo/estado, ir directo à solução/código.
+
+**Regra 6 — Escopo cirúrgico**
+Alterar só o pedido. Fora de escopo: **sinalizar** como pendência, **não** corrigir em silêncio nem «melhorar» ficheiros não pedidos.
+
+**Regra 7 — Fim padronizado**
+Toda resposta técnica relevante termina com **`### TABELA DE REFERÊNCIAS ATUALIZADAS`** (ver secção 14). Próxima sessão pode reutilizar essa tabela como rascunho do bloco compacto.
+
+---
+
+## 6. Técnicas avançadas (contexto longo, Claude Code, engenharia)
+
+- **Plan Mode antes de implementar:** `Shift+Tab` (Cursor) ou pedir plano: ficheiros a tocar, abordagem, aguardar aprovação antes de código.
+- **HANDOFF.md:** com sessão longa (~60% contexto): documentar objectivo, tentativas, o que funcionou/falhou, próximos passos → depois limpar contexto (`/clear` onde existir) → nova sessão com `@HANDOFF.md`.
+- **`.claudeignore` na raiz:** excluir `node_modules/`, `vendor/`, `dist/`, `.git/`, `build/`, `.next/`, `*.log` — reduz ruído indexado (ver economia-de-tokens).
+- **Tabela de gatilhos no `CLAUDE.md`:** lazy-load de skills (palavras-chave → `@skills/...`) em vez de descrever tudo no preâmbulo.
+- **Subagentes:** para investigação ampla no codebase — janela isolada; a sessão principal recebe só o resumo.
+- **13 hacks (resumo):** nova tarefa → limpar contexto; monitorizar % (`/context` onde existir); prompts cirúrgicos; plan antes de codar; preferir edits a rewrites completos; colar só trechos; manter `.cursorrules`/`CLAUDE.md` enxutos; brain como índice; `/compact` ~60%; modelo certo por tarefa; commits + brain após entregas.
+- **Protocolo Insight-first (obrigatório):** quando surgir insight forte de produto/fluxo (padrões entre perfis, inconsistência estrutural, risco em cascata), **pausar automação**, escrever o insight em 3-6 linhas e perguntar explicitamente: `O que você acha desse insight?`. Só depois de resposta humana seguir implementação.
+
+**Modelos por tarefa (orientação custo/benefício)**
+Implementar código / bugs → modelo forte tipo Sonnet (~70%). Tarefas simples / organização → modelo rápido tipo Haiku (~10%). Arquitetura, ADR, auditoria profunda → Opus (~20%). Regra prática: <5 min de explicação → Sonnet; rename/organizar → Haiku; tradeoffs longo prazo → Opus.
+
+**Custos de referência (resumo — detalhe no vault)**
+Ler várias notas canónicas custa ordem 10³ tokens no input; **resumir** essas notas na resposta desperdiça ordem 10³ tokens de output; **referenciar só paths** custa ordem 10¹–10². Prompt com template vs do zero ≈ **40%** menos tokens. Estimativas de sessão: `_Global/Global-for-every-project/02-Prompts_Otimizados/economia-de-tokens.md`.
+
+**CLAUDE.md global vs local**
+Global (`~/.claude/CLAUDE.md`): identidade, segurança universal, enxuto — sem segredos. Local (`./CLAUDE.md`): stack e comandos do projeto; em conflito, local ganha.
+
+---
+
+## 7. Comandos sem custo (`!`, `<error>`, `/compact`)
+
+- **`!comando`** (Claude Code / fluxos compatíveis): executar no terminal **sem** passar texto pelo modelo — ex.: `!npm run dev`, `!php artisan migrate`.
+- **`<error>...</error>`:** colar só **5–10 linhas** do erro; **nunca** log completo (reenvia em todas as mensagens seguintes).
+- **`/compact`** perto de **60%** de contexto: ex. `/compact "Foque em decisões técnicas e ficheiros modificados. Descarte erros, tentativas e explicações longas."`
+- **Outros (Claude Code):** `/clear`, `/context`; onde existir **`/btw [pergunta]`** — resposta sem poluir histórico.
+
+---
+
+## 8. Regras de código
+
+- Nunca inventar nomes de tabelas, campos ou rotas — alinhar com overview e código existente.
+- Respostas executáveis: código pronto, não pseudocódigo vago.
+- Escopo cirúrgico: uma mudança coerente por entrega.
+- Se faltar dado crítico, perguntar antes de inventar.
+- **Zero Trust:** segredos, permissões, dados sensíveis — `_Global/Global-for-every-project/padroes/padroes_zero_trust.md`.
+- **Raciocínio em teia (obrigatório):** qualquer mudança em Ponto/Turno/Escala/Banco de Horas/Hora Extra/Plantões deve mapear impactos cruzados antes do merge. Nunca tratar ação isolada como “tela independente”.
+- **Inteligência mínima de jornada:** não aceitar fluxo “cego por clique”. Backend deve validar sequência real de batidas, calcular minutos trabalhados do dia e devolver déficit/extra explícito para alimentar notificações e banco de horas.
+- **Saída antecipada:** registrar com confirmação dupla explícita (1. intenção de sair antes; 2. ciência de possível desconto salarial), gerar sinalização para gestão e refletir em carga horária/banco de horas/horas extras.
+- **Modelo obrigatório de proposta de insight (produto/gestão):** toda sugestão nova deve ser apresentada no formato:
+  1. **Onde exatamente (proposta prática)** — tela, bloco, conteúdo e ações rápidas;
+  2. **Propósito real (hospital)** — problema atual, ganho operacional e efeito em continuidade assistencial;
+  3. **Venda em 1 minuto** — impacto para diretoria, RH, coordenação e auditoria;
+  4. **Exemplo de uso real** — cenário prático de decisão no dia a dia.
+  Só depois da aprovação humana seguir para implementação.
+
+---
+
+## 9. O que NÃO fazer
+
+- Não sugerir dependências fora do `composer.json` / `package.json` sem justificar e sem pedido.
+- Não criar ficheiros fora da estrutura existente sem alinhar com o utilizador.
+- Não propor refactors fora do escopo pedido.
+- Não inventar estado do projeto — usar overview no brain.
+- Não usar paths Windows (`X:\...`) — ambiente de referência é Linux.
+
+---
+
+## 10. Padrões globais (referências do brain)
+
+- Catálogo herdável: `_Global/Global-for-every-project/padroes/universais-catalogo-herdavel.md`
+- Erros e soluções: `_Global/Global-for-every-project/padroes/universais-erros-e-solucoes.md`
+- Zero Trust: `_Global/Global-for-every-project/padroes/padroes_zero_trust.md`
+- Cybersecurity: `_Global/Global-for-every-project/cybersecurity/overview.cybersecurity.md`
+- Hub universal: `_Global/Global-for-every-project/overview.universais.md`
+- Master / leitura por tarefa: `_Global/00-Master.md`
+- Economia de tokens: `_Global/Global-for-every-project/02-Prompts_Otimizados/economia-de-tokens.md`
+
+---
+
+## 11. Bugs conhecidos / pontos de atenção
+
+- API `/api/v3` com exposição sem auth (crítico para produção).
+- Credenciais no git e artefactos de debug versionados.
+- Bypass de autorização para admin em cenários de erro (BUG-004).
+- `dd()` em regra de acesso.
+- Fallback inseguro de perfil admin (BUG-017).
+- Laravel 8 EOL — risco operacional (BUG-010 / auditoria).
+
+---
+
+## 12. Comandos úteis (Docker, Artisan, npm)
+
+- Subir ambiente: `docker compose up -d`
+- Logs: `docker compose logs -f`
+- Shell no container: `docker compose exec app bash`
+- Migrações: `php artisan migrate`
+- Frontend v3 (Vite): `cd resources/gente-v3 && npm install && npm run dev`
+- Build v3: `npm run build` (dentro de `gente-v3`)
+- Legado Mix (raiz): `npm run watch` / `npm run dev` (scripts da raiz)
+
+---
+
+## 13. Checklist de início de sessão (do vault)
+
+**Antes de começar**
+
+- [ ] Nova tarefa? → limpar contexto (`/clear` onde existir)
+- [ ] `.claudeignore` existe na raiz do projeto?
+- [ ] MCPs desnecessários desligados?
+- [ ] `CLAUDE.md` local com tabela de gatilhos (se usas Claude Code)?
+- [ ] Prompt com uma entrega clara (não «picado» sem nexo)?
+- [ ] Plan Mode / plano antes de implementar código novo?
+
+**Durante**
+
+- [ ] Monitorizar uso de contexto (`/context` onde existir)
+- [ ] ~60%: considerar HANDOFF + compact + nova sessão
+- [ ] Erros: tags `<error>` com 5–10 linhas
+- [ ] Comandos repetitivos: `!` quando a ferramenta suportar
+
+**Antes de enviar prompt (humano ou IA)**
+
+- [ ] `_Global/00-Master` + hub universal + overview GENTE considerados?
+- [ ] Existe template em `02-Prompts_Otimizados/` para esta tarefa?
+- [ ] Contexto do prompt < ~600 tokens ou fragmentado?
+- [ ] Uma entrega por prompt?
+- [ ] Claude web? → bloco «REFERÊNCIAS DO VAULT (compacto)» no início (≤12 linhas)
+- [ ] Pedido explícito da secção **TABELA DE REFERÊNCIAS ATUALIZADAS** no fim?
+
+---
+
+## 14. Formato de resposta no chat + tabela obrigatória
+
+- Directo e executável; **português** com o utilizador.
+- Ao alterar docs do projeto: mencionar path no vault + se precisa atualizar Obsidian.
+- **Obrigatório** no fim de respostas técnicas complexas:
+
+### TABELA DE REFERÊNCIAS ATUALIZADAS
+
+| Path vault (`Obsidian-Brain-v6/_Global/...`) | Como usei | Atualizar Obsidian? (sim/não) |
+|---------------------------------------------|-----------|-------------------------------|
+| … | … | … |
+
+**Atualizar = sim** quando houver decisão nova, correcção de stack/comportamento documentável — copiar linha para a nota certa ou relatório de sprint.

@@ -1,0 +1,1 @@
+import{u as s,s as o,i as r,M as u}from"./main-CLaAvfKD.js";function c(){const e=s(),n=r();return{isReadOnly:o(()=>{if(!e.semadMantaUiReadonlyForShell)return!1;const t=u(n.path);if(!t?.ringKey)return!1;const a=e.tenantScopeRingsPublic[t.ringKey];return!!(a&&a.semad_block_mutations)})}}export{c as u};

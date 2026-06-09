@@ -145,8 +145,19 @@ class DecimoTerceiroService
     {
         if (!$dataInicio) return 12;
 
+<<<<<<< Updated upstream
         $inicio = \Carbon\Carbon::parse($dataInicio);
         $anoInicio = $inicio->year;
+=======
+    private function resolverDependentes(int $funcionarioId): int
+    {
+        return (int) DB::table('PESSOA_DEPENDENTE')
+            ->where('FUNCIONARIO_ID', $funcionarioId)
+            ->whereIn('PESSOA_DEPENDENTE_DEDUCAO_IRRF', [1, 2])
+            ->whereNull('PESSOA_DEPENDENTE_DT_FIM')
+            ->count();
+    }
+>>>>>>> Stashed changes
 
         // Admitido antes do ano de referência = 12 meses
         if ($anoInicio < $ano) return 12;

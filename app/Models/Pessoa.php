@@ -170,9 +170,6 @@ class Pessoa extends Model
         "pessoaBancos.tipoPix",
         "pessoaBancos.tipoConta",
         "pessoaOcupacoes.ocupacao",
-        "dependentes.dependenteTipo",
-        "dependentes.dependenteTipoFim",
-        "dependentes.pessoa",
         "funcionarios.lotacoes.vinculo",
         "funcionarios.lotacoes.setor.unidade",
         "funcionarios.lotacoes.atribuicaoLotacoes.atribuicao.atribuicaoTipo",
@@ -192,7 +189,6 @@ class Pessoa extends Model
         'pessoaBancos',
         'pessoaConselhos',
         'pessoaOcupacoes',
-        'dependentes',
         'funcionarios.lotacoes.atribuicaoLotacoes.atribuicaoLotacaoEventos',
         'funcionarios.detalheEscalas.detalheEscalaItens',
         'funcionarios.detalheEscalas.detalheEscalaAlertas',
@@ -228,9 +224,6 @@ class Pessoa extends Model
             "estadoCivil",
             "tipoSanguineo",
             "rhMais",
-            "dependentes.dependenteTipo",
-            "dependentes.dependenteTipoFim",
-            "dependentes.pessoa",
             "documentos.tipoDocumento",
             "pessoaConselhos.conselho.tipo",
             "pessoaConselhos.uf",
@@ -424,7 +417,14 @@ class Pessoa extends Model
 
     public function dependentes()
     {
-        return $this->hasMany(Dependente::class, "PESSOA_ID", "PESSOA_ID");
+        return $this->hasManyThrough(
+            PessoaDependente::class,
+            Funcionario::class,
+            'PESSOA_ID',       // FK em FUNCIONARIO aponta para PESSOA
+            'FUNCIONARIO_ID',  // FK em PESSOA_DEPENDENTE aponta para FUNCIONARIO
+            'PESSOA_ID',       // chave local em PESSOA
+            'FUNCIONARIO_ID'   // chave local em FUNCIONARIO
+        );
     }
 
     public function pessoaConselhos()
@@ -702,6 +702,11 @@ class Pessoa extends Model
 
                 $detalheEscala->delete();
             }
+
+            // 2.2b Dependentes do funcionário (PESSOA_DEPENDENTE — tabela canônica v3)
+            DB::table('PESSOA_DEPENDENTE')
+                ->where('FUNCIONARIO_ID', $funcionario->FUNCIONARIO_ID)
+                ->delete();
 
             // 2.3 Usuários vinculados ao funcionário
             if ($funcionario->usuario) {

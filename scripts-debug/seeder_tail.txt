@@ -1,0 +1,40 @@
+﻿            'FOLHA_DESCRICAO' => $descricao,
+            'FOLHA_TIPO' => $folhaTipoId,
+            'VINCULO_ID' => $vinculoId,
+            'FOLHA_COMPETENCIA' => $competencia,
+            'FOLHA_QTD_SERVIDORES' => 0,
+            'FOLHA_VALOR_TOTAL' => 0,
+        ];
+
+        $existente = DB::table('FOLHA')->where('FOLHA_DESCRICAO', $descricao)->value('FOLHA_ID');
+
+        if ($existente) {
+            DB::table('FOLHA')->where('FOLHA_ID', $existente)->update($data);
+            return (int) $existente;
+        }
+
+        return (int) DB::table('FOLHA')->insertGetId($data);
+    }
+
+    private function resolverFolhaTipoMensal(): int
+    {
+        $colDesc = $this->resolverColDescTabelaGenerica();
+        if ($colDesc) {
+            $id = DB::table('TABELA_GENERICA')
+                ->where('TABELA_ID', 32)  // RTG::TIPOS_FOLHA
+                ->where(function ($q) use ($colDesc) {
+                    $q->where($colDesc, 'like', '%MENSAL%')
+                      ->orWhere($colDesc, 'like', '%NORMAL%')
+                      ->orWhere($colDesc, 'like', '%FOLHA%');
+                })
+                ->where('COLUNA_ID', '!=', 0)
+                ->orderBy('COLUNA_ID')
+                ->value('COLUNA_ID');
+            if ($id) {
+                return (int) $id;
+            }
+        }
+        // Fallback: usar 1
+        return 1;
+    }
+}

@@ -134,8 +134,6 @@ class FuncionariosPMSLzSeeder extends Seeder
                     $pessoaData['PESSOA_CPF'] = $cpf;
                 if (Schema::hasColumn('PESSOA', 'PESSOA_NASC'))
                     $pessoaData['PESSOA_NASC'] = $nasc;
-                if (Schema::hasColumn('PESSOA', 'PESSOA_DEPENDENTES_IRRF'))
-                    $pessoaData['PESSOA_DEPENDENTES_IRRF'] = 0;
                 $pessoaId = DB::table('PESSOA')->insertGetId($pessoaData);
             }
 

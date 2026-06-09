@@ -20,7 +20,7 @@ use App\Models\Certidao;
 use App\Models\Cidade;
 use App\Models\Conselho;
 use App\Models\Contato;
-use App\Models\Dependente;
+use App\Models\PessoaDependente;
 use App\Models\DetalheEscala;
 use App\Models\DetalheEscalaAlerta;
 use App\Models\DetalheEscalaAutoriza;
@@ -106,7 +106,7 @@ class Auditables
             Cidade::class,
             Conselho::class,
             Contato::class,
-            Dependente::class,
+            PessoaDependente::class,
             DetalheEscalaAlerta::class,
             DetalheEscalaAutoriza::class,
             DetalheEscalaItem::class,

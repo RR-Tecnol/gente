@@ -481,14 +481,20 @@
                     <span class="dep-irrf-chip" :class="dep.deducao_irrf == '1' ? 'irrf-sim' : 'irrf-nao'">
                       {{ dep.deducao_irrf == '1' ? 'Deduz IRRF' : dep.deducao_irrf == '2' ? 'Pensão' : 'Sem dedução' }}
                     </span>
+                    <span v-if="dep.dt_fim" class="dep-irrf-chip irrf-nao" style="margin-left: 4px; background: #fee2e2; color: #b91c1c;">
+                      Encerrado em {{ formatDate(dep.dt_fim) }}
+                    </span>
                   </div>
-                  <button class="doc-del" @click="deletarDependente(dep.id)" title="Excluir">🗑</button>
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn-sm" style="background:#f1f5f9; color:#475569; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;" @click="iniciarEditDep(dep)" title="Editar">✏️ Editar</button>
+                    <button class="doc-del" @click="deletarDependente(dep.id)" title="Excluir">🗑</button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Formulário de adição -->
+              <!-- Formulário de adição/edição -->
               <div v-if="addingDep" class="dep-form">
-                <h4 class="form-section-title" style="margin:0 0 8px">➕ Novo Dependente</h4>
+                <h4 class="form-section-title" style="margin:0 0 8px">{{ editingDepId ? '✏️ Editar Dependente' : '➕ Novo Dependente' }}</h4>
                 <div class="form-two-col">
                   <div class="form-group" style="grid-column:1/-1">
                     <label>Nome completo *</label>
@@ -517,19 +523,33 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Tipo de Dedução (IRRF)</label>
+                    <label>Tipo de Dedução (IRRF) *</label>
                     <select v-model="newDep.deducao_irrf" class="cfg-input">
                       <option value="1">Dependente IRRF</option>
                       <option value="2">Pensão alimentícia</option>
                       <option value="0">Sem dedução</option>
                     </select>
                   </div>
+                  <div class="form-group">
+                    <label>Início da Dependência</label>
+                    <input type="date" v-model="newDep.dt_inicio" class="cfg-input" />
+                  </div>
+                  <template v-if="editingDepId">
+                    <div class="form-group">
+                      <label>Fim da Dependência</label>
+                      <input type="date" v-model="newDep.dt_fim" class="cfg-input" />
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1">
+                      <label>Motivo do Fim</label>
+                      <input v-model="newDep.motivo_fim" class="cfg-input" placeholder="Ex: Maioridade, Separação, Óbito..." />
+                    </div>
+                  </template>
                 </div>
                 <div class="uf-actions" style="margin-top:4px">
                   <button class="modal-cancel" @click="addingDep = false">Cancelar</button>
                   <button class="modal-submit" :disabled="salvandoDep" @click="salvarDependente">
                     <span v-if="salvandoDep" class="btn-spin"></span>
-                    <template v-else>💾 Salvar Dependente</template>
+                    <template v-else>💾 Salvar</template>
                   </button>
                 </div>
               </div>
@@ -597,11 +617,19 @@ const openConfirm = (titulo, msg, fn) => {
 // ── Dependentes ──────────────────────────────────────────────────
 const dependentes = ref([])
 const addingDep = ref(false)
+const editingDepId = ref(null)
 const salvandoDep = ref(false)
-const newDep = ref({ nome: '', cpf: '', data_nasc: '', parentesco: '', deducao_irrf: '1' })
+const newDep = ref({ nome: '', cpf: '', data_nasc: '', parentesco: '', deducao_irrf: '1', dt_inicio: '', dt_fim: '', motivo_fim: '' })
 
 const iniciarAddDep = () => {
-  newDep.value = { nome: '', cpf: '', data_nasc: '', parentesco: '', deducao_irrf: '1' }
+  newDep.value = { nome: '', cpf: '', data_nasc: '', parentesco: '', deducao_irrf: '1', dt_inicio: '', dt_fim: '', motivo_fim: '' }
+  editingDepId.value = null
+  addingDep.value = true
+}
+
+const iniciarEditDep = (dep) => {
+  newDep.value = { ...dep, dt_inicio: dep.dt_inicio || '', dt_fim: dep.dt_fim || '', motivo_fim: dep.motivo_fim || '' }
+  editingDepId.value = dep.id
   addingDep.value = true
 }
 
@@ -611,10 +639,28 @@ const salvarDependente = async () => {
   }
   salvandoDep.value = true
   try {
-    const { data } = await api.post(`/api/v3/funcionarios/${route.params.id}/dependentes`, newDep.value)
-    dependentes.value.push(data.dependente ?? { ...newDep.value, id: Date.now() })
+    const payload = {
+      PESSOA_DEPENDENTE_NOME: newDep.value.nome,
+      PESSOA_DEPENDENTE_CPF: newDep.value.cpf || null,
+      PESSOA_DEPENDENTE_NASCIMENTO: newDep.value.data_nasc || null,
+      PESSOA_DEPENDENTE_PARENTESCO: newDep.value.parentesco,
+      PESSOA_DEPENDENTE_DEDUCAO_IRRF: newDep.value.deducao_irrf,
+      PESSOA_DEPENDENTE_DT_INICIO: newDep.value.dt_inicio || null,
+      PESSOA_DEPENDENTE_DT_FIM: newDep.value.dt_fim || null,
+      PESSOA_DEPENDENTE_MOTIVO_FIM: newDep.value.motivo_fim || null,
+    }
+
+    if (editingDepId.value) {
+      const { data } = await api.put(`/api/v3/funcionarios/${route.params.id}/dependentes/${editingDepId.value}`, payload)
+      const idx = dependentes.value.findIndex(d => d.id === editingDepId.value)
+      if (idx !== -1) dependentes.value[idx] = data.dependente
+      showToast('✅ Dependente atualizado!')
+    } else {
+      const { data } = await api.post(`/api/v3/funcionarios/${route.params.id}/dependentes`, payload)
+      dependentes.value.push(data.dependente)
+      showToast('✅ Dependente salvo!')
+    }
     addingDep.value = false
-    showToast('✅ Dependente salvo!')
   } catch (e) {
     showToast('Erro: ' + (e.response?.data?.erro || e.message), 'err')
   } finally { salvandoDep.value = false }

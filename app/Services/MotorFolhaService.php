@@ -294,7 +294,13 @@ class MotorFolhaService
                 'f.FUNCIONARIO_ID',
                 'f.FUNCIONARIO_DATA_INICIO',
                 'f.FUNCIONARIO_REGIME_PREV',
-                'p.PESSOA_DEPENDENTES_IRRF',
+                \Illuminate\Support\Facades\DB::raw("(
+                    SELECT COUNT(*)
+                    FROM PESSOA_DEPENDENTE pd
+                    WHERE pd.FUNCIONARIO_ID = f.FUNCIONARIO_ID
+                      AND pd.PESSOA_DEPENDENTE_DEDUCAO_IRRF IN (1, 2)
+                      AND pd.PESSOA_DEPENDENTE_DT_FIM IS NULL
+                ) as qtd_dependentes_irrf"),
                 'v.VINCULO_TIPO',
                 'v.VINCULO_REGIME',
                 'v.VINCULO_FGTS',
@@ -533,7 +539,7 @@ class MotorFolhaService
                     : $this->calcularInssRgps($basePrev);
             }
 
-            $dep = (int) ($s->PESSOA_DEPENDENTES_IRRF ?? 0);
+            $dep = (int) ($s->qtd_dependentes_irrf ?? 0);
             // GAP-MF-08: usar dedução IRRF dependente correta 2026 (R$ 189,59) via TabelasImpostoService.
             // Trocamos o cálculo manual por delegação ao serviço, que já trata dependente internamente.
             $tabelas = app(\App\Services\TabelasImpostoService::class);
