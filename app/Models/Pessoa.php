@@ -666,7 +666,7 @@ class Pessoa extends Model
         $pessoa->load(self::$relacionamentoExcluir);
 
         // 1. Relacionamentos diretos de Pessoa
-        foreach (['documentos', 'contatos', 'certidoes', 'pessoaBancos', 'pessoaConselhos', 'pessoaOcupacoes', 'dependentes'] as $rel) {
+        foreach (['documentos', 'contatos', 'certidoes', 'pessoaBancos', 'pessoaConselhos', 'pessoaOcupacoes'] as $rel) {
             foreach ($pessoa->{$rel} ?? [] as $item) {
                 $item->delete();
             }
