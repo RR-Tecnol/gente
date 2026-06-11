@@ -1,0 +1,44 @@
+[
+    {
+        "TABLE_NAME": "ACIDENTE_TRABALHO"
+    },
+    {
+        "TABLE_NAME": "AGENDAMENTO_EXAME"
+    },
+    {
+        "TABLE_NAME": "BENEFICIO"
+    },
+    {
+        "TABLE_NAME": "EPI_REGISTRO"
+    },
+    {
+        "TABLE_NAME": "EXAME_OCUPACIONAL"
+    },
+    {
+        "TABLE_NAME": "FUNCIONARIO_BENEFICIO"
+    },
+    {
+        "TABLE_NAME": "LAUDO_SST"
+    },
+    {
+        "TABLE_NAME": "migrations"
+    },
+    {
+        "TABLE_NAME": "PARAMETRO_FINANCEIRO"
+    },
+    {
+        "TABLE_NAME": "PESQUISA"
+    },
+    {
+        "TABLE_NAME": "PESQUISA_PERGUNTA"
+    },
+    {
+        "TABLE_NAME": "PESQUISA_RESPOSTA"
+    },
+    {
+        "TABLE_NAME": "TREINAMENTO"
+    },
+    {
+        "TABLE_NAME": "TREINAMENTO_INSCRICAO"
+    }
+]

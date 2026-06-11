@@ -16,7 +16,6 @@ if (!Schema::hasTable('PESQUISA')) {
         $table->string('PESQUISA_PUBLICO_ALVO', 100)->nullable();
         $table->boolean('PESQUISA_ATIVA')->default(true);
         $table->timestamps();
-        $table->timestamps();
     });
 }
 if (!Schema::hasTable('PESQUISA_PERGUNTA')) {
@@ -27,7 +26,6 @@ if (!Schema::hasTable('PESQUISA_PERGUNTA')) {
         $table->string('PERGUNTA_TIPO', 50); // NPS, MULTIPLA, ABERTA
         $table->json('PERGUNTA_OPCOES')->nullable();
         $table->integer('PERGUNTA_ORDEM')->default(0);
-        $table->timestamps();
         $table->timestamps();
     });
 }

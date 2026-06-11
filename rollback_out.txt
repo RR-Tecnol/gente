@@ -1,1 +1,0 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿Migration not found: 2026_03_30_000041_create_patrimonio_tables
