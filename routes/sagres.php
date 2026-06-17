@@ -1,4 +1,10 @@
 <?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
 // ══════════════════════════════════════════════════════════════════
 // SAGRES / TCE-MA — integração com sistema de controle externo
 // LAT-06 / GAP-13
@@ -201,5 +207,85 @@ Route::get('/sagres/download/{id}', function ($id) {
         ]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+// GET /sagres/depara — colunas alinhadas a SagresView.vue (DEPARA_ID, SAGRES_COD, TIPO, ATIVO)
+Route::get('/sagres/depara', function () {
+    try {
+        if (!Schema::hasTable('SAGRES_EVENTO_DEPARA')) {
+            return response()->json(['ok' => true, 'depara' => [], 'total' => 0]);
+        }
+        $raw = DB::table('SAGRES_EVENTO_DEPARA')->orderBy('DEPARA_ID')->get();
+        $depara = $raw->map(function ($r) {
+            $cod = $r->SAGRES_COD ?? $r->RUBRICA_SISTEMA ?? $r->EVENTO_INTERNO_COD ?? '';
+            $desc = $r->SAGRES_DESCRICAO ?? $r->EVENTO_INTERNO_NOME ?? '';
+            $tipoRaw = (string) ($r->TIPO ?? 'P');
+            $tipoLetra = strtoupper(substr($tipoRaw, 0, 1));
+            $tipoVue = $tipoLetra === 'D' ? 'D' : 'P';
+            $ativo = isset($r->ATIVO) ? (bool) $r->ATIVO : true;
+
+            return [
+                'DEPARA_ID' => (int) $r->DEPARA_ID,
+                'SAGRES_COD' => (string) $cod,
+                'SAGRES_DESCRICAO' => (string) $desc,
+                'TIPO' => $tipoVue,
+                'ATIVO' => $ativo,
+            ];
+        })->values();
+        return response()->json(['ok' => true, 'depara' => $depara, 'total' => $depara->count()]);
+    } catch (\Throwable $e) {
+        return response()->json(['ok' => true, 'depara' => [], 'total' => 0, 'aviso' => $e->getMessage()]);
+    }
+});
+
+// GET /sagres/exportacoes — SagresView.vue usa exportacoes[] com EXPORTACAO_ID, ARQUIVO_XML_PATH, ENVIADO_EM
+Route::get('/sagres/exportacoes', function () {
+    try {
+        if (!Schema::hasTable('SAGRES_GERACAO')) {
+            return response()->json(['ok' => true, 'exportacoes' => [], 'historico' => []]);
+        }
+        $q = DB::table('SAGRES_GERACAO as g')
+            ->leftJoin('USUARIO as u', 'u.USUARIO_ID', '=', 'g.GERADO_POR')
+            ->select(
+                'g.GERACAO_ID',
+                'g.COMPETENCIA',
+                'g.ARQUIVO_NOME',
+                'g.TOTAL_SERV',
+                'g.TOTAL_LIQUIDO',
+                'g.STATUS',
+                'u.USUARIO_NOME as gerado_por',
+                'g.created_at',
+                'g.updated_at'
+            );
+        if (Schema::hasColumn('SAGRES_GERACAO', 'ENVIADO_EM')) {
+            $q->addSelect('g.ENVIADO_EM');
+        }
+        $rows = $q->orderByDesc('g.created_at')->limit(50)->get();
+        $map = $rows->map(function ($g) {
+            $status = (string) ($g->STATUS ?? 'GERADO');
+            $path = $g->ARQUIVO_NOME ?? null;
+            $enviado = $g->ENVIADO_EM ?? null;
+            if ($enviado === null && $status === 'ENVIADO' && !empty($g->updated_at)) {
+                $enviado = $g->updated_at;
+            }
+
+            return [
+                'EXPORTACAO_ID' => (int) $g->GERACAO_ID,
+                'GERACAO_ID' => (int) $g->GERACAO_ID,
+                'COMPETENCIA' => (string) ($g->COMPETENCIA ?? ''),
+                'STATUS' => $status,
+                'created_at' => $g->created_at,
+                'ENVIADO_EM' => $enviado,
+                'ARQUIVO_XML_PATH' => $path,
+                'ARQUIVO_NOME' => $path,
+                'total_servidores' => (int) ($g->TOTAL_SERV ?? 0),
+                'total_liquido' => $g->TOTAL_LIQUIDO ?? 0,
+                'gerado_por' => $g->gerado_por ?? null,
+            ];
+        })->values();
+        return response()->json(['ok' => true, 'exportacoes' => $map, 'historico' => $map]);
+    } catch (\Throwable $e) {
+        return response()->json(['ok' => true, 'exportacoes' => [], 'historico' => []]);
     }
 });

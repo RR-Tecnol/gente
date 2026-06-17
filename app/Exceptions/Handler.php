@@ -2,6 +2,8 @@
 
 namespace App\Exceptions;
 
+use App\Support\IntegritySentinelService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 
@@ -35,7 +37,12 @@ class Handler extends ExceptionHandler
     public function register()
     {
         $this->reportable(function (Throwable $e) {
-            //
+            if ($e instanceof QueryException) {
+                $msg = (string) $e->getMessage();
+                if (stripos($msg, 'Invalid object name') !== false) {
+                    IntegritySentinelService::recordInvalidObjectName($msg);
+                }
+            }
         });
     }
 }

@@ -21,21 +21,21 @@ class UsuariosPMSLzSeeder extends Seeder
 
         // [login, nome, perfil_id, matricula_funcionario]
         $usuarios = [
-            ['2026-0001', 'Ana Cristina Barros', 5, '2026-0001'],  // Externo
-            ['2026-0002', 'José Carlos Lima', 6, '2026-0002'],  // RH Folha
-            ['2026-0003', 'Maria das Dores Silva', 3, '2026-0003'],  // Operacional
-            ['2026-0004', 'Francisco Ramos Costa', 15, '2026-0004'],  // RH Rede
-            ['2026-0005', 'Antônia Pereira Nunes', 14, '2026-0005'],  // RH APS
-            ['2026-0006', 'Raimundo Sousa Farias', 7, '2026-0006'],  // Gestão
-            ['2026-0007', 'Luciana Moura Castro', 11, '2026-0007'],  // Coordenador de Setor
-            ['2026-0008', 'Pedro Henrique Alves', 12, '2026-0008'],  // Diretor/Gestor de Unidade
-            ['2026-0009', 'Cláudia Regina Santos', 8, '2026-0009'],  // RH Unidade
-            ['2026-0010', 'Roberto Fonseca Melo', 5, '2026-0010'],  // Externo (SP)
-            ['2026-0012', 'Geraldo Augusto Reis', 5, '2026-0012'],  // Externo (CC)
-            ['2026-0013', 'Silvana Monteiro Cruz', 9, '2026-0013'],  // Direitos e Deveres
-            ['2026-0014', 'Marcos Vinícius Neto', 7, '2026-0014'],  // Gestão (FC)
-            ['2026-0016', 'Carlos Eduardo Brito', 10, '2026-0016'],  // Recrutador
-            ['2026-0018', 'Danielle Souza Cunha', 4, '2026-0018'],  // Manutenção
+            ['2026-0001', 'Ana Cristina Barros', 5, '2010-0001'],  // Externo
+            ['2026-0002', 'José Carlos Lima', 6, '2008-0002'],  // RH Folha
+            ['2026-0003', 'Maria das Dores Silva', 3, '2005-0003'],  // Operacional
+            ['2026-0004', 'Francisco Ramos Costa', 15, '2009-0004'],  // RH Rede
+            ['2026-0005', 'Antônia Pereira Nunes', 14, '2012-0005'],  // RH APS
+            ['2026-0006', 'Raimundo Sousa Farias', 7, '2007-0006'],  // Gestão
+            ['2026-0007', 'Luciana Moura Castro', 11, '2011-0007'],  // Coordenador de Setor
+            ['2026-0008', 'Pedro Henrique Alves', 12, '2015-0008'],  // Diretor/Gestor de Unidade
+            ['2026-0009', 'Cláudia Regina Santos', 8, '2010-0009'],  // RH Unidade
+            ['2026-0010', 'Roberto Fonseca Melo', 5, '2000-0010'],  // Externo (SP)
+            ['2026-0012', 'Geraldo Augusto Reis', 5, '2021-0012'],  // Externo (CC)
+            ['2026-0013', 'Silvana Monteiro Cruz', 9, '2013-0013'],  // Direitos e Deveres
+            ['2026-0014', 'Marcos Vinícius Neto', 7, '2012-0014'],  // Gestão (FC)
+            ['2026-0016', 'Carlos Eduardo Brito', 10, '2003-0016'],  // Recrutador
+            ['2026-0018', 'Danielle Souza Cunha', 4, '2023-0018'],  // Manutenção
         ];
 
         foreach ($usuarios as [$login, $nome, $perfilId, $matricula]) {

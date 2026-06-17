@@ -66,6 +66,61 @@ class RemessaBancariaService
         return $this->gerarArquivo($detalhes);
     }
 
+    /**
+     * Mesmo layout que {@see gerarPorFolha}, mas com {@see DetalheFolha::cursor()} e escrita directa em $out (memória O(1) por registo).
+     */
+    public function streamGerarPorFolha(int $folhaId, $out): void
+    {
+        if (! is_resource($out)) {
+            throw new \InvalidArgumentException('streamGerarPorFolha requer um resource de escrita.');
+        }
+
+        $query = DetalheFolha::with([
+            'funcionario.pessoa',
+            'funcionario.pessoa.pessoaBancos.banco',
+        ])
+            ->where('FOLHA_ID', $folhaId)
+            ->whereNull('DETALHE_FOLHA_ERRO')
+            ->orderBy('DETALHE_FOLHA_ID');
+
+        if (! (clone $query)->exists()) {
+            throw new \RuntimeException('Nenhum detalhe de folha para gerar remessa.');
+        }
+
+        $this->linhas = [];
+        $this->sequenciaRegistro = 0;
+        $this->qtdLoteRegistros = 0;
+        $this->totalLoteValor = 0.0;
+        $dataAtual = now()->format('dmY');
+        $horaAtual = now()->format('His');
+
+        $linhasEmitidas = 0;
+        $emit = function (string $linha) use ($out, &$linhasEmitidas): void {
+            fwrite($out, $linha . "\r\n");
+            $linhasEmitidas++;
+        };
+
+        $emit($this->headerArquivo($dataAtual, $horaAtual));
+        $emit($this->headerLote());
+
+        foreach ($query->cursor() as $detalhe) {
+            $valorLiquido = (float) $detalhe->DETALHE_FOLHA_PROVENTOS - (float) $detalhe->DETALHE_FOLHA_DESCONTOS;
+            if ($valorLiquido <= 0) {
+                continue;
+            }
+            $banco = $detalhe->funcionario?->pessoa?->pessoaBancos?->first();
+            $emit($this->segmentoA($detalhe, $banco, $valorLiquido));
+            $emit($this->segmentoB($detalhe));
+            $this->qtdLoteRegistros += 2;
+            $this->totalLoteValor += $valorLiquido;
+        }
+
+        $emit($this->trailerLote());
+
+        $this->qtdArquivoRegistros = $linhasEmitidas;
+        $emit($this->trailerArquivo());
+    }
+
     public function gerarArquivo(Collection $detalhes): string
     {
         $this->linhas = [];

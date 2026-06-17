@@ -15,6 +15,7 @@
         </div>
       </div>
     </div>
+    <div v-if="erroPagina" class="erro-box">{{ erroPagina }}</div>
 
     <!-- CALENDÁRIO DE SOBREAVISO -->
     <div class="section-hdr" :class="{ loaded }">
@@ -135,6 +136,7 @@ const mesAtual    = ref(new Date())
 const novoAcion   = reactive({ data: '', local: '', horaIni: '', horaFim: '', motivo: '' })
 const sobreaviso  = ref([])
 const acionamentos = ref([])
+const erroPagina = ref('')
 
 // ── Mapeamento: colunas DB → formato Vue ────────────────────
 const mapSobreaviso = (r) => {
@@ -150,6 +152,7 @@ const mapSobreaviso = (r) => {
     valor:       r.SOBREAVISO_VALOR ?? r.valor ?? null,
     ativo:       r.SOBREAVISO_ATIVO != null ? !!r.SOBREAVISO_ATIVO : (r.ativo ?? false),
     inicio:      inicio,
+    fim:         fim,
   }
 }
 
@@ -165,24 +168,17 @@ const mapAcionamento = (r) => ({
   pago:     !!(r.ACIONAMENTO_PAGO  ?? r.pago     ?? false),
 })
 
-const mockSobreaviso = [
-  { id: 1, periodoLabel: '24/02 – 27/02/2026', setor: 'UTI Adulto',    horas: 72, percentual: 33.3, valor: 550, ativo: true  },
-  { id: 2, periodoLabel: '10/02 – 12/02/2026', setor: 'Pronto-Socorro', horas: 48, percentual: 33.3, valor: 370, ativo: false },
-]
-const mockAcionamentos = [
-  { id: 1, data: '2026-02-25', motivo: 'Emergência cirúrgica', local: 'Centro Cirúrgico', horaIni: '02:30', horaFim: '05:00', duracaoH: 2.5, valor: 185, pago: false },
-  { id: 2, data: '2026-02-10', motivo: 'Intercorrência respiratória', local: 'UTI Adulto', horaIni: '23:00', horaFim: '01:30', duracaoH: 2.5, valor: 185, pago: true  },
-]
-
 const fetchDados = async () => {
   const comp = `${mesAtual.value.getFullYear()}-${String(mesAtual.value.getMonth() + 1).padStart(2,'0')}`
   try {
     const { data } = await api.get('/api/v3/sobreaviso', { params: { competencia: comp } })
-    sobreaviso.value   = (!data.fallback && data.sobreaviso?.length)   ? data.sobreaviso.map(mapSobreaviso)   : mockSobreaviso
-    acionamentos.value = (!data.fallback && data.acionamentos?.length) ? data.acionamentos.map(mapAcionamento) : mockAcionamentos
-  } catch {
-    sobreaviso.value   = mockSobreaviso
-    acionamentos.value = mockAcionamentos
+    sobreaviso.value   = Array.isArray(data.sobreaviso) ? data.sobreaviso.map(mapSobreaviso) : []
+    acionamentos.value = Array.isArray(data.acionamentos) ? data.acionamentos.map(mapAcionamento) : []
+    erroPagina.value = ''
+  } catch (e) {
+    sobreaviso.value   = []
+    acionamentos.value = []
+    erroPagina.value = e?.response?.data?.erro || 'Falha ao carregar dados de sobreaviso.'
   }
 }
 
@@ -190,25 +186,18 @@ const salvarAcionamento = async () => {
   if (salvando.value) return
   salvando.value = true
   try {
-    const { data } = await api.post('/api/v3/sobreaviso/acionamento', {
+    await api.post('/api/v3/sobreaviso/acionamento', {
       data: novoAcion.data,
       local: novoAcion.local,
       hora_ini: novoAcion.horaIni,
       hora_fim: novoAcion.horaFim,
       motivo: novoAcion.motivo,
     })
-    acionamentos.value.unshift(mapAcionamento(data.acionamento ?? {
-      ACIONAMENTO_ID: Date.now(),
-      ACIONAMENTO_DATA: novoAcion.data,
-      ACIONAMENTO_MOTIVO: novoAcion.motivo,
-      ACIONAMENTO_LOCAL: novoAcion.local,
-      ACIONAMENTO_HORA_INI: novoAcion.horaIni,
-      ACIONAMENTO_HORA_FIM: novoAcion.horaFim,
-    }))
+    await fetchDados()
     Object.assign(novoAcion, { data: '', local: '', horaIni: '', horaFim: '', motivo: '' })
     modalAberto.value = false
   } catch (e) {
-    console.error('Erro ao salvar acionamento:', e)
+    erroPagina.value = e?.response?.data?.erro || 'Falha ao registrar acionamento.'
   } finally {
     salvando.value = false
   }
@@ -281,6 +270,7 @@ const cells = computed(() => {
 .hero-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #818cf8; margin-bottom: 5px; }
 .hero-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: -0.02em; margin: 0 0 3px; }
 .hero-sub { font-size: 13px; color: #94a3b8; margin: 0; }
+.erro-box { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; border-radius:12px; padding:10px 12px; font-size:13px; font-weight:600; }
 .hero-stats { display: flex; gap: 10px; flex-wrap: wrap; }
 .hstat { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 10px 18px; text-align: center; }
 .hv { display: block; font-size: 20px; font-weight: 900; }

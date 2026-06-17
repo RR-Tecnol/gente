@@ -17,6 +17,9 @@
         </div>
       </div>
     </div>
+    <div v-if="dataWarning" class="data-warning" :class="{ loaded }">
+      <span>⚠️ {{ dataWarning }}</span>
+    </div>
 
     <!-- KPI CARDS -->
     <div class="kpi-grid" :class="{ loaded }">
@@ -30,10 +33,57 @@
       </div>
     </div>
 
+    <div class="section-hdr" :class="{ loaded }">
+      <h2 class="sh-title">🚨 Ações Prioritárias Hoje</h2>
+      <span class="sh-badge" v-if="acoesPrioritarias.length > 0">{{ acoesPrioritarias.length }}</span>
+    </div>
+    <div class="priority-list" :class="{ loaded }">
+      <div v-for="(a, i) in acoesPrioritariasTop5" :key="a.id" class="priority-item" :style="{ '--api': i }">
+        <div class="priority-main">
+          <span class="priority-nome">{{ a.servidor || 'Servidor' }}</span>
+          <span class="priority-det">{{ tipoLabel(a.tipo) }} — {{ a.detalhe || 'Sem detalhe' }}</span>
+          <span class="priority-micro">Espera: {{ a.idade_dias || 0 }} dia(s)</span>
+        </div>
+        <div class="priority-meta">
+          <span class="priority-level" :class="`pl-${a.severidade || 'baixo'}`">{{ labelSeveridade(a.severidade) }} · {{ a.impacto_score || 0 }}</span>
+          <span class="priority-debt">Débito: {{ formatHoras(a.deficit_horas) }}h</span>
+        </div>
+        <div class="priority-actions">
+          <button class="ap-btn-neg" @click="reprovar(a)" title="Reprovar">✕</button>
+          <button class="ap-btn-ok" @click="aprovar(a)" title="Aprovar">✓</button>
+        </div>
+      </div>
+      <div v-if="acoesPrioritariasTop5.length === 0" class="ap-empty">
+        <span>🧭</span><p>Sem ações prioritárias no momento.</p>
+      </div>
+      <div v-else-if="acoesPrioritarias.length > 5" class="priority-footnote">
+        Mostrando 5 de {{ acoesPrioritarias.length }} ações priorizadas.
+      </div>
+    </div>
+
+    <div class="section-hdr" :class="{ loaded }">
+      <h2 class="sh-title">🧠 Risco Agregado do Setor (SLA diário)</h2>
+    </div>
+    <div class="risk-agg-card" :class="{ loaded }">
+      <div class="rac-top">
+        <div>
+          <span class="rac-setor">{{ riscoAgregado.setor }}</span>
+          <span class="rac-score" :class="`pl-${riscoAgregado.severidade}`">{{ labelSeveridade(riscoAgregado.severidade) }} · {{ riscoAgregado.score }}</span>
+        </div>
+        <span class="rac-trend" :class="`rt-${riscoAgregado.tendencia}`">{{ labelTendencia(riscoAgregado.tendencia) }}</span>
+      </div>
+      <div class="rac-metrics">
+        <span>Deficit: <strong>{{ formatHoras(riscoAgregado.metricas?.deficit_horas) }}h</strong></span>
+        <span>Ausencias hoje: <strong>{{ riscoAgregado.metricas?.ausencias_hoje ?? 0 }}</strong></span>
+        <span>Inconsistencias: <strong>{{ riscoAgregado.metricas?.inconsistencias_ponto ?? 0 }}</strong></span>
+      </div>
+      <p class="rac-rec">{{ riscoAgregado.recomendacao }}</p>
+    </div>
+
     <!-- APROVAÇÕES PENDENTES -->
     <div class="section-hdr" :class="{ loaded }">
       <h2 class="sh-title">⏳ Aprovações Pendentes</h2>
-      <span class="sh-badge" v-if="pendencias.length > 0">{{ pendencias.length }}</span>
+      <span class="sh-badge" v-if="totalPendencias > 0">{{ totalPendencias }}</span>
     </div>
     <div class="aprovacoes-list" :class="{ loaded }">
       <div v-for="(p, i) in pendencias" :key="p.id" class="aprov-item" :style="{ '--api': i }">
@@ -56,6 +106,36 @@
       </div>
       <div v-if="pendencias.length === 0" class="ap-empty">
         <span>✅</span><p>Todas as solicitações foram resolvidas!</p>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO DE DECISÕES -->
+    <div class="section-hdr" :class="{ loaded }">
+      <h2 class="sh-title">🗂️ Histórico de Decisões</h2>
+      <div class="hist-filters">
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'todos' }" @click="filtroHistorico = 'todos'">Todos</button>
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'aprovado' }" @click="filtroHistorico = 'aprovado'">Aprovados</button>
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'reprovado' }" @click="filtroHistorico = 'reprovado'">Recusados</button>
+      </div>
+    </div>
+    <div class="aprovacoes-list" :class="{ loaded }">
+      <div v-for="(h, i) in historicoFiltrado" :key="h.id || i" class="aprov-item" :style="{ '--api': i }">
+        <div class="ap-tipo-ico" :style="{ background: tipoCor(h.tipo) + '15', borderColor: tipoCor(h.tipo) + '30' }">
+          <span>{{ h.status === 'aprovado' ? '✅' : '❌' }}</span>
+        </div>
+        <div class="ap-info">
+          <span class="ap-nome">{{ h.servidor || 'Servidor' }}</span>
+          <span class="ap-tipo-txt">{{ tipoLabel(h.tipo) }} — {{ h.status === 'aprovado' ? 'Aprovado' : 'Recusado' }}</span>
+          <span class="ap-detalhe">{{ h.detalhe || 'Sem detalhe' }}</span>
+          <span v-if="h.justificativa" class="ap-just">Motivo da recusa: {{ h.justificativa }}</span>
+        </div>
+        <div class="ap-data">
+          <span class="apd-val">{{ formatarDataHora(h.data) }}</span>
+          <span class="apd-label">Atualizado</span>
+        </div>
+      </div>
+      <div v-if="historicoFiltrado.length === 0" class="ap-empty">
+        <span>🗃️</span><p>Nenhuma decisão no filtro selecionado.</p>
       </div>
     </div>
 
@@ -172,11 +252,61 @@
           <div v-if="modalAv.erro" class="av-msg-err">❌ {{ modalAv.erro }}</div>
           <div v-if="modalAv.ok"   class="av-msg-ok">✅ Avaliação salva com sucesso!</div>
 
+          <div class="av-hist-wrap">
+            <div class="av-hist-hdr">
+              <h3>Histórico de Avaliações</h3>
+              <span v-if="carregandoHistoricoAv">Carregando...</span>
+            </div>
+            <div v-if="!carregandoHistoricoAv && historicoAv.length === 0" class="av-hist-empty">
+              Nenhuma avaliação registrada para este servidor.
+            </div>
+            <div v-else class="av-hist-list">
+              <div v-for="h in historicoAv" :key="h.id || `${h.ciclo}-${h.criado_em}`" class="av-hist-item">
+                <div>
+                  <strong>{{ h.ciclo || 'Ciclo não informado' }}</strong>
+                  <span>{{ formatarDataHora(h.criado_em) }}</span>
+                </div>
+                <div>
+                  <strong :style="{ color: avNotaCor(Number(h.nota || 0)) }">{{ Number(h.nota || 0).toFixed(1) }}</strong>
+                  <span>{{ h.status || 'enviada' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="av-modal-footer">
             <button class="av-btn-cancel" @click="modalAv.open = false">Cancelar</button>
             <button class="av-btn-save" :disabled="modalAv.salvando" @click="salvarAvaliacao">
               <span v-if="modalAv.salvando" class="btn-spin"></span>
               <template v-else>💾 Salvar Avaliação</template>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- MODAL RECUSA -->
+    <transition name="modal">
+      <div v-if="modalRecusa.open" class="av-overlay" @click.self="modalRecusa.open = false">
+        <div class="av-modal" style="max-width:520px">
+          <div class="av-modal-hdr">
+            <div>
+              <span class="av-modal-eyebrow">❌ Recusar solicitação</span>
+              <h2 class="av-modal-title">{{ modalRecusa.item?.servidor }}</h2>
+              <span class="av-modal-sub">{{ tipoLabel(modalRecusa.item?.tipo || 'outros') }}</span>
+            </div>
+            <button class="av-modal-close" @click="modalRecusa.open = false">✕</button>
+          </div>
+          <div style="padding:16px 24px">
+            <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px">Justificativa da recusa *</label>
+            <textarea v-model="modalRecusa.justificativa" class="av-obs" rows="4" placeholder="Informe o motivo da recusa para registrar no histórico"></textarea>
+            <div v-if="modalRecusa.erro" class="av-msg-err" style="margin:10px 0 0">❌ {{ modalRecusa.erro }}</div>
+          </div>
+          <div class="av-modal-footer">
+            <button class="av-btn-cancel" @click="modalRecusa.open = false">Cancelar</button>
+            <button class="av-btn-save" :disabled="modalRecusa.salvando" @click="confirmarRecusa">
+              <span v-if="modalRecusa.salvando" class="btn-spin"></span>
+              <template v-else>Recusar com justificativa</template>
             </button>
           </div>
         </div>
@@ -194,6 +324,15 @@ const router = useRouter()
 const loaded = ref(false)
 const busca = ref('')
 const toast = ref({ visible: false, msg: '', tipo: '' })
+const dataWarning = ref('')
+
+const sanitizeUtf = (v) => String(v ?? '')
+  .replaceAll('Ã£', 'ã')
+  .replaceAll('Ã¡', 'á')
+  .replaceAll('Ã©', 'é')
+  .replaceAll('Ãª', 'ê')
+  .replaceAll('Ã§', 'ç')
+  .replaceAll('Ã', 'à')
 
 // ── Mapeamento de equipe backend→Vue ─────────────────────────
 const mapMembro = (m) => ({
@@ -209,36 +348,36 @@ const mapMembro = (m) => ({
 
 const mapPendencia = (p) => ({
   id:          p.id         ?? p.ref_id,
-  servidor:    p.servidor   ?? '—',
+  servidor:    sanitizeUtf(p.servidor ?? '—'),
   tipo:        p.tipo       ?? 'outros',
-  detalhe:     p.detalhe    ?? '—',
+  detalhe:     sanitizeUtf(p.detalhe ?? '—'),
   data:        p.data       ?? null,
   ref_id:      p.ref_id     ?? null,
   ref_tabela:  p.ref_tabela ?? null,
 })
 
-// ── Mock data completo como fallback ─────────────────────────
-const mockEquipe = [
-  { id: 1, nome: 'Ana Beatriz Santos', cargo: 'Enfermeira Assistencial', turno: 'Manhã 07–13h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-  { id: 2, nome: 'Carlos Eduardo Lima', cargo: 'Técnico de Enfermagem', turno: 'Tarde 13–19h', presente: false, ferias: false, atestado: false, statusLabel: 'Escalado Tarde' },
-  { id: 3, nome: 'Fernanda Rodrigues', cargo: 'Enfermeira Chefe', turno: null, presente: false, ferias: true, atestado: false, statusLabel: 'Em Férias' },
-  { id: 4, nome: 'Marcos Vinicius Souza', cargo: 'Técnico de Enfermagem', turno: 'Noite 19–07h', presente: false, ferias: false, atestado: false, statusLabel: 'Escalado Noite' },
-  { id: 5, nome: 'Juliana Martins', cargo: 'Enfermeira Assistencial', turno: 'Manhã 07–13h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-  { id: 6, nome: 'Roberto Alves', cargo: 'Técnico de Enfermagem', turno: null, presente: false, ferias: false, atestado: true, statusLabel: 'Atestado' },
-  { id: 7, nome: 'Patrícia Costa', cargo: 'Enfermeira Assistencial', turno: 'Manhã 07–13h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-  { id: 8, nome: 'Diego Ferreira', cargo: 'Técnico de Enfermagem', turno: 'Tarde 13–19h', presente: true, ferias: false, atestado: false, statusLabel: 'Presente' },
-]
-
-const mockPendencias = [
-  { id: 1, servidor: 'Ana Beatriz Santos', tipo: 'ferias', detalhe: '15 dias — 10/03/2026 a 25/03/2026', data: '2026-02-20' },
-  { id: 2, servidor: 'Carlos Eduardo Lima', tipo: 'plantao', detalhe: 'Plantão extra 08/03 — UTI Adulto 07h–19h', data: '2026-02-21' },
-  { id: 3, servidor: 'Fernanda Rodrigues', tipo: 'abono', detalhe: 'Abono de falta — 18/02/2026 — Consulta médica', data: '2026-02-22' },
-  { id: 4, servidor: 'Marcos Vinicius Souza', tipo: 'horas', detalhe: 'Compensação banco de horas — 4h em 06/03', data: '2026-02-23' },
-]
+const mapAcaoPrioritaria = (a) => ({
+  ...mapPendencia(a),
+  impacto_score: Number(a.impacto_score ?? 0),
+  severidade: a.severidade ?? 'baixo',
+  deficit_horas: Math.max(0, Number(a.deficit_horas ?? 0)),
+  idade_dias: Number(a.idade_dias ?? 0),
+})
 
 const equipe    = ref([])
 const pendencias = ref([])
+const historico = ref([])
 const kpisData  = ref(null)
+const acoesPrioritarias = ref([])
+const riscoAgregado = ref({
+  setor: 'Sem setor',
+  score: 0,
+  severidade: 'baixo',
+  tendencia: 'estavel',
+  recomendacao: 'Operação estável. Manter monitoramento diário.',
+  metricas: { deficit_horas: 0, ausencias_hoje: 0, inconsistencias_ponto: 0 },
+})
+const filtroHistorico = ref('todos')
 
 // ── KPIs: usa valores do backend ou calcula a partir da equipe localmente ──
 const kpis = computed(() => {
@@ -258,23 +397,46 @@ const kpis = computed(() => {
 onMounted(async () => {
   try {
     const { data } = await api.get('/api/v3/gestor')
-    if (!data.fallback && data.equipe?.length) {
-      equipe.value    = data.equipe.map(mapMembro)
-      pendencias.value = (data.pendencias ?? []).map(mapPendencia)
-      kpisData.value  = data.kpis ?? null
-    } else {
-      equipe.value    = mockEquipe
-      pendencias.value = mockPendencias
+    equipe.value = Array.isArray(data.equipe) ? data.equipe.map(mapMembro) : []
+    pendencias.value = Array.isArray(data.pendencias) ? data.pendencias.map(mapPendencia) : []
+    acoesPrioritarias.value = Array.isArray(data.acoes_prioritarias) ? data.acoes_prioritarias.map(mapAcaoPrioritaria) : []
+    riscoAgregado.value = data.risco_agregado_setor ?? riscoAgregado.value
+    historico.value = Array.isArray(data.historico) ? data.historico.map((h) => ({
+      ...h,
+      servidor: sanitizeUtf(h.servidor),
+      detalhe: sanitizeUtf(h.detalhe),
+      justificativa: sanitizeUtf(h.justificativa),
+    })) : []
+    kpisData.value  = data.kpis ?? null
+
+    if (data.fallback) {
+      dataWarning.value = 'Dados de contingência recebidos pela API. Revise integrações do backend para operação de produção.'
     }
   } catch {
-    equipe.value    = mockEquipe
-    pendencias.value = mockPendencias
+    equipe.value = []
+    pendencias.value = []
+    acoesPrioritarias.value = []
+    riscoAgregado.value = {
+      setor: 'Sem setor',
+      score: 0,
+      severidade: 'baixo',
+      tendencia: 'estavel',
+      recomendacao: 'Operação estável. Manter monitoramento diário.',
+      metricas: { deficit_horas: 0, ausencias_hoje: 0, inconsistencias_ponto: 0 },
+    }
+    historico.value = []
+    dataWarning.value = 'Não foi possível carregar os dados reais do Portal do Gestor.'
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
 })
 
 const totalPendencias = computed(() => pendencias.value.length)
+const acoesPrioritariasTop5 = computed(() => acoesPrioritarias.value.slice(0, 5))
+const historicoFiltrado = computed(() => {
+  if (filtroHistorico.value === 'todos') return historico.value
+  return historico.value.filter(h => h.status === filtroHistorico.value)
+})
 const equipeFiltrada  = computed(() => busca.value
   ? equipe.value.filter(m => (m.nome + m.cargo).toLowerCase().includes(busca.value.toLowerCase()))
   : equipe.value)
@@ -283,18 +445,78 @@ const tipoCor   = (t) => ({ ferias: '#3b82f6', plantao: '#f59e0b', abono: '#10b9
 const tipoIco   = (t) => ({ ferias: '🏖️', plantao: '🏥', abono: '📋', horas: '⏱️' })[t] ?? '📄'
 const tipoLabel = (t) => ({ ferias: 'Férias', plantao: 'Plantão Extra', abono: 'Abono de Falta', horas: 'Banco de Horas' })[t] ?? t
 const formatDate = (d) => { try { return new Date(d+'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }) } catch { return d } }
+const formatHoras = (h) => Number(h || 0).toFixed(1)
+const labelSeveridade = (s) => ({ critico: 'Crítico', alto: 'Alto', medio: 'Médio', baixo: 'Baixo' }[s] ?? 'Baixo')
+const labelTendencia = (t) => ({ piorando: 'Tendência: piorando', melhorando: 'Tendência: melhorando', estavel: 'Tendência: estável' }[t] ?? 'Tendência: estável')
 const showToast  = (msg, tipo = 'ok') => { toast.value = { visible: true, msg, tipo }; setTimeout(() => toast.value.visible = false, 3500) }
 
 const aprovar = async (p) => {
-  try { await api.post('/api/v3/gestor/aprovar', { acao: 'aprovado', ref_id: p.ref_id, ref_tabela: p.ref_tabela }) } catch { /* fallback */ }
-  pendencias.value = pendencias.value.filter(x => x.id !== p.id)
-  showToast(`✅ "${p.servidor}" — ${tipoLabel(p.tipo)} aprovad${p.tipo === 'ferias' ? 'as' : 'o'}!`, 'ok')
+  try {
+    const resp = await api.post('/api/v3/gestor/aprovar', {
+      acao: 'aprovado',
+      ref_id: p.ref_id,
+      ref_tabela: p.ref_tabela,
+      tipo: p.tipo,
+      servidor: p.servidor,
+      detalhe: p.detalhe,
+    })
+    pendencias.value = pendencias.value.filter(x => x.id !== p.id)
+    historico.value.unshift({
+      id: resp?.data?.historico_item?.id || `hist-${Date.now()}`,
+      servidor: p.servidor,
+      tipo: p.tipo,
+      detalhe: p.detalhe,
+      data: resp?.data?.historico_item?.data || new Date().toISOString(),
+      status: 'aprovado',
+      justificativa: null,
+    })
+    showToast(`✅ "${p.servidor}" — ${tipoLabel(p.tipo)} aprovad${p.tipo === 'ferias' ? 'as' : 'o'}!`, 'ok')
+  } catch (e) {
+    showToast(e?.response?.data?.error || 'Falha ao aprovar solicitação.', 'err')
+  }
 }
 
-const reprovar = async (p) => {
-  try { await api.post('/api/v3/gestor/aprovar', { acao: 'reprovado', ref_id: p.ref_id, ref_tabela: p.ref_tabela }) } catch { /* fallback */ }
-  pendencias.value = pendencias.value.filter(x => x.id !== p.id)
-  showToast(`❌ "${p.servidor}" — solicitação reprovada.`, 'err')
+const modalRecusa = ref({ open: false, item: null, justificativa: '', erro: '', salvando: false })
+const reprovar = (p) => {
+  modalRecusa.value = { open: true, item: p, justificativa: '', erro: '', salvando: false }
+}
+
+const confirmarRecusa = async () => {
+  const p = modalRecusa.value.item
+  const justificativa = (modalRecusa.value.justificativa || '').trim()
+  if (!justificativa) {
+    modalRecusa.value.erro = 'A justificativa é obrigatória para recusar.'
+    return
+  }
+  modalRecusa.value.salvando = true
+  modalRecusa.value.erro = ''
+  try {
+    const resp = await api.post('/api/v3/gestor/aprovar', {
+      acao: 'reprovado',
+      ref_id: p.ref_id,
+      ref_tabela: p.ref_tabela,
+      tipo: p.tipo,
+      servidor: p.servidor,
+      detalhe: p.detalhe,
+      justificativa,
+    })
+    pendencias.value = pendencias.value.filter(x => x.id !== p.id)
+    historico.value.unshift({
+      id: resp?.data?.historico_item?.id || `hist-${Date.now()}`,
+      servidor: p.servidor,
+      tipo: p.tipo,
+      detalhe: p.detalhe,
+      data: resp?.data?.historico_item?.data || new Date().toISOString(),
+      status: 'reprovado',
+      justificativa,
+    })
+    modalRecusa.value.open = false
+    showToast(`❌ "${p.servidor}" — solicitação reprovada.`, 'err')
+  } catch (e) {
+    modalRecusa.value.erro = e?.response?.data?.error || 'Falha ao recusar solicitação.'
+  } finally {
+    modalRecusa.value.salvando = false
+  }
 }
 
 const avaliacdes = [
@@ -311,10 +533,12 @@ const plantoesSemana = computed(() =>
   }))
 )
 
-const verFicha = (m) => { router.push('/funcionarios/' + m.id) }
+const verFicha = (m) => { router.push('/funcionario/' + m.id) }
 
 // ── Avaliação de Desempenho ──────────────────────────────────
 const cicloAtual = '2026.1'
+const historicoAv = ref([])
+const carregandoHistoricoAv = ref(false)
 
 const criarCriterios = () => [
   { id: 1, ico: '🎯', nome: 'Cumprimento de Metas',     peso: 25, nota: 7, hovered: 0, obs: '' },
@@ -336,6 +560,29 @@ const avConceito   = (n) => n >= 9 ? 'Excelente' : n >= 7 ? 'Bom' : n >= 5 ? 'Re
 
 const abrirAvaliacao = (m) => {
   modalAv.value = { open: true, membro: m, criterios: criarCriterios(), salvando: false, ok: false, erro: '' }
+  carregarHistoricoAvaliacao(m.id)
+}
+
+const formatarDataHora = (v) => {
+  if (!v) return 'Sem data'
+  try {
+    return new Date(v).toLocaleString('pt-BR')
+  } catch {
+    return String(v)
+  }
+}
+
+const carregarHistoricoAvaliacao = async (funcionarioId) => {
+  carregandoHistoricoAv.value = true
+  historicoAv.value = []
+  try {
+    const { data } = await api.get('/api/v3/avaliacoes', { params: { funcionario_id: funcionarioId } })
+    historicoAv.value = Array.isArray(data?.avaliacoes) ? data.avaliacoes : []
+  } catch {
+    historicoAv.value = []
+  } finally {
+    carregandoHistoricoAv.value = false
+  }
 }
 
 const salvarAvaliacao = async () => {
@@ -348,6 +595,7 @@ const salvarAvaliacao = async () => {
       ciclo: cicloAtual,
       criterios: modalAv.value.criterios.map(c => ({ nome: c.nome, peso: c.peso, nota: c.nota, obs: c.obs })),
     })
+    await carregarHistoricoAvaliacao(modalAv.value.membro.id)
     modalAv.value.ok = true
     showToast(`✅ Avaliação de ${modalAv.value.membro.nome} salva!`, 'ok')
     setTimeout(() => { modalAv.value.open = false }, 1800)
@@ -360,8 +608,25 @@ const salvarAvaliacao = async () => {
 </script>
 
 <style scoped>
-.pg-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
-.hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #0a1428 55%, #14280a 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
+.pg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-family: 'Inter', system-ui, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+.pg-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 10% -10%, rgba(56, 189, 248, 0.10), transparent 55%),
+    radial-gradient(120% 70% at 90% 120%, rgba(14, 165, 233, 0.10), transparent 55%);
+}
+.pg-page > * { position: relative; z-index: 1; }
+.hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0b1f3a 0%, #114a72 55%, #0f766e 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
 .hero-shapes { position: absolute; inset: 0; pointer-events: none; }
 .hs { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.12; }
@@ -393,7 +658,36 @@ const salvarAvaliacao = async () => {
 .s-input { border: none; font-size: 13px; color: #1e293b; outline: none; background: transparent; font-family: inherit; width: 160px; }
 .aprovacoes-list { display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s; }
 .aprovacoes-list.loaded { opacity: 1; transform: none; }
-.aprov-item { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 18px; animation: apIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--api) * 60ms) both; flex-wrap: wrap; }
+.priority-list { display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s; }
+.priority-list.loaded { opacity: 1; transform: none; }
+.priority-item { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, rgba(239,246,255,0.95), rgba(236,253,245,0.85)); border: 1px solid #bfdbfe; border-radius: 14px; padding: 12px 14px; animation: apIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--api) * 60ms) both; }
+.priority-footnote { font-size: 12px; color: #475569; font-weight: 600; padding: 2px 4px 0; }
+.priority-main { flex: 1; min-width: 180px; }
+.priority-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.priority-nome { display: block; font-size: 13px; font-weight: 800; color: #0f172a; }
+.priority-det { display: block; font-size: 11px; color: #334155; margin-top: 1px; }
+.priority-micro { display: block; font-size: 10px; color: #64748b; margin-top: 3px; }
+.priority-level { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 8px; white-space: nowrap; }
+.priority-debt { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 8px; white-space: nowrap; background: #dbeafe; color: #1e3a8a; }
+.pl-critico { background: #fee2e2; color: #991b1b; }
+.pl-alto { background: #ffedd5; color: #9a3412; }
+.pl-medio { background: #fef3c7; color: #92400e; }
+.pl-baixo { background: #dcfce7; color: #166534; }
+.priority-actions { display: flex; gap: 8px; }
+.data-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 12px; font-weight: 700; border-radius: 12px; padding: 10px 12px; opacity: 0; transform: translateY(6px); transition: all 0.35s cubic-bezier(0.22,1,0.36,1); }
+.data-warning.loaded { opacity: 1; transform: none; }
+.risk-agg-card { border: 1px solid #dbeafe; background: radial-gradient(circle at top, rgba(224,242,254,0.65), #fff); border-radius: 16px; padding: 14px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s; }
+.risk-agg-card.loaded { opacity: 1; transform: none; }
+.rac-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.rac-setor { display: block; font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 5px; }
+.rac-score { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 8px; }
+.rac-trend { font-size: 11px; font-weight: 700; border-radius: 8px; padding: 4px 8px; }
+.rt-piorando { background: #fee2e2; color: #991b1b; }
+.rt-melhorando { background: #dcfce7; color: #166534; }
+.rt-estavel { background: #e2e8f0; color: #334155; }
+.rac-metrics { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: #334155; margin-bottom: 8px; }
+.rac-rec { margin: 0; font-size: 12px; color: #1e293b; font-weight: 600; }
+.aprov-item { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, rgba(239,246,255,0.95), rgba(255,255,255,0.96)); border: 1px solid #dbeafe; border-radius: 16px; padding: 14px 18px; animation: apIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--api) * 60ms) both; flex-wrap: wrap; }
 @keyframes apIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 .ap-tipo-ico { width: 44px; height: 44px; border-radius: 12px; border: 1px solid; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .ap-info { flex: 1; min-width: 160px; }
@@ -412,6 +706,10 @@ const salvarAvaliacao = async () => {
 .ap-empty { display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; }
 .ap-empty span { font-size: 32px; }
 .ap-empty p { font-size: 14px; color: #94a3b8; margin: 0; }
+.ap-just { display:block; margin-top:4px; font-size:11px; color:#991b1b; font-weight:700; }
+.hist-filters { display:flex; gap:8px; flex-wrap:wrap; }
+.hf-btn { border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+.hf-btn.active { background:#f0fdf4; border-color:#86efac; color:#166534; }
 .equipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; opacity: 0; transform: translateY(8px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.1s; }
 .equipe-grid.loaded { opacity: 1; transform: none; }
 .membro-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; animation: mcIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--mi) * 40ms) both; transition: all 0.18s; }
@@ -497,6 +795,16 @@ const salvarAvaliacao = async () => {
 .av-nf-conceito { display: block; font-size: 14px; font-weight: 700; margin-top: 4px; }
 .av-msg-err { margin: 0 24px 10px; font-size: 12px; font-weight: 600; color: #dc2626; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 8px 12px; }
 .av-msg-ok  { margin: 0 24px 10px; font-size: 12px; font-weight: 600; color: #166534; background: #dcfce7; border: 1px solid #86efac; border-radius: 10px; padding: 8px 12px; }
+.av-hist-wrap { margin: 0 24px 12px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc; }
+.av-hist-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.av-hist-hdr h3 { margin: 0; font-size: 12px; font-weight: 800; color: #1e293b; }
+.av-hist-hdr span { font-size: 11px; color: #64748b; }
+.av-hist-empty { font-size: 12px; color: #64748b; padding: 6px 2px; }
+.av-hist-list { max-height: 140px; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.av-hist-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
+.av-hist-item > div { display: flex; flex-direction: column; }
+.av-hist-item strong { font-size: 12px; color: #0f172a; }
+.av-hist-item span { font-size: 11px; color: #64748b; }
 .av-modal-footer { display: flex; gap: 10px; padding: 16px 24px; border-top: 1px solid #f1f5f9; }
 .av-btn-cancel { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 14px; font-weight: 700; color: #64748b; cursor: pointer; transition: all 0.15s; }
 .av-btn-cancel:hover { background: #f1f5f9; }

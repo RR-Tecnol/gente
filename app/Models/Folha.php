@@ -48,7 +48,7 @@ class Folha extends Model
         'VINCULO_ID' => 'integer',
         'FOLHA_COMPETENCIA' => Periodo::class,
         'FOLHA_QTD_SERVIDORES' => 'integer',
-        'FOLHA_VALOR_TOTAL' => 'integer',
+        'FOLHA_VALOR_TOTAL' => 'decimal:2',
     ];
 
     public function historicosFolhas()
@@ -59,8 +59,14 @@ class Folha extends Model
 
     public function historicoUltimo()
     {
+        // PMSL go-live 11/05/2026: HISTORICO_FOLHA_ULTIMO nao existe no schema PMSL.
+        // Schema::hasColumn cacheado pelo Laravel retorna falso-positivo em producao.
+        // Solucao definitiva: retornar apenas o historico mais recente por FOLHA_ID
+        // sem filtrar por HISTORICO_FOLHA_ULTIMO (coluna inexistente em PMSL).
+        // Pos go-live: adicionar migration para HISTORICO_FOLHA_ULTIMO ou reestruturar
+        // a relacao (ver DT-API-01 em docs/DIVIDA_TECNICA_POS_GOLIVE_PMSL.md).
         return $this->hasOne(HistoricoFolha::class, 'FOLHA_ID', 'FOLHA_ID')
-            ->where('HISTORICO_FOLHA_ULTIMO', 1);
+            ->latest('HISTORICO_FOLHA_ID');
     }
 
     public function tipoFolha()
@@ -141,6 +147,11 @@ class Folha extends Model
             ->find($id);
     }
 
+    /**
+     * @deprecated Fase 3 (08/05/2026). Substituído por MotorFolhaService::despacharProcessamentoAssincrono().
+     *             Stored procedure T-SQL sp_gera_folha NÃO é mais o motor canônico do GENTE v3.
+     *             Mantido apenas para compatibilidade com código legado que possa chamar diretamente.
+     */
     public function salvaFolha($lista_id_setores)
     {
         $retorno = '';
@@ -156,6 +167,11 @@ class Folha extends Model
         ));
     }
 
+    /**
+     * @deprecated Fase 3 (08/05/2026). Substituído por MotorFolhaService::despacharProcessamentoAssincrono().
+     *             Stored procedure T-SQL sp_gera_folha NÃO é mais o motor canônico.
+     *             Mantido apenas como API legada — não chamar em código novo.
+     */
     public static function processarFolha($request, $userId)
     {
         $periodo = explode('/', $request["FOLHA_COMPETENCIA"]);
@@ -183,6 +199,11 @@ class Folha extends Model
         );
     }
 
+    /**
+     * @deprecated Fase 3 (08/05/2026). Substituído por ProcessarFolhaJob (que internamente chama MotorFolhaService).
+     *             Stored procedure T-SQL sp_gera_folha NÃO é mais o motor canônico.
+     *             FolhaController::alterar agora despacha o Job no lugar de chamar este método.
+     */
     public static function reprocessarFolha($folhaId, $userId)
     {
         DB::statement(

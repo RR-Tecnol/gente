@@ -58,7 +58,7 @@ Route::post('/comunicados', function (\Illuminate\Http\Request $request) use ($t
     try {
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        // Tenta buscar nome do funcionÃ¡rio
+        // Tenta buscar nome do funcionário
         $nome = $user->USUARIO_LOGIN ?? 'Sistema';
         try {
             $func = \App\Models\Funcionario::with('pessoa')
@@ -82,8 +82,7 @@ Route::post('/comunicados', function (\Illuminate\Http\Request $request) use ($t
             ]);
             return response()->json(['message' => 'Comunicado publicado!', 'id' => $id], 201);
         }
-        // Se a tabela nÃ£o existe, simula sucesso
-        return response()->json(['message' => 'Comunicado publicado (modo demo).', 'id' => rand(1000, 9999)], 201);
+        return response()->json(['erro' => 'Tabela COMUNICADO não encontrada. Não foi possível publicar.'], 500);
     } catch (\Throwable $e) {
         \Illuminate\Support\Facades\Log::error('Comunicado: ' . $e->getMessage());
         return response()->json(['erro' => $e->getMessage()], 500);
@@ -94,7 +93,7 @@ Route::post('/comunicados', function (\Illuminate\Http\Request $request) use ($t
 Route::put('/comunicados/{id}', function ($id, \Illuminate\Http\Request $request) use ($tabelaExiste) {
     try {
         if ($tabelaExiste('COMUNICADO')) {
-            \Illuminate\Support\Facades\DB::table('COMUNICADO')
+            $updated = \Illuminate\Support\Facades\DB::table('COMUNICADO')
                 ->where('COMUNICADO_ID', $id)
                 ->update(array_filter([
                     'COMUNICADO_TITULO' => $request->titulo,
@@ -103,8 +102,12 @@ Route::put('/comunicados/{id}', function ($id, \Illuminate\Http\Request $request
                     'COMUNICADO_PRIORIDADE' => $request->prioridade,
                     'COMUNICADO_FIXADO' => $request->has('fixado') ? ($request->fixado ? 1 : 0) : null,
                 ], fn($v) => $v !== null));
+            if (!$updated) {
+                return response()->json(['erro' => 'Comunicado não encontrado ou sem alterações.'], 404);
+            }
+            return response()->json(['message' => 'Comunicado atualizado.']);
         }
-        return response()->json(['message' => 'Comunicado atualizado.']);
+        return response()->json(['erro' => 'Tabela COMUNICADO não encontrada.'], 500);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
@@ -114,11 +117,15 @@ Route::put('/comunicados/{id}', function ($id, \Illuminate\Http\Request $request
 Route::delete('/comunicados/{id}', function ($id) use ($tabelaExiste) {
     try {
         if ($tabelaExiste('COMUNICADO')) {
-            \Illuminate\Support\Facades\DB::table('COMUNICADO')
+            $deleted = \Illuminate\Support\Facades\DB::table('COMUNICADO')
                 ->where('COMUNICADO_ID', $id)
                 ->delete();
+            if (!$deleted) {
+                return response()->json(['erro' => 'Comunicado não encontrado.'], 404);
+            }
+            return response()->json(['message' => 'Comunicado excluído.']);
         }
-        return response()->json(['message' => 'Comunicado excluÃ­do.']);
+        return response()->json(['erro' => 'Tabela COMUNICADO não encontrada.'], 500);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }

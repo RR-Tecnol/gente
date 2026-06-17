@@ -25,6 +25,18 @@
       </div>
     </div>
 
+    <div class="teia-panel" :class="{ loaded }">
+      <div class="teia-title">🕸️ Teia de Conectividade</div>
+      <div class="teia-sub">
+        Benefícios impactam Folha, Verbas e Relatórios. Use os atalhos para validar efeito cascata.
+      </div>
+      <div class="teia-links">
+        <button class="teia-btn" @click="irPara('/folha-pagamento')">Folha de Pagamento</button>
+        <button class="teia-btn" @click="irPara('/verba-indenizatoria')">Verbas Indenizatórias</button>
+        <button class="teia-btn" @click="irPara('/relatorios')">Central de Relatórios</button>
+      </div>
+    </div>
+
     <!-- ═══ TABS ═══════════════════════════════════════════════════ -->
     <div class="filter-tabs" style="margin-top: 20px;" :class="{ loaded }">
       <button class="ftab" :class="{ active: tabAtiva === 'catalogo' }" @click="tabAtiva = 'catalogo'">Catálogo</button>
@@ -276,6 +288,9 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/plugins/axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 // Estados globais da View
 const loaded = ref(false)
@@ -308,6 +323,7 @@ const formataDataBr = (isoStr) => {
   if (parts.length !== 3) return isoStr
   return `${parts[2]}/${parts[1]}/${parts[0]}`
 }
+const irPara = (path) => router.push(path)
 
 // ── TABS LIFE-CYCLE E WATCHERS ───────────────────────────────────────
 watch(tabAtiva, (newTab) => {
@@ -466,6 +482,38 @@ const fetchRelatorio = async (silent = false) => {
 .view-container {
   display: flex;
   flex-direction: column;
+}
+.teia-panel {
+  margin-top: 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 14px;
+}
+.teia-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1e3a8a;
+}
+.teia-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #1e40af;
+}
+.teia-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.teia-btn {
+  border: 1px solid #93c5fd;
+  background: #fff;
+  color: #1d4ed8;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
 }
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.96) translateY(8px); }

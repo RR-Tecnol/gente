@@ -92,9 +92,9 @@
             <td><span class="vinculo-badge">{{ f.vinculo || '—' }}</span></td>
             <td>{{ formatDate(f.FUNCIONARIO_DATA_INICIO) }}</td>
             <td>
-              <span class="status-badge" :class="f.FUNCIONARIO_DATA_FIM ? 'badge-red' : 'badge-green'">
+              <span class="status-badge" :class="isFuncionarioAtivo(f) ? 'badge-green' : 'badge-red'">
                 <span class="badge-dot"></span>
-                {{ f.FUNCIONARIO_DATA_FIM ? 'Inativo' : 'Ativo' }}
+                {{ isFuncionarioAtivo(f) ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
             <td>
@@ -105,7 +105,7 @@
                 <button class="act-btn act-purple" title="Editar" @click.stop="abrirModalEdicao(f)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <button v-if="!f.FUNCIONARIO_DATA_FIM" class="act-btn act-red" title="Inativar" @click.stop="confirmarInativacao(f)">
+                <button v-if="isFuncionarioAtivo(f)" class="act-btn act-red" title="Inativar" @click.stop="confirmarInativacao(f)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 </button>
               </div>
@@ -530,8 +530,14 @@ const form = ref(formVazio())
 
 // ── Computed ────────────────────────────────────────────────
 const ativos = computed(() =>
-  funcionarios.value.filter(f => !f.FUNCIONARIO_DATA_FIM).length
+  funcionarios.value.filter(isFuncionarioAtivo).length
 )
+const isFuncionarioAtivo = (f) => {
+  const fim = f?.FUNCIONARIO_DATA_FIM
+  if (!fim) return true
+  const d = new Date(`${String(fim).slice(0, 10)}T23:59:59`)
+  return !Number.isNaN(d.getTime()) && d.getTime() > Date.now()
+}
 
 // ── Carregamento ────────────────────────────────────────────
 onMounted(async () => {

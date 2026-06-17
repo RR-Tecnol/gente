@@ -35,6 +35,17 @@
       </div>
     </div>
 
+    <div class="teia-box" :class="{ loaded }">
+      <div>
+        <strong>Teia de desempenho:</strong> avaliações devem refletir treinamentos e assiduidade (Ponto/Banco de Horas).
+      </div>
+      <div class="teia-actions">
+        <button class="teia-btn" @click="irPara('/treinamentos')">Treinamentos</button>
+        <button class="teia-btn" @click="irPara('/ponto')">Ponto</button>
+        <button class="teia-btn" @click="irPara('/banco-horas')">Banco de Horas</button>
+      </div>
+    </div>
+
     <!-- HISTÓRICO MINI -->
     <div class="historico-strip" :class="{ loaded }">
       <div v-for="(av, i) in avaliacoes" :key="av.ciclo" class="hs-item" :style="{ '--hd': `${i * 80}ms` }">
@@ -134,6 +145,9 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import api from '@/plugins/axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const loaded    = ref(false)
 const salvando  = ref(false)
@@ -232,10 +246,14 @@ const salvarAvaliacao = async () => {
     salvando.value = false
   }
 }
+const irPara = (path) => router.push(path)
 </script>
 
 <style scoped>
 .ad-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
+.teia-box { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#f0fdf4; border:1px solid #86efac; color:#166534; border-radius:12px; padding:10px 14px; font-size:12px; font-weight:600; }
+.teia-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.teia-btn { border:1px solid #86efac; background:#fff; color:#15803d; border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
 .hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #1a1a3a 55%, #0d2014 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
 .hero-shapes { position: absolute; inset: 0; pointer-events: none; }

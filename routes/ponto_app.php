@@ -1,10 +1,13 @@
 <?php
 // ══════════════════════════════════════════════════════════════════
 // APP MOBILE DE PONTO — Endpoints sem sessão web, autenticados por JWT simples
-// Incluído dentro do grupo api/v3 do web.php
+// Incluído dentro do grupo api/v3 do web.php (middleware ['web'] apenas, sem auth)
 // ══════════════════════════════════════════════════════════════════
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 
 // ── Helper: calcular distância Haversine em metros ────────────────
 $haversine = function ($lat1, $lon1, $lat2, $lon2) {

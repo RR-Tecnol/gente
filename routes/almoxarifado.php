@@ -7,18 +7,24 @@ use Illuminate\Support\Facades\Route;
 // Catálogo de itens com saldo atual
 Route::get('/almoxarifado/itens', function () {
     try {
-        $itens = DB::table('ITEM_ESTOQUE as i')
-            ->leftJoin('SALDO_ESTOQUE as s', 's.ITEM_ID', '=', 'i.ITEM_ID')
-            ->where('i.ITEM_ATIVO', true)
+        $saldoAgg = DB::table('SALDO_ESTOQUE as s')
             ->select(
-                'i.*',
+                's.ITEM_ID',
                 DB::raw('COALESCE(SUM(s.SALDO_QUANTIDADE), 0) as saldo_total'),
                 DB::raw('COALESCE(SUM(s.SALDO_VALOR_MEDIO * s.SALDO_QUANTIDADE), 0) as valor_estoque')
             )
-            ->groupBy('i.ITEM_ID', 'i.ITEM_CODIGO', 'i.ITEM_DESCRICAO',
-                      'i.ITEM_UNIDADE', 'i.ITEM_CATEGORIA',
-                      'i.ITEM_ESTOQUE_MINIMO', 'i.ITEM_ATIVO',
-                      'i.created_at', 'i.updated_at')
+            ->groupBy('s.ITEM_ID');
+
+        $itens = DB::table('ITEM_ESTOQUE as i')
+            ->leftJoinSub($saldoAgg, 'sa', function ($join) {
+                $join->on('sa.ITEM_ID', '=', 'i.ITEM_ID');
+            })
+            ->where('i.ITEM_ATIVO', true)
+            ->select(
+                'i.*',
+                DB::raw('COALESCE(sa.saldo_total, 0) as saldo_total'),
+                DB::raw('COALESCE(sa.valor_estoque, 0) as valor_estoque')
+            )
             ->orderBy('i.ITEM_DESCRICAO')
             ->get();
         return response()->json(['itens' => $itens]);
@@ -54,15 +60,20 @@ Route::post('/almoxarifado/itens', function () {
 // Itens abaixo do estoque mínimo
 Route::get('/almoxarifado/abaixo-minimo', function () {
     try {
+        $saldoAgg = DB::table('SALDO_ESTOQUE as s')
+            ->select(
+                's.ITEM_ID',
+                DB::raw('COALESCE(SUM(s.SALDO_QUANTIDADE), 0) as saldo_total')
+            )
+            ->groupBy('s.ITEM_ID');
+
         $itens = DB::table('ITEM_ESTOQUE as i')
-            ->leftJoin('SALDO_ESTOQUE as s', 's.ITEM_ID', '=', 'i.ITEM_ID')
+            ->leftJoinSub($saldoAgg, 'sa', function ($join) {
+                $join->on('sa.ITEM_ID', '=', 'i.ITEM_ID');
+            })
             ->where('i.ITEM_ATIVO', true)
-            ->groupBy('i.ITEM_ID', 'i.ITEM_CODIGO', 'i.ITEM_DESCRICAO',
-                      'i.ITEM_UNIDADE', 'i.ITEM_ESTOQUE_MINIMO',
-                      'i.ITEM_CATEGORIA', 'i.ITEM_ATIVO',
-                      'i.created_at', 'i.updated_at')
-            ->havingRaw('COALESCE(SUM(s.SALDO_QUANTIDADE), 0) < i.ITEM_ESTOQUE_MINIMO')
-            ->select('i.*', DB::raw('COALESCE(SUM(s.SALDO_QUANTIDADE), 0) as saldo_total'))
+            ->whereRaw('COALESCE(sa.saldo_total, 0) < i.ITEM_ESTOQUE_MINIMO')
+            ->select('i.*', DB::raw('COALESCE(sa.saldo_total, 0) as saldo_total'))
             ->get();
         return response()->json(['itens' => $itens, 'total' => $itens->count()]);
     } catch (\Throwable $e) {

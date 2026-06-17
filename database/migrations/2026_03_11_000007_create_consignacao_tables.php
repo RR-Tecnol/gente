@@ -34,12 +34,12 @@ return new class extends Migration {
 
             // Seed: convênios padrão
             \Illuminate\Support\Facades\DB::table('CONSIG_CONVENIO')->insert([
-                ['CONVENIO_NOME' => 'Banco do Brasil', 'CONVENIO_TIPO' => 'BANCO', 'BANCO_CODIGO' => '001', 'TAXA_JUROS_MAX' => 2.14, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
-                ['CONVENIO_NOME' => 'Caixa Econômica Federal', 'CONVENIO_TIPO' => 'BANCO', 'BANCO_CODIGO' => '104', 'TAXA_JUROS_MAX' => 2.14, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
-                ['CONVENIO_NOME' => 'Bradesco Consig', 'CONVENIO_TIPO' => 'BANCO', 'BANCO_CODIGO' => '237', 'TAXA_JUROS_MAX' => 2.14, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['CONVENIO_NOME' => 'Banco do Brasil', 'CONVENIO_TIPO' => 'BANCO', 'BANCO_CODIGO' => '001', 'TAXA_JUROS_MAX' => 2, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['CONVENIO_NOME' => 'Caixa Econômica Federal', 'CONVENIO_TIPO' => 'BANCO', 'BANCO_CODIGO' => '104', 'TAXA_JUROS_MAX' => 2, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['CONVENIO_NOME' => 'Bradesco Consig', 'CONVENIO_TIPO' => 'BANCO', 'BANCO_CODIGO' => '237', 'TAXA_JUROS_MAX' => 2, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['CONVENIO_NOME' => 'Sindicato dos Servidores', 'CONVENIO_TIPO' => 'SINDICATO', 'BANCO_CODIGO' => null, 'TAXA_JUROS_MAX' => 0, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
-                ['CONVENIO_NOME' => 'Cooperativa Municipal', 'CONVENIO_TIPO' => 'COOPERATIVA', 'BANCO_CODIGO' => null, 'TAXA_JUROS_MAX' => 1.80, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
-                ['CONVENIO_NOME' => 'Cartão Consignado', 'CONVENIO_TIPO' => 'CARTAO', 'BANCO_CODIGO' => null, 'TAXA_JUROS_MAX' => 3.06, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['CONVENIO_NOME' => 'Cooperativa Municipal', 'CONVENIO_TIPO' => 'COOPERATIVA', 'BANCO_CODIGO' => null, 'TAXA_JUROS_MAX' => 1, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['CONVENIO_NOME' => 'Cartão Consignado', 'CONVENIO_TIPO' => 'CARTAO', 'BANCO_CODIGO' => null, 'TAXA_JUROS_MAX' => 3, 'ATIVO' => true, 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
 

@@ -4,9 +4,9 @@
       <div class="hero-shapes"><div class="hs hs1"></div><div class="hs hs2"></div></div>
       <div class="hero-inner">
         <div>
-          <span class="hero-eyebrow">🔄 Escalas Hospitalares</span>
-          <h1 class="hero-title">Substituições de Plantão</h1>
-          <p class="hero-sub">Gerencie as trocas e substituições de plantão</p>
+          <span class="hero-eyebrow">🔄 Gestão de Substituições (SEMED)</span>
+          <h1 class="hero-title">Cobertura de Turnos</h1>
+          <p class="hero-sub">Gerencie coberturas de regência e dobra de turno</p>
         </div>
         <div class="hero-stats">
           <div class="hstat hstat-yellow"><span class="hstat-val">{{ resumo.pendentes }}</span><span class="hstat-label">Pendentes</span></div>
@@ -16,15 +16,20 @@
       </div>
     </div>
 
-    <div class="toolbar" :class="{ loaded }">
+    <div class="abas" :class="{ loaded }">
+      <button class="aba-btn" :class="{ active: abaAtiva === 'substituicoes' }" @click="abaAtiva = 'substituicoes'">Substituições</button>
+      <button class="aba-btn" :class="{ active: abaAtiva === 'historico' }" @click="abaAtiva = 'historico'">Histórico</button>
+    </div>
+
+    <div v-if="abaAtiva === 'substituicoes'" class="toolbar" :class="{ loaded }">
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" class="s-ico"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <input v-model="busca" class="s-input" placeholder="Buscar por profissional..." />
       </div>
       <select v-model="statusFiltro" class="filter-select">
         <option value="">Todos os status</option>
-        <option value="pendente">Pendentes</option>
-        <option value="aprovada">Aprovadas</option>
+        <option value="pendente_aceite">Pendentes</option>
+        <option value="confirmada">Confirmadas</option>
         <option value="recusada">Recusadas</option>
       </select>
       <button class="nova-btn" @click="abrirModalNova">
@@ -35,7 +40,7 @@
 
     <div v-if="loading" class="state-box"><div class="spinner"></div><p>Carregando...</p></div>
 
-    <div v-else class="subs-grid" :class="{ loaded }">
+    <div v-else-if="abaAtiva === 'substituicoes'" class="subs-grid" :class="{ loaded }">
       <div v-for="(s, i) in subsFiltradas" :key="s.id" class="sub-card" :style="{ '--sd': `${i * 50}ms` }">
         <div class="sub-status-bar" :class="statusClass(s.status)"></div>
         <div class="sub-body">
@@ -51,14 +56,16 @@
           <div class="sub-details">
             <span class="sub-detail">📅 {{ formatDate(s.data_plantao) }}</span>
             <span class="sub-detail">⏱️ {{ s.turno }}</span>
-            <span class="sub-detail" v-if="s.setor">🏥 {{ s.setor }}</span>
+            <span class="sub-detail" v-if="s.unidade_escolar">🏫 {{ s.unidade_escolar }}</span>
+            <span class="sub-detail" v-if="s.setor">🏛️ {{ s.setor }}</span>
+            <span class="sub-detail" v-if="s.tipo_convocacao">📌 {{ s.tipo_convocacao }}</span>
           </div>
           <p class="sub-motivo" v-if="s.motivo">{{ s.motivo }}</p>
           <div class="sub-footer">
             <span class="sub-criado">{{ formatDateRel(s.criado_em) }}</span>
-            <div class="sub-actions" v-if="s.status === 'pendente'">
-              <button class="act-approve" @click="aprovar(s)" title="Aprovar">✅</button>
-              <button class="act-reject"  @click="recusar(s)"  title="Recusar">❌</button>
+            <div class="sub-actions" v-if="s.status === 'pendente_aceite'">
+              <button class="act-approve" :disabled="acaoEmAndamento === `aprovar-${s.id}`" @click="aprovar(s)" title="Aprovar">✅</button>
+              <button class="act-reject"  :disabled="acaoEmAndamento === `recusar-${s.id}`" @click="recusar(s)"  title="Recusar">❌</button>
             </div>
           </div>
         </div>
@@ -66,12 +73,35 @@
       <div v-if="subsFiltradas.length === 0" class="state-box"><span class="state-ico">🔄</span><p>Nenhuma substituição encontrada</p></div>
     </div>
 
+    <div v-else class="hist-wrap" :class="{ loaded }">
+      <div class="hist-filtros">
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'todos' }" @click="filtroHistorico = 'todos'">Todos</button>
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'confirmada' }" @click="filtroHistorico = 'confirmada'">Confirmados</button>
+        <button class="hf-btn" :class="{ active: filtroHistorico === 'recusada' }" @click="filtroHistorico = 'recusada'">Recusados</button>
+      </div>
+      <div v-if="historicoFiltrado.length === 0" class="state-box"><span class="state-ico">🗃️</span><p>Nenhuma decisão no filtro selecionado.</p></div>
+      <div v-for="(h, i) in historicoFiltrado" :key="h.id || i" class="hist-item">
+        <div class="sub-status-badge" :class="statusClass(h.status)"><span class="dot"></span>{{ statusLabel(h.status) }}</div>
+        <div class="hist-main">
+          <strong>{{ h.solicitante || '—' }}</strong> <span class="sub-troca">→</span> <strong>{{ h.substituto || '—' }}</strong>
+          <div class="sub-details">
+            <span class="sub-detail">📅 {{ formatDate(h.data_plantao) }}</span>
+            <span class="sub-detail">⏱️ {{ h.turno || '—' }}</span>
+            <span class="sub-detail" v-if="h.unidade_escolar">🏫 {{ h.unidade_escolar }}</span>
+            <span class="sub-detail" v-if="h.setor">🏛️ {{ h.setor }}</span>
+          </div>
+          <p class="sub-motivo" v-if="h.justificativa">{{ h.justificativa }}</p>
+        </div>
+        <span class="sub-criado">{{ formatDateRel(h.decidido_em || h.data_plantao) }}</span>
+      </div>
+    </div>
+
     <!-- MODAL NOVA SUBSTITUIÇÃO -->
     <transition name="modal">
       <div v-if="modalAberto" class="modal-overlay" @click.self="modalAberto = false">
         <div class="modal-card">
           <div class="modal-hdr">
-            <h3>🔄 Nova Substituição</h3>
+            <h3>🔄 Nova Cobertura de Turno</h3>
             <button class="modal-close" @click="modalAberto = false">✕</button>
           </div>
           <div class="modal-body">
@@ -108,7 +138,7 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label>Data do Plantão <span class="req">*</span></label>
+                <label>Data do Turno <span class="req">*</span></label>
                 <input v-model="novaForm.data" type="date" class="cfg-input" />
               </div>
               <div class="form-group">
@@ -118,9 +148,37 @@
                   <option>Manhã (07–13h)</option>
                   <option>Tarde (13–19h)</option>
                   <option>Noturno (19–07h)</option>
-                  <option>Plantão 12h</option>
+                  <option>Dobra de Turno</option>
                 </select>
               </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Tipo de Convocação <span class="req">*</span></label>
+                <select v-model="novaForm.tipo_convocacao" class="cfg-input">
+                  <option value="OPTATIVA">OPTATIVA</option>
+                  <option value="COMPULSORIA">COMPULSORIA</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Unidade Escolar</label>
+                <input v-model="novaForm.unidade_escolar" class="cfg-input" placeholder="Ex: UEB João XXIII" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Horário Início</label>
+                <input v-model="novaForm.horario_inicio" class="cfg-input" placeholder="07:00" />
+              </div>
+              <div class="form-group">
+                <label>Horário Fim</label>
+                <input v-model="novaForm.horario_fim" class="cfg-input" placeholder="11:00" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Disciplina/Cargo</label>
+              <input v-model="novaForm.disciplina_cargo" class="cfg-input" placeholder="Matemática / Professor" />
             </div>
 
             <div class="form-group">
@@ -141,6 +199,32 @@
         </div>
       </div>
     </transition>
+
+    <!-- MODAL RECUSA -->
+    <transition name="modal">
+      <div v-if="modalRecusa.open" class="modal-overlay" @click.self="modalRecusa.open = false">
+        <div class="modal-card">
+          <div class="modal-hdr">
+            <h3>❌ Recusar Substituição</h3>
+            <button class="modal-close" @click="modalRecusa.open = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Justificativa da recusa <span class="req">*</span></label>
+              <textarea v-model="modalRecusa.justificativa" class="cfg-input cfg-textarea" rows="3" placeholder="Informe o motivo da recusa..."></textarea>
+            </div>
+            <div v-if="modalRecusa.erro" class="form-erro">{{ modalRecusa.erro }}</div>
+            <div class="modal-actions">
+              <button class="modal-cancel" @click="modalRecusa.open = false">Cancelar</button>
+              <button class="modal-submit" :disabled="modalRecusa.salvando" @click="confirmarRecusa">
+                <span v-if="modalRecusa.salvando" class="btn-spin"></span>
+                <template v-else>Recusar</template>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -151,28 +235,85 @@ import api from '@/plugins/axios'
 const loaded = ref(false)
 const loading = ref(true)
 const modalAberto = ref(false)
+const abaAtiva = ref('substituicoes')
 const busca = ref('')
 const statusFiltro = ref('')
 const subs = ref([])
+const historico = ref([])
+const filtroHistorico = ref('todos')
 const enviando = ref(false)
 const erroEnvio = ref('')
 const loadingEscalas = ref(false)
 const loadingFuncs = ref(false)
 const escalasDisponiveis = ref([])
 const funcionariosEscala = ref([])
+const acaoEmAndamento = ref(null)
+const modalRecusa = ref({ open: false, item: null, justificativa: '', erro: '', salvando: false })
 
 const novaForm = reactive({
   escala_id: '', solicitante_id: '', substituto_id: '',
-  data: '', turno: '', motivo: ''
+  data: '', turno: '', motivo: '',
+  tipo_convocacao: 'OPTATIVA',
+  horario_inicio: '',
+  horario_fim: '',
+  unidade_escolar: '',
+  disciplina_cargo: '',
 })
+
+const normalizarEscala = (e = {}) => ({
+  ESCALA_ID: e.ESCALA_ID ?? e.escala_id ?? e.id ?? null,
+  ESCALA_COMPETENCIA: e.ESCALA_COMPETENCIA ?? e.competencia ?? '',
+  setor: e.setor ?? e.setor_nome ?? '—',
+})
+
+const normalizarSub = (s = {}) => ({
+  id: s.id ?? s.SUBSTITUICAO_ESCALA_ID ?? Date.now(),
+  solicitante: s.solicitante ?? s.funcionario ?? '—',
+  solicitante_id: s.solicitante_id ?? s.FUNCIONARIO_ID ?? null,
+  substituto: s.substituto ?? s.funcionario_substituto ?? '—',
+  substituto_id: s.substituto_id ?? s.FUNCIONARIO_SUBSTITUTO_ID ?? null,
+  data_plantao: s.data_plantao ?? s.data ?? s.SUBSTITUICAO_ESCALA_DATA ?? null,
+  turno: s.turno ?? s.turno_sigla ?? '—',
+  tipo_convocacao: (s.tipo_convocacao || 'OPTATIVA').toUpperCase(),
+  horario_inicio: s.horario_inicio ?? null,
+  horario_fim: s.horario_fim ?? null,
+  unidade_escolar: s.unidade_escolar ?? null,
+  disciplina_cargo: s.disciplina_cargo ?? null,
+  setor: s.setor ?? s.setor_nome ?? '—',
+  motivo: s.motivo ?? s.justificativa ?? null,
+  status: normalizarStatus(s.status),
+  criado_em: s.criado_em ?? s.data_plantao ?? s.data ?? s.SUBSTITUICAO_ESCALA_DATA ?? null,
+})
+
+const normalizarStatus = (v) => {
+  const raw = String(v ?? 'pendente').toLowerCase().trim()
+  if (raw === 'aprovado' || raw === 'aprovada' || raw === 'confirmada' || raw === 'aceita' || raw === 'aceito') return 'confirmada'
+  if (raw === 'reprovado' || raw === 'reprovada' || raw === 'recusada') return 'recusada'
+  if (raw === 'falta_substituicao') return 'falta_substituicao'
+  return 'pendente_aceite'
+}
 
 // ── Carregamento de dados ────────────────────────────────────
 const fetchSubs = async () => {
   try {
     const { data } = await api.get('/api/v3/substituicoes')
-    subs.value = Array.isArray(data) ? data : (data.substituicoes ?? [])
+    const rows = Array.isArray(data) ? data : (data.substituicoes ?? [])
+    subs.value = rows.map(normalizarSub)
+    historico.value = (data?.historico ?? []).map((h) => ({
+      id: h.id,
+      substituicao_id: h.substituicao_id,
+      status: normalizarStatus(h.status),
+      justificativa: h.justificativa,
+      decidido_em: h.decidido_em,
+      solicitante: h.solicitante ?? '—',
+      substituto: h.substituto ?? '—',
+      data_plantao: h.data_plantao ?? null,
+      turno: h.turno ?? '—',
+      setor: h.setor ?? '—',
+    }))
   } catch {
-    subs.value = mockSubs()
+    subs.value = []
+    historico.value = []
   } finally {
     loading.value = false
     setTimeout(() => { loaded.value = true }, 80)
@@ -183,7 +324,10 @@ const carregarEscalas = async () => {
   loadingEscalas.value = true
   try {
     const { data } = await api.get('/api/v3/escalas')
-    escalasDisponiveis.value = data.escalas ?? data ?? []
+    const arr = data.escalas ?? data ?? []
+    escalasDisponiveis.value = arr
+      .map(normalizarEscala)
+      .filter(e => e.ESCALA_ID && e.ESCALA_COMPETENCIA)
   } catch {
     escalasDisponiveis.value = []
   } finally {
@@ -207,7 +351,7 @@ const carregarFuncionariosEscala = async () => {
 }
 
 const abrirModalNova = async () => {
-  Object.assign(novaForm, { escala_id: '', solicitante_id: '', substituto_id: '', data: '', turno: '', motivo: '' })
+  Object.assign(novaForm, { escala_id: '', solicitante_id: '', substituto_id: '', data: '', turno: '', motivo: '', tipo_convocacao: 'OPTATIVA', horario_inicio: '', horario_fim: '', unidade_escolar: '', disciplina_cargo: '' })
   erroEnvio.value = ''
   modalAberto.value = true
   if (!escalasDisponiveis.value.length) await carregarEscalas()
@@ -226,10 +370,14 @@ const subsFiltradas = computed(() => {
   return list
 })
 const resumo = computed(() => ({
-  pendentes: subs.value.filter(s => s.status === 'pendente').length,
-  aprovadas: subs.value.filter(s => s.status === 'aprovada').length,
+  pendentes: subs.value.filter(s => s.status === 'pendente_aceite').length,
+  aprovadas: subs.value.filter(s => s.status === 'confirmada').length,
   total: subs.value.length,
 }))
+const historicoFiltrado = computed(() => {
+  if (filtroHistorico.value === 'todos') return historico.value
+  return historico.value.filter(h => h.status === filtroHistorico.value)
+})
 const novaFormValida = computed(() =>
   novaForm.escala_id && novaForm.solicitante_id && novaForm.data && novaForm.turno
 )
@@ -238,78 +386,73 @@ const novaFormValida = computed(() =>
 const enviarSub = async () => {
   enviando.value = true; erroEnvio.value = ''
   try {
-    const solObj = funcionariosEscala.value.find(f => f.funcionario_id == novaForm.solicitante_id)
-    const subObj = funcionariosEscala.value.find(f => f.funcionario_id == novaForm.substituto_id)
-    const escObj = escalasDisponiveis.value.find(e => e.ESCALA_ID == novaForm.escala_id)
-    const { data } = await api.post('/api/v3/substituicoes', {
+    await api.post('/api/v3/substituicoes', {
       escala_id:     novaForm.escala_id,
       solicitante_id: novaForm.solicitante_id,
       substituto_id:  novaForm.substituto_id || null,
       data_plantao:   novaForm.data,
       turno:          novaForm.turno,
       motivo:         novaForm.motivo,
+      tipo_convocacao: novaForm.tipo_convocacao,
+      horario_inicio: novaForm.horario_inicio || null,
+      horario_fim: novaForm.horario_fim || null,
+      unidade_escolar: novaForm.unidade_escolar || null,
+      disciplina_cargo: novaForm.disciplina_cargo || null,
     })
-    subs.value.unshift({
-      id: data.id ?? Date.now(),
-      solicitante:    solObj?.nome ?? 'Profissional',
-      solicitante_id: novaForm.solicitante_id,
-      substituto:     subObj?.nome ?? '—',
-      substituto_id:  novaForm.substituto_id,
-      data_plantao:   novaForm.data,
-      turno:          novaForm.turno,
-      setor:          escObj?.setor ?? '—',
-      motivo:         novaForm.motivo,
-      status:         'pendente',
-      criado_em:      new Date().toISOString().slice(0, 10),
-    })
+    await fetchSubs()
     modalAberto.value = false
   } catch (e) {
-    // Fallback: adiciona localmente
-    const solObj = funcionariosEscala.value.find(f => f.funcionario_id == novaForm.solicitante_id)
-    const subObj = funcionariosEscala.value.find(f => f.funcionario_id == novaForm.substituto_id)
-    const escObj = escalasDisponiveis.value.find(e => e.ESCALA_ID == novaForm.escala_id)
-    subs.value.unshift({
-      id: Date.now(),
-      solicitante:    solObj?.nome ?? 'Profissional',
-      solicitante_id: novaForm.solicitante_id,
-      substituto:     subObj?.nome ?? '—',
-      substituto_id:  novaForm.substituto_id,
-      data_plantao:   novaForm.data,
-      turno:          novaForm.turno,
-      setor:          escObj?.setor ?? '—',
-      motivo:         novaForm.motivo,
-      status:         'pendente',
-      criado_em:      new Date().toISOString().slice(0, 10),
-    })
-    modalAberto.value = false
+    erroEnvio.value = e?.response?.data?.erro || 'Falha ao registrar substituição. Verifique a API e tente novamente.'
   } finally {
     enviando.value = false
   }
 }
 
 const aprovar = async (s) => {
-  try { await api.put(`/api/v3/substituicoes/${s.id}`, { status: 'aprovada' }) } catch {}
-  s.status = 'aprovada'
+  acaoEmAndamento.value = `aprovar-${s.id}`
+  try {
+    await api.put(`/api/v3/substituicoes/${s.id}`, { status: 'confirmada' })
+    await fetchSubs()
+  } catch {
+    // sem atualização otimista: mantém estado consistente do backend
+  } finally {
+    acaoEmAndamento.value = null
+  }
 }
 const recusar = async (s) => {
-  try { await api.put(`/api/v3/substituicoes/${s.id}`, { status: 'recusada' }) } catch {}
-  s.status = 'recusada'
+  modalRecusa.value = { open: true, item: s, justificativa: '', erro: '', salvando: false }
+}
+
+const confirmarRecusa = async () => {
+  const s = modalRecusa.value.item
+  const justificativa = (modalRecusa.value.justificativa || '').trim()
+  if (!justificativa) {
+    modalRecusa.value.erro = 'A justificativa é obrigatória.'
+    return
+  }
+  acaoEmAndamento.value = `recusar-${s.id}`
+  modalRecusa.value.salvando = true
+  modalRecusa.value.erro = ''
+  try {
+    await api.put(`/api/v3/substituicoes/${s.id}`, { status: 'recusada', justificativa })
+    await fetchSubs()
+    modalRecusa.value.open = false
+  } catch {
+    modalRecusa.value.erro = 'Falha ao recusar substituição.'
+  } finally {
+    modalRecusa.value.salvando = false
+    acaoEmAndamento.value = null
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────
 const avatarHue  = (id) => ((id ?? 1) * 137) % 360
 const iniciais   = (n) => { const w = (n||'').trim().split(' ').filter(Boolean); return w.length >= 2 ? (w[0][0]+w[w.length-1][0]).toUpperCase() : (n||'?').substring(0,2).toUpperCase() }
-const statusLabel = (s) => ({ pendente: 'Pendente', aprovada: 'Aprovada', recusada: 'Recusada' })[s] ?? s
-const statusClass = (s) => ({ pendente: 'st-yellow', aprovada: 'st-green', recusada: 'st-red' })[s] ?? ''
-const formatDate  = (d) => { try { return new Date(d+'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }) } catch { return d } }
-const formatDateRel = (d) => { try { const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000); return diff === 0 ? 'Hoje' : `Há ${diff}d` } catch { return d } }
+const statusLabel = (s) => ({ pendente_aceite: 'Pendente Aceite', confirmada: 'Confirmada', recusada: 'Recusada', falta_substituicao: 'Falta em Substituição' })[s] ?? s
+const statusClass = (s) => ({ pendente_aceite: 'st-yellow', confirmada: 'st-green', recusada: 'st-red', falta_substituicao: 'st-red' })[s] ?? ''
+const formatDate  = (d) => { try { const dt = new Date(`${d}T12:00:00`); if (Number.isNaN(dt.getTime())) return '—'; return dt.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }) } catch { return '—' } }
+const formatDateRel = (d) => { try { const dt = new Date(`${d}T12:00:00`); if (Number.isNaN(dt.getTime())) return '—'; const diff = Math.floor((Date.now() - dt.getTime()) / 86400000); return diff === 0 ? 'Hoje' : `Há ${diff}d` } catch { return '—' } }
 
-const mockSubs = () => [
-  { id: 1, solicitante: 'Ana Paula Santos', solicitante_id: 1, substituto: 'Carlos Eduardo Lima', substituto_id: 2, data_plantao: '2026-02-28', turno: 'Noturno (19–07h)', setor: 'UTI Adulto', motivo: 'Consulta médica agendada', status: 'pendente', criado_em: '2026-02-23' },
-  { id: 2, solicitante: 'Marcos Rocha', solicitante_id: 3, substituto: 'Fernanda Lima', substituto_id: 4, data_plantao: '2026-02-26', turno: 'Manhã (07–13h)', setor: 'Pronto-Socorro', motivo: 'Compromisso familiar', status: 'aprovada', criado_em: '2026-02-22' },
-  { id: 3, solicitante: 'Roberto Mendes', solicitante_id: 7, substituto: 'Maria Clara', substituto_id: 8, data_plantao: '2026-02-24', turno: 'Tarde (13–19h)', setor: 'Centro Cirúrgico', motivo: 'Problemas pessoais', status: 'recusada', criado_em: '2026-02-19' },
-  { id: 4, solicitante: 'Camila Rodrigues', solicitante_id: 9, substituto: 'Lucas Nunes', substituto_id: 10, data_plantao: '2026-03-01', turno: 'Manhã (07–13h)', setor: 'UTI Adulto', motivo: 'Atestado médico', status: 'pendente', criado_em: '2026-02-24' },
-]
 </script>
 
 <style scoped>
@@ -340,6 +483,9 @@ const mockSubs = () => [
 .filter-select { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: #475569; outline: none; }
 .nova-btn { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 12px; border: none; background: #3b82f6; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
 .nova-btn:hover { background: #2563eb; transform: translateY(-1px); }
+.abas { display:flex; gap:8px; }
+.aba-btn { border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:10px; padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer; }
+.aba-btn.active { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
 
 .state-box { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; color: #64748b; text-align: center; }
 .state-ico { font-size: 40px; margin-bottom: 10px; }
@@ -378,6 +524,12 @@ const mockSubs = () => [
 .act-approve, .act-reject { width: 30px; height: 30px; border-radius: 9px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
 .act-approve:hover { background: #f0fdf4; border-color: #86efac; transform: scale(1.1); }
 .act-reject:hover { background: #fef2f2; border-color: #fca5a5; transform: scale(1.1); }
+.hist-wrap { display:flex; flex-direction:column; gap:10px; }
+.hist-filtros { display:flex; gap:8px; }
+.hf-btn { border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:999px; padding:6px 12px; font-size:11px; font-weight:700; cursor:pointer; }
+.hf-btn.active { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
+.hist-item { display:flex; align-items:flex-start; gap:12px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:12px; }
+.hist-main { flex:1; display:flex; flex-direction:column; gap:6px; }
 
 /* ── MODAL ─────────────────────────────────────────────────── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }

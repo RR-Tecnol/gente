@@ -59,10 +59,14 @@ $calcularRescisao = function ($func, $dataExoneracao, $salarioBase) {
     $feriasVencidasTercio = 0.0;
     try {
         // Conta períodos aquisitivos com 12+ meses sem férias registradas
-        $gozadas = DB::table('FERIAS_PERIODO')
-            ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
-            ->whereNotNull('FERIAS_DATA_INICIO')
-            ->count();
+            // GAP-RES fix: tabela correta é FERIAS (não FERIAS_PERIODO que não existe)
+            // Status calculado pela view — não tem FERIAS_STATUS persistido
+            $gozadas = DB::table('FERIAS')
+                ->where('FUNCIONARIO_ID', $func->FUNCIONARIO_ID)
+                ->whereNotNull('FERIAS_DATA_INICIO')
+                ->whereNotNull('FERIAS_DATA_FIM')
+                ->where('FERIAS_DATA_FIM', '<', now()->toDateString())
+                ->count();
         $periodosTotais = max(0, $anosCompletos - $gozadas);
         if ($periodosTotais > 0) {
             $feriasVencidas = round($salarioBase * $periodosTotais, 2);
@@ -128,7 +132,7 @@ $calcularRescisao = function ($func, $dataExoneracao, $salarioBase) {
 // ── Buscar servidor para exoneração (autocomplete) ────────────────
 Route::get('/exoneracao/buscar', function (Request $request) {
     try {
-        $q = $request->q ?? '';
+        $q = request()->input('q', '');
         $servidores = DB::table('FUNCIONARIO as f')
             ->join('PESSOA as p', 'p.PESSOA_ID', '=', 'f.PESSOA_ID')
             ->leftJoin('CARGO as c', 'c.CARGO_ID', '=', 'f.CARGO_ID')
@@ -158,8 +162,8 @@ Route::get('/exoneracao/buscar', function (Request $request) {
 // ── Preview do cálculo rescisório (sem salvar) ────────────────────
 Route::post('/exoneracao/preview', function (Request $request) use ($getSalarioBase, $calcularRescisao) {
     try {
-        $funcId = $request->funcionario_id;
-        $dataEx = $request->data_exoneracao;
+        $funcId = request()->input('funcionario_id');
+        $dataEx = request()->input('data_exoneracao');
         if (!$funcId || !$dataEx)
             return response()->json(['erro' => 'funcionario_id e data_exoneracao são obrigatórios.'], 422);
 
@@ -180,6 +184,10 @@ Route::post('/exoneracao/preview', function (Request $request) use ($getSalarioB
             'calculo' => $calculo,
         ]);
     } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('[ExonPreview] ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
@@ -188,10 +196,10 @@ Route::post('/exoneracao/preview', function (Request $request) use ($getSalarioB
 Route::post('/exoneracao/registrar', function (Request $request) use ($getSalarioBase, $calcularRescisao) {
     try {
         $user = Auth::user();
-        $funcId = $request->funcionario_id;
-        $dataEx = $request->data_exoneracao;
-        $motivo = $request->motivo_saida ?? 'EXONERACAO';
-        $portaria = $request->portaria_num;
+        $funcId = request()->input('funcionario_id');
+        $dataEx = request()->input('data_exoneracao');
+        $motivo = request()->input('motivo_saida', 'EXONERACAO');
+        $portaria = request()->input('portaria_num');
 
         if (!$funcId || !$dataEx)
             return response()->json(['erro' => 'funcionario_id e data_exoneracao são obrigatórios.'], 422);
@@ -234,14 +242,19 @@ Route::post('/exoneracao/registrar', function (Request $request) use ($getSalari
         ]);
 
         // Atualiza o funcionário
-        DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcId)->update([
-            'FUNCIONARIO_DATA_FIM' => $dataEx,
-            'FUNCIONARIO_MOTIVO_SAIDA' => $motivo,
-            'FUNCIONARIO_DATA_EXONERACAO' => $dataEx,
-            'FUNCIONARIO_PORTARIA_SAIDA' => $portaria,
+        // Schema-defensive: só atualiza colunas que existem em PMSL, incluindo updated_at
+        $colsFun = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCIONARIO');
+        $payloadFun = array_intersect_key([
+            'FUNCIONARIO_DATA_FIM'          => $dataEx,
+            'FUNCIONARIO_MOTIVO_SAIDA'      => $motivo,
+            'FUNCIONARIO_DATA_EXONERACAO'   => $dataEx,
+            'FUNCIONARIO_PORTARIA_SAIDA'    => $portaria,
             'FUNCIONARIO_STATUS_RESCISORIO' => 'PENDENTE',
-            'updated_at' => now(),
-        ]);
+            'updated_at'                    => now(),
+        ], array_flip($colsFun));
+        if (!empty($payloadFun)) {
+            DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $funcId)->update($payloadFun);
+        }
         \Illuminate\Support\Facades\Log::channel('security')->info('exoneracao_registrada', ['usuario' => $user?->USUARIO_ID, 'funcionario' => $funcId, 'rescisao_id' => $rescisaoId]);
 
         return response()->json([
@@ -259,7 +272,16 @@ Route::post('/exoneracao/registrar', function (Request $request) use ($getSalari
 // ── Lista de elegíveis para folha rescisória (com filtro por secretaria) ─
 Route::get('/exoneracao/elegiveis', function (Request $request) {
     try {
-        $unidadeId = $request->unidade_id;
+        $unidadeId = request()->input('unidade_id');
+
+        if (!Schema::hasTable('RESCISAO_CALCULO')) {
+            return response()->json([
+                'total' => 0,
+                'elegiveis' => [],
+                'por_secretaria' => [],
+                'unidades' => DB::table('UNIDADE')->select('UNIDADE_ID as id', 'UNIDADE_NOME as nome')->orderBy('UNIDADE_NOME')->get(),
+            ]);
+        }
 
         $query = DB::table('RESCISAO_CALCULO as rc')
             ->join('FUNCIONARIO as f', 'f.FUNCIONARIO_ID', '=', 'rc.FUNCIONARIO_ID')
@@ -275,8 +297,9 @@ Route::get('/exoneracao/elegiveis', function (Request $request) {
             ->whereNull('rc.FOLHA_ID');
 
         if ($unidadeId) {
-            // Filtro hierárquico: secretaria selecionada + todos os seus setores filhos
-            $setoresIds = DB::table('SETOR')->where('UNIDADE_ID', $unidadeId)->pluck('SETOR_ID');
+            $setoresIds = DB::table('SETOR')
+                ->where('UNIDADE_ID', $unidadeId)
+                ->pluck('SETOR_ID');
             $query->whereIn('l.SETOR_ID', $setoresIds);
         }
 
@@ -295,15 +318,13 @@ Route::get('/exoneracao/elegiveis', function (Request $request) {
             'rc.TOTAL_BRUTO as total_bruto',
             'rc.DESCONTO_IRRF as desconto_irrf',
             'rc.TOTAL_LIQUIDO as total_liquido',
-            'rc.REGIME_PREV as regime',
             'rc.STATUS as status'
         )->orderBy('rc.DATA_EXONERACAO')->get();
 
-        // Agrupa por unidade para exibição no frontend
         $porSecretaria = $elegiveis->groupBy('secretaria');
-
-        // Lista de unidades disponíveis para o filtro
-        $unidades = DB::table('UNIDADE')->select('UNIDADE_ID as id', 'UNIDADE_NOME as nome')->get();
+        $unidades = DB::table('UNIDADE')
+            ->select('UNIDADE_ID as id', 'UNIDADE_NOME as nome')
+            ->orderBy('UNIDADE_NOME')->get();
 
         return response()->json([
             'total' => $elegiveis->count(),
@@ -312,6 +333,7 @@ Route::get('/exoneracao/elegiveis', function (Request $request) {
             'unidades' => $unidades,
         ]);
     } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('[ExonElegiveis] ' . $e->getMessage());
         return response()->json(['erro' => $e->getMessage()], 500);
     }
 });
@@ -320,21 +342,30 @@ Route::get('/exoneracao/elegiveis', function (Request $request) {
 Route::post('/exoneracao/incluir-folha', function (Request $request) {
     try {
         $user = Auth::user();
-        $rescisaoIds = $request->rescisao_ids ?? [];
-        $competencia = $request->competencia ?? now()->format('Y-m');
+        $rescisaoIds = request()->input('rescisao_ids', []);
+        $competencia = request()->input('competencia', now()->format('Y-m'));
 
         if (empty($rescisaoIds))
             return response()->json(['erro' => 'Nenhum servidor selecionado.'], 422);
 
         // Cria ou recupera a folha rescisória da competência
-        $folhaId = DB::table('FOLHA')->insertGetId([
+        // Schema-defensive: FOLHA_TIPO_ESPECIAL não existe; usar FOLHA_TIPO_EVENTO (adicionado no GAP-13)
+        $folhaData = [
             'FOLHA_DESCRICAO' => "Folha Rescisória — $competencia",
             'FOLHA_TIPO' => 2,
-            'FOLHA_TIPO_ESPECIAL' => 'RESCISORIA',
-            'FOLHA_COMPETENCIA' => $competencia,
-            'FOLHA_SITUACAO' => 'ABERTA',
-            'FOLHA_CRIACAO' => now(),
-        ]);
+            'FOLHA_COMPETENCIA' => str_replace('-', '', substr($competencia, 0, 7)),
+            // Usar apenas ano+mes como INTEGER YYYYMM (padrão do sistema)
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_TIPO_EVENTO')) {
+            $folhaData['FOLHA_TIPO_EVENTO'] = 'RESCISORIA';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_SITUACAO')) {
+            $folhaData['FOLHA_SITUACAO'] = 'ABERTA';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('FOLHA', 'FOLHA_CRIACAO')) {
+            $folhaData['FOLHA_CRIACAO'] = now();
+        }
+        $folhaId = DB::table('FOLHA')->insertGetId($folhaData);
 
         $incluidos = 0;
         foreach ($rescisaoIds as $rescId) {
@@ -394,10 +425,14 @@ Route::post('/exoneracao/incluir-folha', function (Request $request) {
             ]);
 
             // Atualiza funcionário
-            DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $rc->FUNCIONARIO_ID)->update([
+            $colsFun = \Illuminate\Support\Facades\Schema::getColumnListing('FUNCIONARIO');
+            $payloadFun = array_intersect_key([
                 'FUNCIONARIO_STATUS_RESCISORIO' => 'INCLUIDO_FOLHA',
                 'updated_at' => now(),
-            ]);
+            ], array_flip($colsFun));
+            if (!empty($payloadFun)) {
+                DB::table('FUNCIONARIO')->where('FUNCIONARIO_ID', $rc->FUNCIONARIO_ID)->update($payloadFun);
+            }
 
             $incluidos++;
         }

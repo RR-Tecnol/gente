@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Services;
-
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,11 +25,14 @@ class DepreciacaoService
         // Competência AAAAMM → YYYY-MM para comparação
         $anoMes = substr($competencia, 0, 4) . '-' . substr($competencia, 4, 2);
 
+        // R56: SQLite_datetime → comparação direta de data (cross-driver)
+        $inicioMesCompetencia = Carbon::createFromFormat('Y-m', $anoMes)->startOfMonth()->toDateString();
+
         $bens = DB::table('BEM_PATRIMONIAL')
             ->where('BEM_STATUS', 'ATIVO')
-            ->where(function ($q) use ($anoMes) {
+            ->where(function ($q) use ($inicioMesCompetencia) {
                 $q->whereNull('BEM_DATA_ULTIMA_DEPRECIACAO')
-                  ->orWhereRaw("strftime('%Y-%m', BEM_DATA_ULTIMA_DEPRECIACAO) < ?", [$anoMes]);
+                  ->orWhere('BEM_DATA_ULTIMA_DEPRECIACAO', '<', $inicioMesCompetencia);
             })
             ->get();
 

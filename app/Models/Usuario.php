@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Support\UnidadeEscopoUsuario;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 
 class Usuario extends Authenticatable
 {
@@ -132,6 +135,25 @@ class Usuario extends Authenticatable
     public static function getById($userId)
     {
         return self::with(self::$rels)->find($userId);
+    }
+
+    /**
+     * Fluxos de aprovação: o alvo está sob comando hierárquico (lotação ativa no escopo de setores)?
+     */
+    public function podeGerenciar(Funcionario $alvo, ?Request $request = null): bool
+    {
+        $q = $alvo->lotacoes();
+        if (Schema::hasColumn('LOTACAO', 'LOTACAO_DATA_FIM')) {
+            $q->whereNull('LOTACAO_DATA_FIM');
+        }
+        $setorIds = $q->pluck('SETOR_ID')->map(fn ($v) => (int) $v)->filter(fn ($id) => $id > 0)->unique()->all();
+        foreach ($setorIds as $sid) {
+            if (UnidadeEscopoUsuario::podeAcessarSetor($this, $sid, $request)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

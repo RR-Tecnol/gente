@@ -26,18 +26,20 @@ class ApuracaoPontoService
     {
         [$ano, $mes] = explode('-', $competencia);
 
+        // R40: whereYear/whereMonth → whereBetween (cross-driver SQLite/MySQL/SQL Server)
+        $inicioMes = Carbon::create((int) $ano, (int) $mes, 1)->startOfMonth();
+        $fimMes = $inicioMes->copy()->endOfMonth();
+
         // Busca todos os registros de ponto do mês
         $registros = RegistroPonto::where('FUNCIONARIO_ID', $funcionarioId)
-            ->whereYear('REGISTRO_DATA_HORA', $ano)
-            ->whereMonth('REGISTRO_DATA_HORA', $mes)
+            ->whereBetween('REGISTRO_DATA_HORA', [$inicioMes, $fimMes])
             ->orderBy('REGISTRO_DATA_HORA')
             ->get();
 
         // Busca os itens de escala do mês (turnos esperados)
         $itensEscala = DetalheEscalaItem::with('turno')
             ->whereHas('detalheEscala', fn($q) => $q->where('FUNCIONARIO_ID', $funcionarioId))
-            ->whereYear('DETALHE_ESCALA_ITEM_DATA', $ano)
-            ->whereMonth('DETALHE_ESCALA_ITEM_DATA', $mes)
+            ->whereBetween('DETALHE_ESCALA_ITEM_DATA', [$inicioMes->toDateString(), $fimMes->toDateString()])
             ->get()
             ->keyBy('DETALHE_ESCALA_ITEM_DATA');
 

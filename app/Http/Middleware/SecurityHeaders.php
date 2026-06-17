@@ -33,11 +33,13 @@ class SecurityHeaders
         // cobre o backend Laravel (views Blade + API responses)
         $response->headers->set('Content-Security-Policy',
             "default-src 'self'; " .
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " .
-            "style-src 'self' 'unsafe-inline'; " .
-            "img-src 'self' data: blob: https://api.dicebear.com; " .
-            "font-src 'self' data:; " .
-            "connect-src 'self'; " .
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com; " .
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " .
+            "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " .
+            "img-src 'self' data: blob: https://api.dicebear.com https://*.tile.openstreetmap.org; " .
+            "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; " .
+            "connect-src 'self' https://viacep.com.br https://www.google.com; " .
+            "frame-src 'self' https://www.google.com; " .
             "frame-ancestors 'self';"
         );
 

@@ -60,8 +60,8 @@
         </div>
         <div class="at-actions">
           <button class="at-act" title="Baixar PDF" @click="baixarAtestadoPDF(a.id)">📄</button>
-          <!-- Botões de aprovação (gestor) -->
-          <template v-if="a.status === 'pendente'">
+          <!-- Aprovar / Rejeitar: só admin ou RH (alinhado ao backend) -->
+          <template v-if="podeAcaoGestaoAtestados && a.status === 'pendente'">
             <button class="at-act at-act-green" title="Aprovar" @click="abrirAprovacao(a, 'aprovar')">✅</button>
             <button class="at-act at-act-red"   title="Rejeitar" @click="abrirAprovacao(a, 'rejeitar')">❌</button>
           </template>
@@ -74,9 +74,9 @@
       </div>
     </div>
 
-    <!-- MODAL APROVAÇÃO DO GESTOR -->
+    <!-- MODAL APROVAÇÃO / VALIDAÇÃO RH (não renderiza no DOM para servidor comum) -->
     <transition name="modal">
-      <div v-if="modalAprovacao" class="modal-overlay" @click.self="modalAprovacao = null">
+      <div v-if="podeAcaoGestaoAtestados && modalAprovacao" class="modal-overlay" @click.self="modalAprovacao = null">
         <div class="modal-card">
           <div class="modal-hdr">
             <h3>{{ acaoAtual === 'aprovar' ? '✅ Aprovar Atestado' : '❌ Rejeitar Atestado' }}</h3>
@@ -93,7 +93,7 @@
                 : 'Informe o motivo da rejeição para o servidor.' }}
             </p>
             <div class="form-group">
-              <label>Observação do Gestor <span class="opt-label">(opcional)</span></label>
+              <label>Observação do RH <span class="opt-label">(opcional)</span></label>
               <textarea v-model="obsGestor" class="cfg-input cfg-ta" rows="3"
                 :placeholder="acaoAtual === 'aprovar'
                   ? 'Ex: Atestado validado. Ausência justificada.'
@@ -179,6 +179,14 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import api from '@/plugins/axios'
+import { useAuthStore } from '@/store/auth'
+
+const authStore = useAuthStore()
+
+/** Alinha com a API: só admin ou RH podem aprovar/rejeitar (Pinia: isAdmin ∪ isRH) */
+const podeAcaoGestaoAtestados = computed(
+  () => authStore.isAdmin || authStore.isRH
+)
 
 const loaded = ref(false)
 const modalAberto = ref(false)
@@ -290,23 +298,24 @@ const obsGestor      = ref('')
 const aprovando      = ref(false)
 
 const abrirAprovacao = (atestado, acao) => {
+  if (!podeAcaoGestaoAtestados.value) return
   modalAprovacao.value = atestado
-  acaoAtual.value      = acao
-  obsGestor.value      = ''
+  acaoAtual.value = acao
+  obsGestor.value = ''
 }
 
 const confirmarAprovacao = async () => {
-  if (!modalAprovacao.value) return
+  if (!modalAprovacao.value || !podeAcaoGestaoAtestados.value) return
   aprovando.value = true
   try {
-    const { data } = await api.put(`/api/v3/atestados-v3/${modalAprovacao.value.id}/status`, {
-      acao: acaoAtual.value,
-      observacao: obsGestor.value || null,
+    const id = modalAprovacao.value.id
+    const slug = acaoAtual.value === 'aprovar' ? 'aprovar' : 'rejeitar'
+    await api.put(`/api/v3/atestados/${id}/${slug}`, {
+      parecer: obsGestor.value || null
     })
-    // Atualiza localmente sem reload
-    const idx = atestados.value.findIndex(a => a.id === modalAprovacao.value.id)
+    const idx = atestados.value.findIndex(a => a.id === id)
     if (idx !== -1) {
-      atestados.value[idx].status  = data.status ?? acaoAtual.value === 'aprovar' ? 'aprovado' : 'rejeitado'
+      atestados.value[idx].status = acaoAtual.value === 'aprovar' ? 'aprovado' : 'rejeitado'
       atestados.value[idx].parecer = obsGestor.value || null
     }
     showToast(acaoAtual.value === 'aprovar' ? '✅ Atestado aprovado com sucesso!' : '❌ Atestado rejeitado.')

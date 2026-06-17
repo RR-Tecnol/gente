@@ -181,8 +181,8 @@ const fetchHolerites = async () => {
       proventos: h.proventos ?? h.bruto ?? 0,
       descontos: h.descontos ?? 0,
       liquido:   h.liquido ?? 0,
-      // Para o link do PDF precisamos do funcionario_id — pode vir diretamente ou via id
       funcionario_id: h.funcionario_id ?? null,
+      detalhe_folha_id: h.detalhe_folha_id ?? null,
     }))
   } catch (err) {
     console.error('Erro ao buscar holerites:', err)
@@ -211,10 +211,19 @@ const formatCompetencia = (comp) => {
 }
 
 const baixarHolerite = (funcionarioId, competencia, holerite) => {
-  // Usa o ID do cálculo para a rota nova
-  const calculoId = holerite?.calculo_id ?? holerite?.id ?? funcionarioId
-  const comp = competencia?.replace('-', '/') ?? competencia
-  window.open(`/api/v3/contra-cheque/${funcionarioId}/${comp}/pdf`, '_blank')
+  const detalheId = holerite?.detalhe_folha_id ?? holerite?.calculo_id ?? holerite?.id
+  if (detalheId) {
+    window.open(`/api/v3/holerite-pdf/${detalheId}`, '_blank')
+    return
+  }
+  // Fallback: PDF via serviço (competência YYYYMM, ex. 202604)
+  const comp = String(competencia || '').replace(/\D/g, '').slice(0, 6)
+  if (funcionarioId && comp.length === 6) {
+    window.open(`/api/v3/contra-cheque/${funcionarioId}/${comp}/pdf`, '_blank')
+    return
+  }
+  console.warn('Holerite sem detalhe_folha_id nem competência válida', { funcionarioId, competencia, holerite })
+  window.alert('Não foi possível abrir o PDF. Recarregue a página. Se continuar, verifique se a folha foi processada no sistema.')
 }
 </script>
 

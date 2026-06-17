@@ -3,41 +3,34 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 
-// 1. Auto-migration (Gatilho para garantir as tabelas necessárias)
-if (!Schema::hasTable('BENEFICIO')) {
-    Schema::create('BENEFICIO', function (Blueprint $table) {
-        $table->increments('BENEFICIO_ID');
-        $table->string('BENEFICIO_NOME', 150);
-        $table->string('BENEFICIO_TIPO', 50)->nullable(); // VT, VR, Plano Saúde...
-        $table->decimal('BENEFICIO_VALOR', 10, 2)->default(0);
-        $table->string('BENEFICIO_STATUS', 20)->default('ativo');
-        $table->timestamps();
-    });
-}
-
-if (!Schema::hasTable('FUNCIONARIO_BENEFICIO')) {
-    Schema::create('FUNCIONARIO_BENEFICIO', function (Blueprint $table) {
-        $table->increments('ID');
-        $table->unsignedInteger('FUNCIONARIO_ID')->index();
-        $table->unsignedInteger('BENEFICIO_ID')->index();
-        $table->date('DATA_INICIO')->nullable();
-        $table->date('DATA_FIM')->nullable();
-        $table->decimal('VALOR_ESPECIFICO', 10, 2)->nullable();
-        $table->integer('DEPENDENTES')->default(0);
-        $table->string('STATUS', 20)->default('ativo');
-        $table->text('OBSERVACAO')->nullable();
-        $table->timestamps();
-    });
+if (!function_exists('ensureBeneficioTablesFromRoutes')) {
+    function ensureBeneficioTablesFromRoutes(): void
+    {
+        if (!Schema::hasTable('BENEFICIO') || !Schema::hasTable('FUNCIONARIO_BENEFICIO')) {
+            throw new \RuntimeException('Tabelas de benefícios não encontradas. Execute migrations canônicas.');
+        }
+    }
 }
 
 // 2. Endpoints do Módulo de Benefícios
 Route::prefix('beneficios')->group(function () {
 
+    // ── Lista geral (GET /api/v3/beneficios) — dados básicos do catálogo
+    Route::get('/', function () {
+        try {
+            ensureBeneficioTablesFromRoutes();
+            $lista = DB::table('BENEFICIO')->orderBy('BENEFICIO_NOME')->get();
+            return response()->json(['beneficios' => $lista, 'total' => $lista->count()]);
+        } catch (\Throwable $e) {
+            return response()->json(['beneficios' => [], 'total' => 0, 'aviso' => $e->getMessage()], 200);
+        }
+    });
+
     // ── Catálogo de Benefícios ──
     Route::get('/catalogo', function (Request $request) {
+        ensureBeneficioTablesFromRoutes();
         try {
             $query = DB::table('BENEFICIO');
             
@@ -53,6 +46,7 @@ Route::prefix('beneficios')->group(function () {
     });
 
     Route::post('/catalogo', function (Request $request) {
+        ensureBeneficioTablesFromRoutes();
         try {
             $data = $request->validate([
                 'BENEFICIO_NOME' => 'required|string|max:150',
@@ -80,10 +74,11 @@ Route::prefix('beneficios')->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // ── Vínculos por Servidor ──
     Route::get('/{funcionario_id}', function ($funcionario_id) {
+        ensureBeneficioTablesFromRoutes();
         try {
             $vinculos = DB::table('FUNCIONARIO_BENEFICIO as fb')
                 ->join('BENEFICIO as b', 'fb.BENEFICIO_ID', '=', 'b.BENEFICIO_ID')
@@ -104,6 +99,7 @@ Route::prefix('beneficios')->group(function () {
     })->where('funcionario_id', '[0-9]+');
 
     Route::post('/{funcionario_id}', function (Request $request, $funcionario_id) {
+        ensureBeneficioTablesFromRoutes();
         try {
             $data = $request->validate([
                 'BENEFICIO_ID' => 'required|integer',
@@ -139,9 +135,10 @@ Route::prefix('beneficios')->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    })->where('funcionario_id', '[0-9]+');
+    })->where('funcionario_id', '[0-9]+')->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     Route::delete('/{id}', function ($id) {
+        ensureBeneficioTablesFromRoutes();
         try {
             // Em vez de hard delete, pode-se inativar se desejado,
             // mas o requesito foi explícito: DELETE /beneficios/{id}
@@ -150,10 +147,11 @@ Route::prefix('beneficios')->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // ── Relatório de Relacionamentos e KPI ──
     Route::get('/relatorio/kpis', function () {
+        ensureBeneficioTablesFromRoutes();
         try {
             // Conta totais distintos
             $totalServidoresComBeneficio = DB::table('FUNCIONARIO_BENEFICIO')
@@ -191,6 +189,7 @@ Route::prefix('beneficios')->group(function () {
     // Rota fallback para servir busca de servidores e exibir benefícios 
     // para a aba 'Por Servidor' independentemente (Relatório/Agregado por pessoa)
     Route::get('/relatorio/servidores', function (Request $request) {
+        ensureBeneficioTablesFromRoutes();
         try {
             $query = DB::table('FUNCIONARIO_BENEFICIO as fb')
                 ->join('BENEFICIO as b', 'fb.BENEFICIO_ID', '=', 'b.BENEFICIO_ID')

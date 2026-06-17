@@ -1,0 +1,58 @@
+{
+  "competencia": "2026-04",
+  "schema_version": 1,
+  "gerado_em": "2026-04-28T12:00:00-03:00",
+  "fonte_legacy": "fixture-shadow-smoke-e2e",
+  "descricao": "Dados 100% fictícios para prova de tubulação shadow (sem PII real).",
+  "arquivos": [
+    {
+      "path": "servidores.csv",
+      "rows": 3,
+      "sha256": "726753ee6fbd68f6ac8ea9f10eef744d85d6b1ab921f0f4cccf6cbe12917ce3a",
+      "delimiter": ";",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "resultado_legado.csv",
+      "rows": 3,
+      "sha256": "111a776ab0748b937a354123fd2c64471599602656081b9b70c89b7989197851",
+      "delimiter": ";",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "resultado_gente.csv",
+      "rows": 3,
+      "sha256": "111a776ab0748b937a354123fd2c64471599602656081b9b70c89b7989197851",
+      "delimiter": ";",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "rubricas_legado.csv",
+      "rows": 5,
+      "sha256": "3c87db6dc183919802881238cb8554cb88841b1599f336ba71a85279383c4d21",
+      "delimiter": ";",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "rubricas_gente.csv",
+      "rows": 5,
+      "sha256": "3c87db6dc183919802881238cb8554cb88841b1599f336ba71a85279383c4d21",
+      "delimiter": ";",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "pessoas.csv",
+      "rows": 3,
+      "sha256": "0149a3f5499eaa2efed1d58fd044af2f46afcf07b76fde3d9b51dfd3cc6bf2cf",
+      "delimiter": ";",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "funcionarios.csv",
+      "rows": 3,
+      "sha256": "e23485d8914035c60efaf8a0dab2334d6f6cf23965e8739a87fc4139816ff8bf",
+      "delimiter": ";",
+      "encoding": "UTF-8"
+    }
+  ]
+}

@@ -50,6 +50,15 @@ return [
             'formatter' => Monolog\Formatter\JsonFormatter::class,
         ],
 
+        // Fase 3C — shadow / evidência de tenant scope (MDE / TCE)
+        'tenant_scope' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/tenant_scope.log'),
+            'level' => 'info',
+            'days' => 90,
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

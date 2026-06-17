@@ -85,13 +85,16 @@ Route::patch('/acumulacao/{id}/analisar', function (Request $request, $id) {
             return response()->json(['erro' => 'Status inválido. Use: ' . implode(', ', $statusValidos)], 422);
         }
 
-        DB::table('ACUMULACAO_CARGO')->where('ACUMULACAO_ID', $id)->update([
+        $updated = DB::table('ACUMULACAO_CARGO')->where('ACUMULACAO_ID', $id)->update([
             'STATUS' => $request->status,
             'ANALISADO_POR' => $user->USUARIO_ID ?? null,
             'DATA_ANALISE' => now()->toDateString(),
             'OBSERVACAO' => $request->observacao,
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Declaração de acumulação não encontrada.'], 404);
+        }
 
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {

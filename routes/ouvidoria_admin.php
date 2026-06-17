@@ -19,13 +19,16 @@ Route::get('/ouvidoria/admin', function () {
 Route::patch('/ouvidoria/{id}/responder', function (Request $request, $id) {
     $request->validate(['resposta' => 'required|string']);
     
-    DB::table('OUVIDORIA')
+    $updated = DB::table('OUVIDORIA')
         ->where('OUVIDORIA_ID', $id)
         ->update([
             'OUVIDORIA_RESPOSTA' => $request->input('resposta'),
             'OUVIDORIA_STATUS' => 'respondida',
             'updated_at' => now()
         ]);
+    if (!$updated) {
+        return response()->json(['erro' => 'Manifestação não encontrada.'], 404);
+    }
         
     return response()->json(['ok' => true]);
 });

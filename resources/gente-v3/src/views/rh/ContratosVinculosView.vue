@@ -1,5 +1,6 @@
 <template>
   <div class="cv-page">
+    <div v-if="avisoContrato" class="cv-banner-warn" role="status">{{ avisoContrato }}</div>
     <div class="hero" :class="{ loaded }">
       <div class="hero-shapes"><div class="hs hs1"></div><div class="hs hs2"></div></div>
       <div class="hero-inner">
@@ -101,6 +102,8 @@ import api from '@/plugins/axios'
 
 const loaded = ref(false)
 const toast = ref({ visible: false, msg: '' })
+/** Mensagem quando não há contrato vinculado ao usuário ou a API falhou. */
+const avisoContrato = ref('')
 
 const vinculoAtualData = ref({
   tipo: 'Servidor Efetivo',
@@ -194,6 +197,7 @@ const documentos = ref([
 ])
 
 onMounted(async () => {
+  avisoContrato.value = ''
   try {
     const { data } = await api.get('/api/v3/contratos')
     if (!data.fallback && data.contrato) {
@@ -202,7 +206,7 @@ onMounted(async () => {
         tipo: c.vinculo || 'Servidor',
         regime: c.vinculo || 'Estatutário',
         regimePrev: c.regime_prev ?? 'RPPS',
-        cargo: c.cargo || '—',
+        cargo: (c.cargo && String(c.cargo).trim()) ? String(c.cargo).trim() : '—',
         contrato: c.matricula || '—',
         admissao: c.admissao,
         setor: c.setor,
@@ -211,6 +215,24 @@ onMounted(async () => {
         pis: c.pis,
         detalhes: [],
       }
+    } else {
+      vinculoAtualData.value = {
+        ...vinculoAtualData.value,
+        cargo: '—',
+        contrato: '—',
+        tipo: 'Sem vínculo no cadastro',
+        regime: '—',
+        regimePrev: 'RPPS',
+        admissao: null,
+        setor: '',
+        unidade: '',
+        cpf: undefined,
+        pis: undefined,
+        detalhes: [],
+      }
+      avisoContrato.value = data.fallback
+        ? 'Não foi possível carregar o contrato vinculado ao seu usuário (sem funcionário associado ou indisponível). Os dados abaixo são apenas ilustrativos.'
+        : 'Nenhum contrato ativo retornado pela API. Verifique o cadastro do servidor vinculado ao login.'
     }
     if (!data.fallback && data.historico?.length) {
       historicov.value = data.historico.map((l, idx) => ({
@@ -228,7 +250,17 @@ onMounted(async () => {
         docs: [],
       }))
     }
-  } catch { /* usa mock */ } finally {
+  } catch (e) {
+    vinculoAtualData.value = {
+      ...vinculoAtualData.value,
+      cargo: '—',
+      contrato: '—',
+      tipo: 'Indisponível',
+      regime: '—',
+      detalhes: [],
+    }
+    avisoContrato.value = e?.response?.data?.message || e?.response?.data?.erro || 'Falha ao consultar contratos. Verifique a sessão e tente novamente.'
+  } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
 })
@@ -241,6 +273,7 @@ const formatDate = (d) => { try { return new Date(d+'T12:00:00').toLocaleDateStr
 </script>
 
 <style scoped>
+.cv-banner-warn { margin: 0 2px; padding: 12px 16px; border-radius: 12px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; font-size: 0.9rem; line-height: 1.45; }
 .cv-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
 .hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #1a2a14 55%, #0f1a3a 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }

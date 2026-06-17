@@ -7,14 +7,41 @@ use Illuminate\Support\Facades\Route;
 // Herdado do grupo Route::prefix('api/v3')->middleware([...]) do web.php
 // ──────────────────────────────────────────────────────────────────
 
+if (!function_exists('resolveFuncionarioIdParaAvaliacao')) {
+    function resolveFuncionarioIdParaAvaliacao(\Illuminate\Http\Request $request): ?int
+    {
+        $funcId = $request->query('funcionario_id') ?? $request->input('funcionario_id');
+        if ($funcId) {
+            return (int) $funcId;
+        }
+
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user) {
+            return null;
+        }
+
+        $funcId = \Illuminate\Support\Facades\DB::table('FUNCIONARIO')
+            ->where('USUARIO_ID', $user->USUARIO_ID)
+            ->value('FUNCIONARIO_ID');
+
+        return $funcId ? (int) $funcId : null;
+    }
+}
+
+if (!function_exists('ensureTabelasAvaliacao')) {
+    function ensureTabelasAvaliacao(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('AVALIACAO_DESEMPENHO') || !\Illuminate\Support\Facades\Schema::hasTable('AVALIACAO_CRITERIO')) {
+            throw new \RuntimeException('Tabelas de avaliação não encontradas. Execute migrations canônicas.');
+        }
+    }
+}
+
 // GET — histórico de avaliações (do servidor logado OU de um funcionário específico quando gestor avalia)
 Route::get('/avaliacoes', function (\Illuminate\Http\Request $request) {
     try {
-        $usuario = session('usuario');
-        $funcId = $request->query('funcionario_id')
-            ?? $usuario['FUNCIONARIO_ID']
-            ?? $usuario['id']
-            ?? null;
+        ensureTabelasAvaliacao();
+        $funcId = resolveFuncionarioIdParaAvaliacao($request);
 
         if (!$funcId) {
             return response()->json(['fallback' => true, 'avaliacoes' => []]);
@@ -40,10 +67,12 @@ Route::get('/avaliacoes', function (\Illuminate\Http\Request $request) {
                 ->select('CRITERIO_NOME as nome', 'CRITERIO_PESO as peso', 'CRITERIO_NOTA as nota', 'CRITERIO_OBS as obs')
                 ->get();
             return [
+                'id'        => $av->AVALIACAO_ID,
                 'ciclo'     => $av->ciclo,
                 'nota'      => (float) $av->nota,
                 'status'    => $av->status,
                 'avaliador' => $av->avaliador ?? 'Gestor',
+                'criado_em' => $av->created_at,
                 'criterios' => $criterios,
             ];
         });
@@ -57,13 +86,10 @@ Route::get('/avaliacoes', function (\Illuminate\Http\Request $request) {
 // POST — salvar nova avaliação (gestor avalia servidor)
 Route::post('/avaliacoes', function (\Illuminate\Http\Request $request) {
     try {
-        $usuario     = session('usuario');
-        $avaliadorId = $usuario['USUARIO_ID'] ?? $usuario['id'] ?? null;
-
-        $funcId = $request->input('funcionario_id')
-            ?? $usuario['FUNCIONARIO_ID']
-            ?? $usuario['id']
-            ?? null;
+        ensureTabelasAvaliacao();
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $avaliadorId = $user->USUARIO_ID ?? null;
+        $funcId = resolveFuncionarioIdParaAvaliacao($request);
 
         $ciclo     = $request->input('ciclo', date('Y') . '.1');
         $criterios = $request->input('criterios', []);
@@ -88,6 +114,7 @@ Route::post('/avaliacoes', function (\Illuminate\Http\Request $request) {
             'AVALIACAO_NOTA_FINAL'  => $notaFinal,
             'AVALIACAO_STATUS'      => 'enviada',
             'AVALIADOR_ID'          => $avaliadorId,
+            'AVALIACAO_OBS'         => $request->input('AVALIACAO_OBS'),
             'created_at'            => now(),
             'updated_at'            => now(),
         ]);
@@ -113,4 +140,4 @@ Route::post('/avaliacoes', function (\Illuminate\Http\Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
     }
-});
+})->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');

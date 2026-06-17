@@ -92,6 +92,8 @@
       </button>
     </div>
 
+    <SentinelStatus v-if="showSentinel" />
+
   </div>
 </template>
 
@@ -100,14 +102,25 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import AppIcon from '@/components/AppIcon.vue'
+import SentinelStatus from '@/components/SentinelStatus.vue'
 import api from '@/plugins/axios'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const loaded = ref(false)
 const kpiData = ref(null)
+const fixUtf = (v) => String(v ?? '')
+  .replace(/â€”/g, '—')
+  .replace(/Ã§/g, 'ç')
+  .replace(/Ã£/g, 'ã')
+  .replace(/Ã©/g, 'é')
+  .replace(/Ã¡/g, 'á')
+  .replace(/Ã­/g, 'í')
+  .replace(/Ã³/g, 'ó')
+  .replace(/Ãº/g, 'ú')
 
 const userName = computed(() => authStore.user?.nome?.split(' ')[0] || authStore.perfilLabel || '')
+const showSentinel = computed(() => authStore.hasPerfil('DESENVOLVEDOR') || authStore.hasPerfil('ADMINISTRADOR') || authStore.isAdmin)
 const dateStr = computed(() => {
   return new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 })
@@ -128,7 +141,7 @@ const kpis = computed(() => [
   },
   {
     label: 'Status da Folha',
-    value: kpiData.value?.folha_status ?? '…',
+    value: fixUtf(kpiData.value?.folha_status ?? '…'),
     icon: 'contract', color: '#10b981', colorLight: '#f0fdf4',
     trend: 1, trendLabel: kpiData.value?.folha_competencia ?? ''
   },

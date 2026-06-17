@@ -60,9 +60,11 @@ class RescisaoService
         $feriasVencidas      = 0.0;
         $feriasVencidasTercio = 0.0;
         try {
+            // PMSL: FERIAS não tem coluna STATUS persistida — calcular por data
             $gozadas = DB::table('FERIAS')
                 ->where('FUNCIONARIO_ID', $funcionarioId)
-                ->whereIn('FERIAS_STATUS', ['APROVADA', 'PAGA'])
+                ->whereNotNull('FERIAS_DATA_FIM')
+                ->where('FERIAS_DATA_FIM', '<', now()->toDateString())
                 ->count();
             $periodosTotais = max(0, $anosCompletos - $gozadas);
             if ($periodosTotais > 0) {

@@ -1,6 +1,25 @@
 <?php
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+Route::get('/tabelas/cartorio', function () {
+    try {
+        if (!Schema::hasTable('CARTORIO')) {
+            return response()->json(['itens' => []]);
+        }
+        $q = DB::table('CARTORIO as c')
+            ->orderBy('c.CARTORIO_NOME');
+        if (Schema::hasColumn('CARTORIO', 'CIDADE_ID')) {
+            $q->leftJoin('CIDADE as ci', 'ci.CIDADE_ID', '=', 'c.CIDADE_ID')
+                ->select('c.CARTORIO_ID as id', 'c.CARTORIO_NOME as nome', 'c.CARTORIO_NUMERO as numero', 'ci.CIDADE_NOME as cidade_nome');
+        } else {
+            $q->select('c.CARTORIO_ID as id', 'c.CARTORIO_NOME as nome', 'c.CARTORIO_NUMERO as numero');
+        }
+        return response()->json(['itens' => $q->get()->map(fn ($r) => (array) $r)]);
+    } catch (\Throwable $e) {
+        return response()->json(['itens' => []]);
+    }
+});
 Route::get('/tabelas/banco', function () {
     try { return response()->json(['itens'=>DB::table('BANCO')->orderBy('BANCO_NOME')->get()->map(fn($r)=>['id'=>$r->BANCO_ID,'codigo'=>$r->BANCO_CODIGO??'','nome'=>$r->BANCO_NOME])]); } catch (\Throwable $e) { return response()->json(['itens'=>[]]); }
 });

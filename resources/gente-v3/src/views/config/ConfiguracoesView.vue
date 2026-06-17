@@ -539,7 +539,10 @@ const carregarRegime = async () => {
       pontoConfig.intervalo_almoco  = data.intervalo_almoco  ?? 120
       pontoConfig.tolerancia        = data.tolerancia        ?? 15
     }
-  } catch {}
+  } catch (e) {
+    configMsg.value = e?.response?.data?.erro || 'Falha ao carregar configuração global de ponto.'
+    configMsgOk.value = false
+  }
 }
 
 const salvarPontoConfig = async () => {
@@ -568,7 +571,11 @@ const carregarFuncsPonto = async () => {
   try {
     const { data } = await api.get('/api/v3/ponto/config/funcionarios')
     funcsPonto.value = data ?? []
-  } catch {} finally { carregandoFuncs.value = false }
+    funcMsg.value = ''
+  } catch (e) {
+    funcMsg.value = e?.response?.data?.erro || 'Falha ao carregar configuração por funcionário.'
+    funcMsgOk.value = false
+  } finally { carregandoFuncs.value = false }
 }
 
 const buscaFunc = ref('')
@@ -630,7 +637,7 @@ const densidades = [
 
 const notificacoes = reactive([
   { id: 1, ico: '🏥', titulo: 'Abono de Faltas', desc: 'Notificação quando um abono for deferido ou indeferido', ativo: true },
-  { id: 2, ico: '📅', titulo: 'Escalas Hospitalares', desc: 'Lembrete 2 dias antes de um plantão', ativo: true },
+  { id: 2, ico: '📅', titulo: 'Cobertura de Turnos (SEMED)', desc: 'Lembrete 2 dias antes de um turno de regência', ativo: true },
   { id: 3, ico: '💰', titulo: 'Holerite disponível', desc: 'Aviso quando um novo holerite for processado', ativo: true },
   { id: 4, ico: '⏱️', titulo: 'Inconsistências de Ponto', desc: 'Alerta de batidas inconsistentes no mês', ativo: false },
 ])
@@ -642,7 +649,9 @@ onMounted(async () => {
       const { data } = await api.get(`/api/v3/funcionarios/${u.FUNCIONARIO_ID}`)
       funcionario.value = data.funcionario
     }
-  } catch {}
+  } catch (e) {
+    mostrarToast('error', '❌', e?.response?.data?.erro || 'Falha ao carregar dados do funcionário logado.')
+  }
   const tarefas = [carregarVinculos(), carregarRegime()]
   if (authStore.isAdmin || authStore.isGestor) tarefas.push(carregarFuncsPonto())
   await Promise.all(tarefas)

@@ -8,7 +8,10 @@
         <div>
           <span class="hero-eyebrow">Recursos Humanos</span>
           <h1 class="hero-title">Funcionários</h1>
-          <p class="hero-sub">{{ total }} servidores cadastrados · página {{ paginaAtual }} de {{ ultimaPagina }}</p>
+          <p class="hero-sub">
+            {{ totalGeral }} servidores cadastrados · página {{ paginaAtual }} de {{ ultimaPagina }}
+            <span v-if="limboTotal > 0">· Limbo: {{ limboTotal }} (R$ {{ moeda(limboCustoMensal) }}/mês)</span>
+          </p>
         </div>
         <div class="hero-chips">
           <div class="chip"><span class="chip-dot green"></span><span>Ativos</span><strong>{{ ativos }}</strong></div>
@@ -37,6 +40,16 @@
         <span class="result-count">{{ funcionarios.length }} resultado{{ funcionarios.length !== 1 ? 's' : '' }}</span>
       </div>
     </div>
+    <div class="audit-filters" :class="{ loaded }">
+      <span class="af-label">Filtros de Auditoria:</span>
+      <button class="af-btn" :class="{ active: auditFilter === '' }" @click="setAuditFilter('')">Todos</button>
+      <button class="af-btn" :class="{ active: auditFilter === 'limbo' }" @click="setAuditFilter('limbo')">Aguardando Lotação (Limbo)</button>
+      <button class="af-btn" :class="{ active: auditFilter === 'vinculo_expirando' }" @click="setAuditFilter('vinculo_expirando')">Vínculo Expirando (30d)</button>
+      <button class="af-btn" :class="{ active: auditFilter === 'progressao_pendente' }" @click="setAuditFilter('progressao_pendente')">Progressão Pendente</button>
+    </div>
+    <div v-if="erroApoio" class="state-box error" style="padding:14px 20px;">
+      <p style="margin:0;">{{ erroApoio }}</p>
+    </div>
 
     <!-- LOADING -->
     <div v-if="loading" class="state-box"><div class="spinner"></div><p>Carregando servidores...</p></div>
@@ -57,18 +70,18 @@
       <table class="func-table">
         <thead>
           <tr>
-            <th>Servidor</th>
-            <th>Matrícula</th>
-            <th>Lotação / Setor</th>
-            <th>Vínculo</th>
-            <th>Início</th>
-            <th>Status</th>
+            <th><button class="th-sort" @click="definirOrdenacao('servidor')">Servidor <span>{{ indicadorOrdem('servidor') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('matricula')">Matrícula <span>{{ indicadorOrdem('matricula') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('setor')">Lotação / Setor <span>{{ indicadorOrdem('setor') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('vinculo')">Vínculo <span>{{ indicadorOrdem('vinculo') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('inicio')">Início <span>{{ indicadorOrdem('inicio') }}</span></button></th>
+            <th><button class="th-sort" @click="definirOrdenacao('status')">Status <span>{{ indicadorOrdem('status') }}</span></button></th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="(f, i) in funcionarios"
+            v-for="(f, i) in funcionariosOrdenados"
             :key="f.FUNCIONARIO_ID"
             class="func-row"
             :class="{ 'row-visible': loaded }"
@@ -92,9 +105,13 @@
             <td><span class="vinculo-badge">{{ f.vinculo || '—' }}</span></td>
             <td>{{ formatDate(f.FUNCIONARIO_DATA_INICIO) }}</td>
             <td>
-              <span class="status-badge" :class="f.FUNCIONARIO_DATA_FIM ? 'badge-red' : 'badge-green'">
+              <span
+                class="status-badge"
+                :class="statusBadgeClass(f)"
+                :title="statusTooltip(f)"
+              >
                 <span class="badge-dot"></span>
-                {{ f.FUNCIONARIO_DATA_FIM ? 'Inativo' : 'Ativo' }}
+                {{ statusLabel(f) }}
               </span>
             </td>
             <td>
@@ -105,9 +122,11 @@
                 <button class="act-btn act-purple" title="Editar" @click.stop="abrirModalEdicao(f)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <button v-if="!f.FUNCIONARIO_DATA_FIM" class="act-btn act-red" title="Inativar" @click.stop="confirmarInativacao(f)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                </button>
+                <button
+                  class="btn-icon btn-reset-senha"
+                  title="Resetar senha para o CPF"
+                  @click.stop="resetarSenha(f)"
+                >🔑</button>
               </div>
             </td>
           </tr>
@@ -150,14 +169,14 @@
                   </div>
                   <div class="form-group">
                     <label>CPF</label>
-                    <input v-model="form.PESSOA_CPF_NUMERO" type="text" class="form-input" placeholder="000.000.000-00" />
+                    <input v-model="form.PESSOA_CPF_NUMERO" @input="onInputCpf" type="text" class="form-input" placeholder="000.000.000-00" />
                   </div>
                   <div class="form-group">
                     <label>Data de Nascimento</label>
                     <input v-model="form.PESSOA_DATA_NASCIMENTO" type="date" class="form-input" />
                   </div>
                   <div class="form-group">
-                    <label>Sexo</label>
+                    <label>Sexo Biológico <span class="field-hint">(eSocial)</span></label>
                     <select v-model="form.PESSOA_SEXO" class="form-input">
                       <option value="">Selecione</option>
                       <option value="1">Masculino</option>
@@ -275,11 +294,11 @@
                   </div>
                   <div class="form-group">
                     <label>Celular</label>
-                    <input v-model="form.PESSOA_CELULAR" type="text" class="form-input" placeholder="(00) 90000-0000" />
+                    <input v-model="form.PESSOA_CELULAR" @input="onInputCelular" type="text" class="form-input" placeholder="(00) 90000-0000" />
                   </div>
                   <div class="form-group">
                     <label>Telefone</label>
-                    <input v-model="form.PESSOA_TELEFONE" type="text" class="form-input" placeholder="(00) 0000-0000" />
+                    <input v-model="form.PESSOA_TELEFONE" @input="onInputTelefone" type="text" class="form-input" placeholder="(00) 0000-0000" />
                   </div>
                 </div>
               </div>
@@ -298,7 +317,7 @@
                   </div>
                   <div class="form-group">
                     <label>CEP</label>
-                    <input v-model="form.PESSOA_CEP" type="text" class="form-input" placeholder="00000-000" />
+                    <input v-model="form.PESSOA_CEP" @input="onInputCep" type="text" class="form-input" placeholder="00000-000" />
                   </div>
                 </div>
               </div>
@@ -309,7 +328,7 @@
                 <div class="form-grid">
                   <div class="form-group">
                     <label>RG (Número)</label>
-                    <input v-model="form.PESSOA_RG_NUMERO" type="text" class="form-input" placeholder="Número do RG" />
+                    <input v-model="form.PESSOA_RG_NUMERO" @input="onInputRg" type="text" class="form-input" placeholder="Somente números" />
                   </div>
                   <div class="form-group">
                     <label>RG (Órgão Expedidor)</label>
@@ -341,7 +360,7 @@
                   </div>
                   <div class="form-group">
                     <label>CNH (Número)</label>
-                    <input v-model="form.PESSOA_CNH_NUMERO" type="text" class="form-input" placeholder="Número da CNH" />
+                    <input v-model="form.PESSOA_CNH_NUMERO" @input="onInputCnh" type="text" class="form-input" placeholder="Somente números" />
                   </div>
                   <div class="form-group">
                     <label>CNH (Categoria)</label>
@@ -370,7 +389,7 @@
                   </div>
                   <div class="form-group">
                     <label>PIS / PASEP</label>
-                    <input v-model="form.PESSOA_PIS_PASEP" type="text" class="form-input" placeholder="000.00000.00-0" />
+                    <input v-model="form.PESSOA_PIS_PASEP" @input="onInputPis" type="text" class="form-input" placeholder="000.00000.00-0" />
                   </div>
                 </div>
               </div>
@@ -379,6 +398,15 @@
               <div class="form-section">
                 <h3 class="section-label">Dados Funcionais</h3>
                 <div class="form-grid">
+                  <div class="form-group col-2">
+                    <label>Cargo <span class="req">*</span></label>
+                    <select v-model="form.CARGO_ID" class="form-input" required>
+                      <option value="">Selecione o cargo</option>
+                      <option v-for="c in apoio.cargos" :key="c.id" :value="c.id">
+                        {{ c.nome }}
+                      </option>
+                    </select>
+                  </div>
                   <div class="form-group">
                     <label>Matrícula</label>
                     <input v-model="form.FUNCIONARIO_MATRICULA" type="text" class="form-input" placeholder="Número de matrícula" />
@@ -394,6 +422,35 @@
                   <div class="form-group col-full">
                     <label>Observação</label>
                     <textarea v-model="form.FUNCIONARIO_OBSERVACAO" class="form-input" rows="2" placeholder="Observações sobre o funcionário..."></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="section-label">Jornada e Ponto</h3>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Regime de Batida</label>
+                    <select v-model="form.REGIME" class="form-input">
+                      <option value="4_batidas">4 batidas (entrada/almoco/retorno/saida)</option>
+                      <option value="2_batidas">2 batidas (entrada/saida)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Tolerância (min)</label>
+                    <input v-model.number="form.TOLERANCIA" type="number" min="0" max="120" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Hora de Entrada</label>
+                    <input v-model="form.HORA_ENTRADA" type="time" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Hora de Saída</label>
+                    <input v-model="form.HORA_SAIDA" type="time" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Intervalo de Almoço (min)</label>
+                    <input v-model.number="form.INTERVALO_ALMOCO" type="number" min="0" max="240" class="form-input" />
                   </div>
                 </div>
               </div>
@@ -419,11 +476,14 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Atribuição / Cargo</label>
+                    <label>Atribuição</label>
                     <select v-model="form.ATRIBUICAO_ID" class="form-input">
                       <option value="">Selecione a atribuição</option>
                       <option v-for="a in apoio.atribuicoes" :key="a.id" :value="a.id">{{ a.nome }}</option>
                     </select>
+                    <small v-if="!apoio.atribuicoes.length" class="hint-erro">
+                      Nenhuma atribuição ativa encontrada. Cadastre/ative em Atribuições para concluir.
+                    </small>
                   </div>
                 </div>
               </div>
@@ -445,30 +505,7 @@
         </div>
       </transition>
 
-      <!-- CONFIRM INATIVAÇÃO -->
-      <transition name="modal-fade">
-        <div v-if="confirmAberto" class="modal-overlay" @click.self="confirmAberto = false">
-          <div class="modal-box modal-sm">
-            <div class="modal-header">
-              <h2 class="modal-title">Inativar Funcionário</h2>
-              <button class="modal-close" @click="confirmAberto = false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>
-            <div class="modal-body">
-              <p class="confirm-text">Tem certeza que deseja inativar <strong>{{ funcParaInativar?.pessoa?.PESSOA_NOME }}</strong>?</p>
-              <div class="form-group">
-                <label>Data de Desligamento</label>
-                <input v-model="dataInativacao" type="date" class="form-input" />
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button class="btn-cancel" @click="confirmAberto = false">Cancelar</button>
-              <button class="btn-salvar btn-danger" @click="inativar" :disabled="salvando">
-                {{ salvando ? 'Inativando...' : 'Confirmar Inativação' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </transition>
+
     </teleport>
 
   </div>
@@ -486,14 +523,21 @@ const funcionarios = ref([])
 const loading      = ref(true)
 const loaded       = ref(false)
 const erro         = ref('')
+const erroApoio    = ref('')
 const busca        = ref('')
 const filtroAtivo  = ref('1')
 const paginaAtual  = ref(1)
 const ultimaPagina = ref(1)
 const total        = ref(0)
+const totalGeral   = ref(0)
 const totalAtivos  = ref(0)
+const limboTotal   = ref(0)
+const limboCustoMensal = ref(0)
+const auditFilter  = ref('')
+const ordenacao = ref({ campo: 'servidor', direcao: 'asc' })
 
-const apoio = ref({ setores: [], vinculos: [], atribuicoes: [] })
+const apoio = ref({ setores: [], vinculos: [], atribuicoes: [], cargos: [] })
+const configsPontoPorFuncionario = ref({})
 
 // ── Modal ───────────────────────────────────────────────────
 const modalAberto    = ref(false)
@@ -501,9 +545,6 @@ const modoEdicao     = ref(false)
 const salvando       = ref(false)
 const erroModal      = ref('')
 const successoModal  = ref('')
-const confirmAberto  = ref(false)
-const funcParaInativar = ref(null)
-const dataInativacao = ref(new Date().toISOString().slice(0, 10))
 
 const formVazio = () => ({
   /* Pessoa */
@@ -522,6 +563,13 @@ const formVazio = () => ({
   /* Funcionário */
   FUNCIONARIO_MATRICULA: '', FUNCIONARIO_DATA_INICIO: '', FUNCIONARIO_DATA_FIM: '',
   FUNCIONARIO_OBSERVACAO: '',
+  CARGO_ID: '',
+  /* Jornada/Ponto */
+  REGIME: '4_batidas',
+  HORA_ENTRADA: '08:00',
+  HORA_SAIDA: '18:00',
+  TOLERANCIA: 15,
+  INTERVALO_ALMOCO: 60,
   /* Lotação */
   SETOR_ID: '', VINCULO_ID: '', ATRIBUICAO_ID: '',
   /* ID para edição */
@@ -532,10 +580,44 @@ const form = ref(formVazio())
 // ── Computed ────────────────────────────────────────────────
 // BUG-EST-07: usar total do backend em vez de contar só a página atual
 const ativos = computed(() => totalAtivos.value)
+const funcionariosOrdenados = computed(() => {
+  const list = [...funcionarios.value]
+  const { campo, direcao } = ordenacao.value
+  const factor = direcao === 'asc' ? 1 : -1
+  const str = (v) => String(v ?? '').trim()
+  const toDateNum = (v) => {
+    const t = new Date(String(v ?? '')).getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+  list.sort((a, b) => {
+    let av = ''
+    let bv = ''
+    if (campo === 'servidor') {
+      av = str(a.pessoa?.PESSOA_NOME)
+      bv = str(b.pessoa?.PESSOA_NOME)
+    } else if (campo === 'matricula') {
+      av = str(a.FUNCIONARIO_MATRICULA)
+      bv = str(b.FUNCIONARIO_MATRICULA)
+    } else if (campo === 'setor') {
+      av = str(a.setor)
+      bv = str(b.setor)
+    } else if (campo === 'vinculo') {
+      av = str(a.vinculo)
+      bv = str(b.vinculo)
+    } else if (campo === 'inicio') {
+      return (toDateNum(a.FUNCIONARIO_DATA_INICIO) - toDateNum(b.FUNCIONARIO_DATA_INICIO)) * factor
+    } else if (campo === 'status') {
+      av = isFuncionarioAtivo(a) ? 'ativo' : 'inativo'
+      bv = isFuncionarioAtivo(b) ? 'ativo' : 'inativo'
+    }
+    return av.localeCompare(bv, 'pt-BR', { numeric: true, sensitivity: 'base' }) * factor
+  })
+  return list
+})
 
 // ── Carregamento ────────────────────────────────────────────
 onMounted(async () => {
-  await Promise.all([fetchFuncionarios(), fetchApoio()])
+  await Promise.all([fetchFuncionarios(), fetchApoio(), fetchConfigsPontoFuncionarios()])
   setTimeout(() => { loaded.value = true }, 80)
 })
 
@@ -547,12 +629,16 @@ const fetchFuncionarios = async (pag = 1) => {
     const params = { page: pag }
     if (busca.value)    params.q = busca.value
     if (filtroAtivo.value !== '') params.funcionario_ativo = filtroAtivo.value
+    if (auditFilter.value) params.audit_filter = auditFilter.value
     const { data } = await api.get('/api/v3/funcionarios', { params })
     funcionarios.value = data.data ?? data
     ultimaPagina.value = data.last_page ?? 1
     total.value        = data.total ?? funcionarios.value.length
+    totalGeral.value   = data.total_geral ?? data.total ?? funcionarios.value.length
     // BUG-EST-07: total_ativos do backend ou fallback local (conta apenas a página)
-    totalAtivos.value  = data.total_ativos ?? funcionarios.value.filter(f => !f.FUNCIONARIO_DATA_FIM).length
+    totalAtivos.value  = data.total_ativos ?? funcionarios.value.filter(isFuncionarioAtivo).length
+    limboTotal.value = Number(data.limbo_total || 0)
+    limboCustoMensal.value = Number(data.limbo_custo_mensal_estimado || 0)
   } catch (e) {
     erro.value = e.response?.data?.message || 'Erro ao carregar funcionários.'
   } finally {
@@ -564,7 +650,30 @@ const fetchApoio = async () => {
   try {
     const { data } = await api.get('/api/v3/apoio')
     apoio.value = data
-  } catch {}
+    erroApoio.value = ''
+  } catch (e) {
+    erroApoio.value = e?.response?.data?.erro || 'Falha ao carregar vínculos/setores de apoio. Cadastro pode ficar incompleto.'
+  }
+}
+
+const fetchConfigsPontoFuncionarios = async () => {
+  try {
+    const { data } = await api.get('/api/v3/ponto/config/funcionarios')
+    const rows = Array.isArray(data?.configs) ? data.configs : []
+    const mapa = {}
+    rows.forEach((row) => {
+      mapa[row.FUNCIONARIO_ID] = {
+        REGIME: row.REGIME || '4_batidas',
+        HORA_ENTRADA: row.HORA_ENTRADA || '08:00',
+        HORA_SAIDA: row.HORA_SAIDA || '18:00',
+        TOLERANCIA: Number.isFinite(Number(row.TOLERANCIA)) ? Number(row.TOLERANCIA) : 15,
+        INTERVALO_ALMOCO: Number.isFinite(Number(row.INTERVALO_ALMOCO)) ? Number(row.INTERVALO_ALMOCO) : 60,
+      }
+    })
+    configsPontoPorFuncionario.value = mapa
+  } catch {
+    configsPontoPorFuncionario.value = {}
+  }
 }
 
 // ── Debounce busca ──────────────────────────────────────────
@@ -575,6 +684,67 @@ const debounceBusca = () => {
 }
 
 const mudarPagina = (pag) => { fetchFuncionarios(pag) }
+const setAuditFilter = (filtro) => {
+  auditFilter.value = filtro
+  fetchFuncionarios(1)
+}
+const definirOrdenacao = (campo) => {
+  if (ordenacao.value.campo === campo) {
+    ordenacao.value.direcao = ordenacao.value.direcao === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  ordenacao.value = { campo, direcao: 'asc' }
+}
+const indicadorOrdem = (campo) => {
+  if (ordenacao.value.campo !== campo) return '↕'
+  return ordenacao.value.direcao === 'asc' ? '↑' : '↓'
+}
+const isFuncionarioAtivo = (f) => {
+  const fim = f?.FUNCIONARIO_DATA_FIM
+  if (!fim) return true
+  const d = new Date(`${String(fim).slice(0, 10)}T23:59:59`)
+  return !Number.isNaN(d.getTime()) && d.getTime() > Date.now()
+}
+
+const onlyDigits = (v, max = null) => {
+  const d = String(v ?? '').replace(/\D+/g, '')
+  return max ? d.slice(0, max) : d
+}
+const maskCpf = (v) => {
+  const d = onlyDigits(v, 11)
+  return d.replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1-$2')
+}
+const maskPis = (v) => {
+  const d = onlyDigits(v, 11)
+  return d.replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{5})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{2})(\d)/, '.$1-$2')
+}
+const maskTelefone = (v) => {
+  const d = onlyDigits(v, 10)
+  return d.length <= 2
+    ? d
+    : `(${d.slice(0, 2)}) ${d.slice(2, 6)}${d.length > 6 ? '-' + d.slice(6) : ''}`
+}
+const maskCelular = (v) => {
+  const d = onlyDigits(v, 11)
+  return d.length <= 2
+    ? d
+    : `(${d.slice(0, 2)}) ${d.slice(2, 7)}${d.length > 7 ? '-' + d.slice(7) : ''}`
+}
+const maskCep = (v) => {
+  const d = onlyDigits(v, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+const onInputCpf = () => { form.value.PESSOA_CPF_NUMERO = maskCpf(form.value.PESSOA_CPF_NUMERO) }
+const onInputPis = () => { form.value.PESSOA_PIS_PASEP = maskPis(form.value.PESSOA_PIS_PASEP) }
+const onInputTelefone = () => { form.value.PESSOA_TELEFONE = maskTelefone(form.value.PESSOA_TELEFONE) }
+const onInputCelular = () => { form.value.PESSOA_CELULAR = maskCelular(form.value.PESSOA_CELULAR) }
+const onInputCep = () => { form.value.PESSOA_CEP = maskCep(form.value.PESSOA_CEP) }
+const onInputRg = () => { form.value.PESSOA_RG_NUMERO = onlyDigits(form.value.PESSOA_RG_NUMERO, 20) }
+const onInputCnh = () => { form.value.PESSOA_CNH_NUMERO = onlyDigits(form.value.PESSOA_CNH_NUMERO, 11) }
 
 // ── Modal: Novo ─────────────────────────────────────────────
 const abrirModalNovo = () => {
@@ -588,6 +758,7 @@ const abrirModalNovo = () => {
 // ── Modal: Edição ───────────────────────────────────────────
 const abrirModalEdicao = (f) => {
   const lotacao = (f.lotacoes ?? []).filter(l => !l.LOTACAO_DATA_FIM).sort((a, b) => b.LOTACAO_ID - a.LOTACAO_ID)[0]
+  const cfgPonto = configsPontoPorFuncionario.value[f.FUNCIONARIO_ID] || {}
   form.value = {
     _id: f.FUNCIONARIO_ID,
     /* Pessoa */
@@ -628,6 +799,13 @@ const abrirModalEdicao = (f) => {
     FUNCIONARIO_DATA_INICIO:  f.FUNCIONARIO_DATA_INICIO ?? '',
     FUNCIONARIO_DATA_FIM:     f.FUNCIONARIO_DATA_FIM ?? '',
     FUNCIONARIO_OBSERVACAO:   f.FUNCIONARIO_OBSERVACAO ?? '',
+    CARGO_ID:                 f.CARGO_ID ?? '',
+    /* Jornada/Ponto */
+    REGIME: cfgPonto.REGIME ?? '4_batidas',
+    HORA_ENTRADA: cfgPonto.HORA_ENTRADA ?? '08:00',
+    HORA_SAIDA: cfgPonto.HORA_SAIDA ?? '18:00',
+    TOLERANCIA: cfgPonto.TOLERANCIA ?? 15,
+    INTERVALO_ALMOCO: cfgPonto.INTERVALO_ALMOCO ?? 60,
     /* Lotação */
     SETOR_ID:       lotacao?.SETOR_ID ?? '',
     VINCULO_ID:     lotacao?.VINCULO_ID ?? '',
@@ -644,6 +822,8 @@ const fecharModal = () => { modalAberto.value = false }
 // ── Salvar (criar ou editar) ────────────────────────────────
 const salvar = async () => {
   if (!form.value.PESSOA_NOME) { erroModal.value = 'O nome é obrigatório.'; return }
+  if (!form.value.CARGO_ID) { erroModal.value = 'Cargo é obrigatório.'; return }
+  form.value.PESSOA_EMAIL = String(form.value.PESSOA_EMAIL || '').trim().toLowerCase()
   salvando.value  = true
   erroModal.value = ''
 
@@ -655,7 +835,7 @@ const salvar = async () => {
       await api.post('/api/v3/funcionarios', form.value)
       successoModal.value = 'Funcionário cadastrado com sucesso!'
     }
-    await fetchFuncionarios(paginaAtual.value)
+    await Promise.all([fetchFuncionarios(paginaAtual.value), fetchConfigsPontoFuncionarios()])
     setTimeout(() => fecharModal(), 1500)
   } catch (e) {
     erroModal.value = e.response?.data?.erro || e.response?.data?.message || 'Erro ao salvar. Tente novamente.'
@@ -664,25 +844,13 @@ const salvar = async () => {
   }
 }
 
-// ── Inativar ────────────────────────────────────────────────
-const confirmarInativacao = (f) => {
-  funcParaInativar.value = f
-  dataInativacao.value   = new Date().toISOString().slice(0, 10)
-  confirmAberto.value    = true
-}
-
-const inativar = async () => {
-  salvando.value = true
+const resetarSenha = async (f) => {
+  if (!confirm(`Resetar senha de ${f.pessoa?.PESSOA_NOME}?\nO login será o CPF e a senha será o próprio CPF.\nO funcionário deverá trocar no próximo acesso.`)) return
   try {
-    await api.delete(`/api/v3/funcionarios/${funcParaInativar.value.FUNCIONARIO_ID}`, {
-      data: { FUNCIONARIO_DATA_FIM: dataInativacao.value }
-    })
-    confirmAberto.value = false
-    await fetchFuncionarios(paginaAtual.value)
+    const { data } = await api.post(`/api/v3/funcionarios/${f.FUNCIONARIO_ID}/resetar-senha`)
+    alert(`✅ ${data.message}\nLogin: ${data.login}`)
   } catch (e) {
-    alert(e.response?.data?.erro || 'Erro ao inativar.')
-  } finally {
-    salvando.value = false
+    alert('Erro ao resetar senha: ' + (e.response?.data?.erro || 'Tente novamente.'))
   }
 }
 
@@ -696,6 +864,21 @@ const formatDate = (d) => {
   if (!d) return '—'
   const [y, m, day] = String(d).slice(0, 10).split('-')
   return `${day}/${m}/${y}`
+}
+const moeda = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const statusSemantico = (f) => f?.status_semantico || null
+const statusLabel = (f) => {
+  const s = statusSemantico(f)
+  if (s?.label) return `${s.icone || ''} ${s.label}`.trim()
+  return isFuncionarioAtivo(f) ? '🟢 Lotado' : '⚫ Inativo'
+}
+const statusTooltip = (f) => statusSemantico(f)?.tooltip || (isFuncionarioAtivo(f) ? 'Servidor ativo' : 'Servidor inativo')
+const statusBadgeClass = (f) => {
+  const tipo = statusSemantico(f)?.tipo
+  if (tipo === 'lotado') return 'badge-green'
+  if (tipo === 'limbo') return 'badge-yellow'
+  if (tipo === 'afastado') return 'badge-red'
+  return isFuncionarioAtivo(f) ? 'badge-green' : 'badge-red'
 }
 </script>
 
@@ -750,6 +933,32 @@ const formatDate = (d) => {
 .toolbar-right { display: flex; align-items: center; gap: 12px; }
 .filter-select { border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 12px; font-size: 13px; font-family: inherit; color: #475569; outline: none; cursor: pointer; }
 .result-count { font-size: 12px; color: #94a3b8; font-weight: 600; white-space: nowrap; }
+.audit-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.08s;
+}
+.audit-filters.loaded { opacity: 1; transform: none; }
+.af-label { font-size: 12px; font-weight: 700; color: #64748b; }
+.af-btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.af-btn.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
 
 /* ESTADOS */
 .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; color: #64748b; gap: 12px; }
@@ -760,16 +969,37 @@ const formatDate = (d) => {
 
 /* TABLE CARD */
 .table-card {
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: visible; overflow-x: auto;
+  position: relative;
+  background:
+    linear-gradient(130deg, rgba(226, 240, 252, 0.45), rgba(214, 247, 242, 0.28)),
+    rgba(255,255,255,0.96);
+  border: 1px solid #c7deef;
+  border-radius: 22px;
+  overflow: visible; overflow-x: auto;
   opacity: 0; transform: translateY(12px);
   transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.1s;
 }
+.table-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 22px;
+  border: 8px solid transparent;
+  background: repeating-linear-gradient(-45deg, rgba(56,189,248,0.16) 0 6px, rgba(56,189,248,0.06) 6px 12px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 6px;
+}
 .table-card.loaded { opacity: 1; transform: none; }
 .func-table { width: 100%; border-collapse: collapse; }
-.func-table thead tr { background: #f8fafc; border-bottom: 1px solid #f1f5f9; }
+.func-table thead tr { background: rgba(248, 250, 252, 0.82); backdrop-filter: blur(2px); border-bottom: 1px solid #f1f5f9; }
 .func-table th { padding: 12px 16px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; text-align: left; white-space: nowrap; }
-.func-row { border-bottom: 1px solid #f8fafc; transition: background 0.12s; cursor: default; }
-.func-row:hover { background: #f8fafc; }
+.th-sort { background: transparent; border: none; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 0; }
+.th-sort span { color: #64748b; font-size: 11px; }
+.func-row { border-bottom: 1px solid rgba(226,232,240,0.65); transition: background 0.2s, transform 0.2s, box-shadow 0.2s; cursor: default; }
+.func-row:hover { background: rgba(255,255,255,0.86); transform: translateY(-1px); box-shadow: inset 0 0 0 1px rgba(186,230,253,0.7); }
 .func-row:last-child { border-bottom: none; }
 .func-row.row-visible td { animation: rowIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) var(--row-delay) both; }
 @keyframes rowIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
@@ -785,6 +1015,7 @@ const formatDate = (d) => {
 .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
 .badge-green { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
 .badge-red   { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+.badge-yellow { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
 .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 .row-actions { display: flex; gap: 5px; }
@@ -793,6 +1024,7 @@ const formatDate = (d) => {
 .act-btn.act-blue:hover  { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
 .act-btn.act-purple:hover { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }
 .act-btn.act-red:hover   { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+.act-btn.act-green:hover { background: #ecfdf5; border-color: #6ee7b7; color: #047857; }
 
 /* PAGINAÇÃO */
 .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; border-top: 1px solid #f1f5f9; }
@@ -822,6 +1054,7 @@ const formatDate = (d) => {
 .form-group.col-2 { grid-column: span 2; }
 .form-group.col-full { grid-column: 1 / -1; }
 .form-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
+.hint-erro { color:#b91c1c; font-size:11px; font-weight:600; margin-top:2px; }
 .form-input {
   width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px;
   font-size: 13px; font-family: inherit; color: #1e293b; outline: none;

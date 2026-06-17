@@ -28,6 +28,10 @@
 
     <!-- LISTA ──────────────────────────────────────────────── -->
     <div class="notif-list" :class="{ loaded }">
+      <div v-if="dadosIndisponiveis" class="state-warn">
+        ⚠️ Não foi possível carregar notificações agora. Tentando reconectar com o servidor.
+      </div>
+
       <div
         v-for="(n, i) in notificacoesFiltradas"
         :key="n.id"
@@ -41,6 +45,7 @@
         <div class="notif-body">
           <div class="notif-top">
             <span class="n-titulo">{{ n.titulo }}</span>
+            <span class="crit-chip" :class="`cc-${n.criticidade}`">{{ labelCrit(n.criticidade) }}</span>
             <span class="n-tempo">{{ formatRel(n.criado_em) }}</span>
           </div>
           <p class="n-desc">{{ n.descricao }}</p>
@@ -63,10 +68,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import api from '@/plugins/axios'
 
 const loaded = ref(false)
 const filtroAtivo = ref('todas')
 const notificacoes = ref([])
+const dadosIndisponiveis = ref(false)
 
 const filtros = [
   { val: 'todas', ico: '📋', label: 'Todas' },
@@ -80,16 +87,7 @@ const catCores = { ponto: '#f59e0b', escala: '#0d9488', financeiro: '#10b981', r
 const catCor = (c) => catCores[c] ?? '#94a3b8'
 
 onMounted(() => {
-  notificacoes.value = [
-    { id: 1, titulo: 'Abono de falta deferido', descricao: 'Sua justificativa de 10/02 foi aprovada pelo gestor. A ocorrência foi removida do seu ponto.', categoria: 'ponto', ico: '✅', criado_em: new Date(Date.now() - 1800000), lida: false, link: '/abono-faltas' },
-    { id: 2, titulo: 'Plantão de amanhã confirmado', descricao: 'Lembrete: você tem plantão noturno (19h–07h) amanhã na UTI Adulto.', categoria: 'escala', ico: '📅', criado_em: new Date(Date.now() - 3600000), lida: false, link: '/escala-matriz-v3' },
-    { id: 3, titulo: 'Holerite de Janeiro/2026 disponível', descricao: 'Seu contra-cheque de competência 01/2026 já está disponível para visualização e download.', categoria: 'financeiro', ico: '💰', criado_em: new Date(Date.now() - 86400000), lida: false, link: '/meus-holerites' },
-    { id: 4, titulo: 'Solicitação de substituição recebida', descricao: 'Carlos Lima solicitou que você o substitua no plantão de 28/02 (Noturno, UTI Adulto).', categoria: 'escala', ico: '🔄', criado_em: new Date(Date.now() - 86400000 * 2), lida: true, link: '/substituicoes' },
-    { id: 5, titulo: 'Inconsistência de ponto detectada', descricao: 'Faltam registros de saída nos dias 15 e 16/02. Verifique e entre em contato com o RH.', categoria: 'ponto', ico: '⚠️', criado_em: new Date(Date.now() - 86400000 * 3), lida: true, link: '/ponto' },
-    { id: 6, titulo: 'Férias aprovadas', descricao: 'Sua solicitação de férias para Jul/2026 foi aprovada. 10 dias a partir de 07/07/2026.', categoria: 'rh', ico: '🏖️', criado_em: new Date(Date.now() - 86400000 * 4), lida: true, link: '/ferias-licencas' },
-    { id: 7, titulo: 'Remessa CNAB gerada', descricao: 'O arquivo CNAB 240 de Fevereiro/2026 foi gerado com sucesso. 87 créditos processados.', categoria: 'financeiro', ico: '🏦', criado_em: new Date(Date.now() - 86400000 * 5), lida: true, link: '/remessa-cnab' },
-    { id: 8, titulo: 'Falta registrada — 13/02', descricao: 'Uma falta foi registrada no dia 13/02. Se necessário, solicite abono em até 5 dias úteis.', categoria: 'ponto', ico: '🚫', criado_em: new Date(Date.now() - 86400000 * 6), lida: true, link: '/faltas-atrasos' },
-  ]
+  carregarNotificacoes()
   setTimeout(() => { loaded.value = true }, 80)
 })
 
@@ -105,9 +103,108 @@ const countFiltro = (val) => {
   return notificacoes.value.filter(n => n.categoria === val && !n.lida).length
 }
 
-const marcarLida = (n) => { n.lida = true }
-const marcarTodasLidas = () => notificacoes.value.forEach(n => { n.lida = true })
-const limparLidas = () => { notificacoes.value = notificacoes.value.filter(n => !n.lida) }
+const mapTipoParaCategoria = (tipo = '', url = '', titulo = '', body = '') => {
+  const t = String(tipo).toLowerCase()
+  const u = String(url).toLowerCase()
+  const tt = String(titulo).toLowerCase()
+  const b = String(body).toLowerCase()
+  const pool = `${t} ${u} ${tt} ${b}`
+
+  if (pool.includes('ponto') || pool.includes('/ponto') || pool.includes('batida')) return 'ponto'
+  if (pool.includes('escala') || pool.includes('substituicao') || pool.includes('/portal-gestor') || pool.includes('/escala')) return 'escala'
+  if (
+    pool.includes('financeiro') ||
+    pool.includes('folha') ||
+    pool.includes('holerite') ||
+    pool.includes('rpps') ||
+    pool.includes('consig') ||
+    pool.includes('tesouraria') ||
+    pool.includes('receita')
+  ) return 'financeiro'
+  if (pool.includes('bh_operacional') || pool.includes('banco_horas_operacional') || pool.includes('/banco-horas')) return 'escala'
+  return 'rh'
+}
+
+const carregarNotificacoes = async () => {
+  dadosIndisponiveis.value = false
+  try {
+    const { data } = await api.get('/api/v3/notificacoes')
+    const itens = Array.isArray(data?.notificacoes) ? data.notificacoes : []
+    notificacoes.value = itens.map((n) => {
+      const categoria = mapTipoParaCategoria(n.tipo, n.url, n.titulo, n.body)
+      const scoreCriticidade = calcularScoreCriticidade({
+        tipo: n.tipo,
+        categoria,
+        titulo: n.titulo,
+        body: n.body,
+        url: n.url,
+        criada_em: n.criada_em,
+      })
+      return {
+        id: n.id,
+        titulo: n.titulo || 'Notificação',
+        descricao: n.body || '',
+        categoria,
+        ico: n.icone || '🔔',
+        criado_em: n.criada_em || new Date().toISOString(),
+        lida: !!n.lida,
+        link: n.url || null,
+        criticidade: scoreCriticidade >= 90 ? 'critica' : scoreCriticidade >= 65 ? 'alta' : scoreCriticidade >= 35 ? 'media' : 'baixa',
+        score_criticidade: scoreCriticidade,
+      }
+    }).sort((a, b) => {
+      if (a.lida !== b.lida) return a.lida ? 1 : -1
+      if (a.score_criticidade !== b.score_criticidade) return b.score_criticidade - a.score_criticidade
+      return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
+    })
+  } catch {
+    notificacoes.value = []
+    dadosIndisponiveis.value = true
+  }
+}
+
+const calcularScoreCriticidade = ({ tipo = '', categoria = '', titulo = '', body = '', url = '', criada_em = '' }) => {
+  const txt = `${tipo} ${categoria} ${titulo} ${body} ${url}`.toLowerCase()
+  let score = 10
+
+  if (txt.includes('sla') && txt.includes('venc')) score += 55
+  if (txt.includes('ouvidoria') && txt.includes('crit')) score += 25
+  if (txt.includes('risco') || txt.includes('assistencial') || txt.includes('plantao')) score += 25
+  if (categoria === 'financeiro' || txt.includes('folha') || txt.includes('rpps') || txt.includes('consig')) score += 22
+  if (categoria === 'ponto' || txt.includes('deficit') || txt.includes('banco-horas')) score += 15
+  if (txt.includes('urgente') || txt.includes('atraso')) score += 20
+
+  const idadeHoras = Math.max(0, (Date.now() - new Date(criada_em || Date.now()).getTime()) / (1000 * 60 * 60))
+  if (idadeHoras <= 6) score += 8
+  if (idadeHoras > 72) score -= 8
+
+  return Math.max(0, Math.min(100, Math.round(score)))
+}
+
+const labelCrit = (c) => ({ critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' }[c] ?? 'Baixa')
+
+const marcarLida = async (n) => {
+  if (n.lida) return
+  try {
+    await api.post(`/api/v3/notificacoes/${n.id}/ler`)
+    n.lida = true
+  } catch {
+    dadosIndisponiveis.value = true
+  }
+}
+
+const marcarTodasLidas = async () => {
+  try {
+    await api.post('/api/v3/notificacoes/ler-todas')
+    notificacoes.value.forEach(n => { n.lida = true })
+  } catch {
+    dadosIndisponiveis.value = true
+  }
+}
+
+const limparLidas = () => {
+  notificacoes.value = notificacoes.value.filter(n => !n.lida)
+}
 
 const formatRel = (d) => {
   const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
@@ -153,6 +250,11 @@ const formatRel = (d) => {
 .notif-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
 .n-titulo { font-size: 14px; font-weight: 700; color: #1e293b; }
 .n-tempo { font-size: 11px; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
+.crit-chip { font-size: 10px; font-weight: 800; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.cc-critica { background: #fee2e2; color: #991b1b; }
+.cc-alta { background: #ffedd5; color: #9a3412; }
+.cc-media { background: #fef3c7; color: #92400e; }
+.cc-baixa { background: #dcfce7; color: #166534; }
 .n-desc { font-size: 13px; color: #64748b; margin: 0 0 6px; line-height: 1.5; }
 .n-link { font-size: 12px; font-weight: 700; color: #6366f1; text-decoration: none; }
 .n-link:hover { text-decoration: underline; }
@@ -161,6 +263,15 @@ const formatRel = (d) => {
 .state-empty span { font-size: 48px; }
 .state-empty h3 { font-size: 20px; font-weight: 800; color: #1e293b; margin: 0; }
 .state-empty p { font-size: 14px; color: #94a3b8; margin: 0; }
+.state-warn {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
 
 @media (max-width: 768px) {
   .hero-inner { flex-wrap: wrap; }

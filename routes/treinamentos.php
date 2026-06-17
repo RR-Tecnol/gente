@@ -2,40 +2,22 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 
-if (!Schema::hasTable('TREINAMENTO')) {
-    Schema::create('TREINAMENTO', function (Blueprint $table) {
-        $table->increments('TREINAMENTO_ID');
-        $table->string('TREINAMENTO_TITULO', 200);
-        $table->text('TREINAMENTO_DESC')->nullable();
-        $table->string('TREINAMENTO_AREA', 100)->default('Geral');
-        $table->integer('TREINAMENTO_CARGA')->default(0); // em horas
-        $table->string('TREINAMENTO_MODALIDADE', 50)->default('EAD');
-        $table->string('TREINAMENTO_PROXIMA', 100)->nullable();
-        $table->integer('TREINAMENTO_VAGAS')->default(0);
-        $table->boolean('TREINAMENTO_ATIVO')->default(true);
-        $table->timestamps();
-    });
-}
-if (!Schema::hasTable('TREINAMENTO_INSCRICAO')) {
-    Schema::create('TREINAMENTO_INSCRICAO', function (Blueprint $table) {
-        $table->increments('INSCRICAO_ID');
-        $table->unsignedInteger('TREINAMENTO_ID')->index();
-        $table->unsignedInteger('FUNCIONARIO_ID')->index();
-        $table->string('INSCRICAO_STATUS', 30)->default('inscrito'); // inscrito, andamento, concluido
-        $table->integer('INSCRICAO_PROGRESSO')->default(0);
-        $table->boolean('INSCRICAO_CERTIFICADO')->default(false);
-        $table->date('INSCRICAO_DATA_CONCLUSAO')->nullable();
-        $table->timestamps();
-    });
+if (!function_exists('ensureTreinamentoTablesFromRoutes')) {
+    function ensureTreinamentoTablesFromRoutes(): void
+    {
+        if (!Schema::hasTable('TREINAMENTO') || !Schema::hasTable('TREINAMENTO_INSCRICAO')) {
+            throw new \RuntimeException('Tabelas de treinamento não encontradas. Execute migrations canônicas.');
+        }
+    }
 }
 
 // ==== Área do Servidor (TreinamentosView.vue) ====
 Route::prefix('treinamentos')->group(function () {
     
     Route::get('/meus', function () {
+        ensureTreinamentoTablesFromRoutes();
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
             $func = DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
@@ -67,6 +49,7 @@ Route::prefix('treinamentos')->group(function () {
     });
 
     Route::get('/catalogo', function () {
+        ensureTreinamentoTablesFromRoutes();
         try {
             $catalogo = DB::table('TREINAMENTO')
                 ->where('TREINAMENTO_ATIVO', true)
@@ -91,6 +74,7 @@ Route::prefix('treinamentos')->group(function () {
     });
 
     Route::post('/{id}/inscrever', function (Request $request, $id) {
+        ensureTreinamentoTablesFromRoutes();
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
             $func = DB::table('FUNCIONARIO')->where('USUARIO_ID', $user->USUARIO_ID ?? 0)->first();
@@ -120,6 +104,7 @@ Route::prefix('treinamentos')->group(function () {
 Route::prefix('treinamentos-admin')->group(function () {
     
     Route::get('/kpis', function () {
+        ensureTreinamentoTablesFromRoutes();
         try {
             return response()->json([
                 'cursos_ativos' => DB::table('TREINAMENTO')->where('TREINAMENTO_ATIVO', true)->count(),
@@ -133,11 +118,13 @@ Route::prefix('treinamentos-admin')->group(function () {
 
     // CRUD de Cursos
     Route::get('/cursos', function () {
+        ensureTreinamentoTablesFromRoutes();
         try { return response()->json(DB::table('TREINAMENTO')->orderByDesc('created_at')->get()); } 
         catch (\Exception $e) { return response()->json([], 500); }
     });
 
     Route::post('/cursos', function (Request $request) {
+        ensureTreinamentoTablesFromRoutes();
         try {
             $id = DB::table('TREINAMENTO')->insertGetId([
                 'TREINAMENTO_TITULO' => $request->titulo,
@@ -153,9 +140,10 @@ Route::prefix('treinamentos-admin')->group(function () {
             ]);
             return response()->json(['success' => true, 'id' => $id]);
         } catch (\Exception $e) { return response()->json(['error' => $e->getMessage()], 500); }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     Route::put('/cursos/{id}', function (Request $request, $id) {
+        ensureTreinamentoTablesFromRoutes();
         try {
             DB::table('TREINAMENTO')->where('TREINAMENTO_ID', $id)->update([
                 'TREINAMENTO_TITULO' => $request->titulo,
@@ -170,10 +158,11 @@ Route::prefix('treinamentos-admin')->group(function () {
             ]);
             return response()->json(['success' => true]);
         } catch (\Exception $e) { return response()->json(['error' => $e->getMessage()], 500); }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // Inscrições gerais
     Route::get('/inscricoes', function () {
+        ensureTreinamentoTablesFromRoutes();
         try {
             $data = DB::table('TREINAMENTO_INSCRICAO as I')
                 ->join('TREINAMENTO as T', 'I.TREINAMENTO_ID', '=', 'T.TREINAMENTO_ID')

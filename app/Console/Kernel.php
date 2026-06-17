@@ -13,7 +13,9 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //
+        \App\Console\Commands\AuditVerifyChain::class,
+        \App\Console\Commands\GenteImportSisfolha8aCommand::class,
+        \App\Console\Commands\GenteSmokeTeia7aCommand::class,
     ];
 
     /**
@@ -28,6 +30,16 @@ class Kernel extends ConsoleKernel
         $schedule->call(function () {
             \Illuminate\Support\Facades\DB::table('LOGIN_ATTEMPTS')->where('TENTATIVA_EM', '<', now()->subDay())->delete();
         })->daily();
+
+        // Frente 4: cópia de AUDIT_LOG (JSONL) para disco de custódia (local ou S3 com retenção no bucket)
+        $schedule->call(function () {
+            (new \App\Jobs\StreamAuditToSecureVault)->handle();
+        })->everyTenMinutes()
+            ->name('gente-audit-secure-vault')
+            ->withoutOverlapping(8)
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('scheduler_fail', ['job' => 'gente-audit-secure-vault']);
+            });
 
         // Arquivamento mensal do security.log (1º dia de cada mês às 02:00)
         $schedule->call(function () {
@@ -67,6 +79,60 @@ class Kernel extends ConsoleKernel
                 }
             }
         })->quarterly();
+
+        // S3.4: rotina de inventário banco de horas (idempotente; sem mutação por defeito)
+        $schedule->command('jornada:banco-horas-decaimento --dry-run')
+            ->monthlyOn(1, '03:00')
+            ->name('jornada-banco-horas-relatorio')
+            ->withoutOverlapping(120);
+
+        // S6.1: inicializa e processa prova de vida RPPS/IPAM mensalmente
+        $schedule->command('rpps:prova-vida-processar --inicializar')
+            ->monthlyOn(1, '04:00')
+            ->name('rpps-prova-vida-processar')
+            ->withoutOverlapping(120)
+            ->onSuccess(function () {
+                \Illuminate\Support\Facades\Log::info('scheduler_ok', ['job' => 'rpps-prova-vida-processar']);
+            })
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('scheduler_fail', ['job' => 'rpps-prova-vida-processar']);
+            });
+
+        // S7 fase 1: fila eSocial com retry/backoff (slice frequente e curto)
+        $schedule->command('esocial:processar-fila --limit=80')
+            ->everyFiveMinutes()
+            ->name('esocial-processar-fila')
+            ->withoutOverlapping(10)
+            ->onSuccess(function () {
+                \Illuminate\Support\Facades\Log::info('scheduler_ok', ['job' => 'esocial-processar-fila']);
+            })
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('scheduler_fail', ['job' => 'esocial-processar-fila']);
+            });
+
+        // Sentinela de Integridade: auto-auditoria contínua a cada 5 minutos.
+        $schedule->command('gente:sentinela-run --json')
+            ->everyFiveMinutes()
+            ->name('gente-sentinela-integridade')
+            ->withoutOverlapping(10)
+            ->onSuccess(function () {
+                \Illuminate\Support\Facades\Log::info('scheduler_ok', ['job' => 'gente-sentinela-integridade']);
+            })
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('scheduler_fail', ['job' => 'gente-sentinela-integridade']);
+            });
+
+        // S9 fase 1: verificação operacional consolidada diária
+        $schedule->command('gente:healthcheck --json')
+            ->dailyAt('06:00')
+            ->name('gente-healthcheck')
+            ->withoutOverlapping(30)
+            ->onSuccess(function () {
+                \Illuminate\Support\Facades\Log::info('scheduler_ok', ['job' => 'gente-healthcheck']);
+            })
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('scheduler_fail', ['job' => 'gente-healthcheck']);
+            });
     }
 
     /**

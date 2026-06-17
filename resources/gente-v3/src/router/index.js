@@ -1,49 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
-
-// ═══ Helpers de role ══════════════════════════════════════════════════
-// Roles disponíveis: 'admin', 'rh', 'gestor', 'funcionario'
-// Um usuário com role 'rh' também tem acesso a tudo que 'funcionario' tem.
-// A hierarquia é: admin > rh > gestor > funcionario
-
-const ROLE_HIERARCHY = ['admin', 'rh', 'gestor', 'funcionario']
-
-function userRole(perfil) {
-    if (!perfil) return null
-    const p = perfil.toLowerCase().trim()
-
-    // admin — Desenvolvedor, Administrador, Manutenção, Equipe SISGEP
-    if (['admin', 'administrador', 'administrator', 'desenvolvedor',
-        'developer', 'manutenção', 'manutencao', 'equipe sisgep'].includes(p)) return 'admin'
-
-    // rh — RH Folha, RH Unidade, RH APS, RH Rede, Operacional, Direitos e Deveres, Recrutador
-    if (['rh', 'rh folha', 'rh unidade', 'rh aps', 'rh rede',
-        'operacional', 'direitos e deveres', 'recrutador',
-        'recursos humanos'].includes(p)) return 'rh'
-
-    // gestor — Gestão, Coordenador de Setor, Diretor/Gestor de Unidade
-    if (['gestor', 'gestão', 'gestao', 'coordenador de setor', 'coordenador',
-        'diretor / gestor de unidade', 'diretor', 'gestor de unidade'].includes(p)) return 'gestor'
-
-    return 'funcionario' // Externo e demais
-}
-
-function hasAccess(perfil, requiredRoles) {
-    if (!requiredRoles || requiredRoles.length === 0) return true
-    const role = userRole(perfil)
-    if (!role) return false
-    const roleLevel = ROLE_HIERARCHY.indexOf(role)
-    if (roleLevel === -1) return false
-    // Índice menor = perfil mais privilegiado (admin=0, funcionario=3)
-    // roleLevel <= minRequired: o usuário tem nível igual ou superior ao mínimo necessário
-    const minRequired = Math.min(
-        ...requiredRoles
-            .map(r => ROLE_HIERARCHY.indexOf(r))
-            .filter(i => i !== -1)
-    )
-    return roleLevel <= minRequired  // BUG-02 corrigido: era >=
-}
-
+import { legacyRolesAllow, getNavGateMeta, passesRequiredSlugs } from '@/navigation/navManifest.js'
+import { notifyMobileDrawerClose } from '@/navigation/mobileDrawerBus.js'
 
 // ═══ Rotas ═══════════════════════════════════════════════════════════
 const routes = [
@@ -53,6 +11,12 @@ const routes = [
         name: 'Login',
         component: () => import('../views/auth/LoginView.vue'),
         meta: { public: true }
+    },
+    {
+        path: '/primeiro-acesso',
+        name: 'PrimeiroAcesso',
+        component: () => import('../views/auth/PrimeiroAcessoView.vue'),
+        meta: { requiresAuth: true, firstAccessPage: true }
     },
     // Autocadastro — pública, sem layout de admin
     {
@@ -77,6 +41,12 @@ const routes = [
                 path: 'dashboard',
                 name: 'Dashboard',
                 component: () => import('../views/dashboard/HomeView.vue')
+            },
+            {
+                path: 'dashboard-executivo',
+                name: 'DashboardExecutivo',
+                component: () => import('../views/dashboard/DashboardExecutivoView.vue'),
+                meta: { roles: ['admin', 'rh', 'gestor'] }
             },
             {
                 path: 'meu-perfil',
@@ -116,7 +86,8 @@ const routes = [
             {
                 path: 'atestados-medicos',
                 name: 'AtestadosMedicos',
-                component: () => import('../views/ponto/AtestadosMedicosView.vue')
+                component: () => import('../views/ponto/AtestadosMedicosView.vue'),
+                meta: { roles: ['admin', 'rh'] }
             },
             {
                 path: 'ferias-licencas',
@@ -166,6 +137,11 @@ const routes = [
                 meta: { roles: ['admin', 'rh', 'gestor'] }
             },
             {
+                path: 'minhas-substituicoes',
+                name: 'MinhasSubstituicoes',
+                component: () => import('../views/escala/MinhasSubstituicoesView.vue')
+            },
+            {
                 path: 'escala-sobreaviso',
                 name: 'EscalaSobreaviso',
                 component: () => import('../views/ponto/EscalaSobreavisoView.vue'),
@@ -195,7 +171,7 @@ const routes = [
                 path: 'funcionario/:id',
                 name: 'PerfilFuncionario',
                 component: () => import('../views/rh/PerfilFuncionarioView.vue'),
-                meta: { roles: ['admin', 'rh'] }
+                meta: { roles: ['admin', 'rh', 'gestor'] }
             },
             {
                 path: 'relatorios',
@@ -222,6 +198,12 @@ const routes = [
                 meta: { roles: ['admin', 'rh'] }
             },
             {
+                path: 'decimo-terceiro',
+                name: 'DecimoTerceiro',
+                component: () => import('../views/financeiro/DecimoTerceiroView.vue'),
+                meta: { roles: ['admin', 'rh'] }
+            },
+            {
                 path: 'remessa-cnab',
                 name: 'RemessaCnab',
                 component: () => import('../views/financeiro/RemessaCnabView.vue'),
@@ -236,8 +218,7 @@ const routes = [
             {
                 path: 'progressao-funcional',
                 name: 'ProgressaoFuncional',
-                component: () => import('../views/rh/ProgressaoFuncionalView.vue'),
-                meta: { roles: ['admin', 'rh'] }
+                component: () => import('../views/rh/ProgressaoFuncionalView.vue')
             },
             {
                 path: 'progressao-admin',
@@ -360,8 +341,8 @@ const routes = [
                 meta: { roles: ['admin', 'rh', 'gestor'] }
             },
             {
-                path: 'beneficios',
-                name: 'Beneficios',
+                path: 'beneficios-admin',
+                name: 'BeneficiosAdmin',
                 component: () => import('../views/rh/BeneficiosAdminView.vue'),
                 meta: { roles: ['admin', 'rh'] }
             },
@@ -558,30 +539,79 @@ const router = createRouter({
     routes,
 })
 
+router.afterEach(() => {
+    notifyMobileDrawerClose()
+})
+
 // ═══ Navigation Guard ══════════════════════════════════════════════════
+/** Tela de troca obrigatória de senha (meta explícita — evita falso negativo com merge de meta) */
+function isFirstAccessScreen(to) {
+    return to.name === 'PrimeiroAcesso' || to.matched.some((r) => r.meta && r.meta.firstAccessPage)
+}
+
+/** Rota de login: zona neutra — nunca forçar fetch /me nem lógica de PrimeiroAcesso no guard (login é sempre acessível). */
+function isLoginRoute(to) {
+    return to.name === 'Login' || to.path === '/login'
+}
+
+function deniedToDashboard(next, code) {
+    return next({
+        name: 'Dashboard',
+        query: { denied: 'rbac', code: String(code || 'access_denied') },
+    })
+}
+
+function assertRouteAccess(authStore, to) {
+    const requiredRoles = to.meta.roles
+    if (requiredRoles && requiredRoles.length > 0) {
+        if (!legacyRolesAllow(authStore, requiredRoles)) {
+            return { allowed: false, code: 'legacy_role_required' }
+        }
+    }
+
+    const gate = getNavGateMeta(to.path)
+    if (gate && gate.requiredAnySlugs && gate.requiredAnySlugs.length > 0) {
+        const passes = passesRequiredSlugs(authStore, gate.requiredAnySlugs, gate.legacyRoles || [])
+        if (!passes) {
+            return { allowed: false, code: 'required_slug_missing' }
+        }
+    }
+
+    return { allowed: true, code: null }
+}
+
 router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
 
-    // Rotas públicas: deixa passar
-    if (to.meta.public) return next()
-
-    // Rotas protegidas: verifica autenticação
-    if (to.meta.requiresAuth || to.matched.some(r => r.meta.requiresAuth)) {
-        // Sempre busca dados frescos do servidor antes de renderizar
-        await authStore.fetchUser()
-        if (!authStore.user) {
-            return next({ name: 'Login' })
-        }
+    // 1) Rotas públicas: Login = next() imediato (sem validar sessão; sem fetchUser; sem redirecionar a PrimeiroAcesso)
+    if (to.meta.public && isLoginRoute(to)) {
+        return next()
+    }
+    if (to.meta.public) {
+        return next()
     }
 
-    // Guard de perfil: verifica se o usuário tem a role necessária
-    const requiredRoles = to.meta.roles
-    if (requiredRoles && requiredRoles.length > 0) {
-        if (!hasAccess(authStore.user?.perfil, requiredRoles)) {
-            // Redireciona para o dashboard em vez de 403
+    // 2) A partir daqui, rotas não públicas
+    const needsAuth = to.meta.requiresAuth || to.matched.some((r) => r.meta && r.meta.requiresAuth)
+    if (needsAuth) {
+        if (isFirstAccessScreen(to)) {
+            await authStore.fetchUser()
+        } else {
+            await authStore.fetchUser(true)
+        }
+        if (!authStore.isAuthenticated) {
+            return next({ name: 'Login' })
+        }
+        if (authStore.isAuthenticated && authStore.forcePasswordChange && !isFirstAccessScreen(to)) {
+            return next({ name: 'PrimeiroAcesso' })
+        }
+        if (authStore.isAuthenticated && !authStore.forcePasswordChange && isFirstAccessScreen(to)) {
             return next({ name: 'Dashboard' })
         }
     }
+
+    const access = assertRouteAccess(authStore, to)
+    if (!access.allowed) return deniedToDashboard(next, access.code)
 
     next()
 })

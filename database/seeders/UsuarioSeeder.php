@@ -26,6 +26,13 @@ class UsuarioSeeder extends Seeder
                 'USUARIO_NOME' => $nome,
                 'USUARIO_ATIVO' => 1,
             ]);
+        } else {
+            DB::table('USUARIO')
+                ->where('USUARIO_ID', $usuarioId)
+                ->update([
+                    'USUARIO_NOME' => $nome,
+                    'USUARIO_ATIVO' => 1,
+                ]);
         }
 
         DB::table('USUARIO_PERFIL')->updateOrInsert(

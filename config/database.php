@@ -90,7 +90,9 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'encrypt' => env('DB_ENCRYPT', 'no'),
-            'trust_server_certificate' => env('DB_TRUST_SERVER_CERT', 'yes'),
+            'trust_server_certificate' => true,
+            // Reduz espera em healthchecks/certificação quando o SQL Server está fora do ar.
+            'login_timeout' => (int) env('DB_LOGIN_TIMEOUT', 8),
         ],
 
 

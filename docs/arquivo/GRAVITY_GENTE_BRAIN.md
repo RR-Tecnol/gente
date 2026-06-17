@@ -4,6 +4,12 @@
 > Leia este documento integralmente antes de qualquer ação.
 > Este documento é a consciência central do agente — integra os workflows
 > existentes em .agent/workflows/ com os novos poderes MCP.
+>
+> Atualização operacional mais recente da teia modular:
+> `docs/arquivo/BRAIN_ATUALIZACAO_TEIA_MODULAR_2026-04-26.md`
+>
+> Caminho oficial do Obsidian Brain (vault externo):
+> `/home/DK/brain/Obsidian-Brain-v6/`
 
 ---
 

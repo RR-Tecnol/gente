@@ -12,7 +12,7 @@
         </div>
         <div class="hero-actions">
           <button class="ha-btn sec" @click="marcarTodosLidos">✅ Marcar todos como lidos</button>
-          <button class="ha-btn primary" @click="abrirModalNovo">
+          <button v-if="podeGerirComunicados" class="ha-btn primary" @click="abrirModalNovo">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Comunicado
           </button>
@@ -72,7 +72,7 @@
             </div>
             <div class="ci-arrow">›</div>
           </div>
-          <div class="ci-crud-actions" v-if="c.meu || isAdmin">
+          <div class="ci-crud-actions" v-if="c.meu || podeGerirComunicados">
             <button class="ci-act-btn" @click.stop="editarComunicado(c)" title="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="ci-act-btn ci-act-del" @click.stop="excluirComunicado(c)" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
           </div>
@@ -105,7 +105,7 @@
             </div>
             <div class="ci-arrow">›</div>
           </div>
-          <div class="ci-crud-actions" v-if="c.meu || isAdmin">
+          <div class="ci-crud-actions" v-if="c.meu || podeGerirComunicados">
             <button class="ci-act-btn" @click.stop="editarComunicado(c)" title="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="ci-act-btn ci-act-del" @click.stop="excluirComunicado(c)" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
           </div>
@@ -212,7 +212,7 @@ import { useAuthStore } from '@/store/auth'
 import { sanitize } from '@/plugins/sanitize'
 
 const authStore = useAuthStore()
-const isAdmin   = computed(() => authStore.user?.USUARIO_ADMIN ?? false)
+const podeGerirComunicados = computed(() => authStore.isAdmin || authStore.isRH)
 
 const loaded  = ref(false)
 const loading = ref(true)
@@ -285,6 +285,7 @@ onMounted(async () => {
 
 // ── Ações CRUD ────────────────────────────────────────────────
 const abrirModalNovo = () => {
+  if (!podeGerirComunicados.value) return
   editandoId.value = null
   Object.assign(form, { titulo: '', conteudo: '', categoria: 'rh', prioridade: 'normal', fixado: false })
   erroModal.value = ''; okModal.value = ''
@@ -292,6 +293,7 @@ const abrirModalNovo = () => {
 }
 
 const editarComunicado = (c) => {
+  if (!c.meu && !podeGerirComunicados.value) return
   editandoId.value = c.id
   Object.assign(form, { titulo: c.titulo, conteudo: c.conteudo, categoria: c.categoria, prioridade: c.prioridade, fixado: c.fixado })
   erroModal.value = ''; okModal.value = ''
@@ -300,6 +302,12 @@ const editarComunicado = (c) => {
 
 const publicar = async () => {
   if (!formValido.value) return
+  if (!editandoId.value) {
+    if (!podeGerirComunicados.value) return
+  } else {
+    const c = comunicados.value.find(x => x.id === editandoId.value)
+    if (c && !c.meu && !podeGerirComunicados.value) return
+  }
   salvando.value = true; erroModal.value = ''
   const payload = { titulo: form.titulo, conteudo: form.conteudo, categoria: form.categoria, prioridade: form.prioridade, fixado: form.fixado }
   try {
@@ -332,6 +340,7 @@ const publicar = async () => {
 }
 
 const excluirComunicado = async (c) => {
+  if (!c.meu && !podeGerirComunicados.value) return
   if (!confirm(`Excluir "${c.titulo}"?`)) return
   try {
     if (c.id) await api.delete(`/api/v3/comunicados/${c.id}`)

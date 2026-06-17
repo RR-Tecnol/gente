@@ -59,11 +59,14 @@ Route::post('/pss/editais', function (Request $request) {
 // POST /pss/editais/{id}/publicar — publicar edital
 Route::post('/pss/editais/{id}/publicar', function (Request $request, $id) {
     try {
-        DB::table('PSS_EDITAL')->where('EDITAL_ID', $id)->update([
+        $updated = DB::table('PSS_EDITAL')->where('EDITAL_ID', $id)->update([
             'STATUS' => 'PUBLICADO',
             'DATA_PUBLICACAO' => now()->toDateString(),
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Edital não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
@@ -139,12 +142,15 @@ Route::post('/pss/candidatos', function (Request $request) {
 // PATCH /pss/candidatos/{id}/convocar — convocar candidato
 Route::patch('/pss/candidatos/{id}/convocar', function (Request $request, $id) {
     try {
-        DB::table('PSS_CANDIDATO')->where('CANDIDATO_ID', $id)->update([
+        $updated = DB::table('PSS_CANDIDATO')->where('CANDIDATO_ID', $id)->update([
             'STATUS' => 'CONVOCADO',
             'DATA_CONVOCACAO' => now()->toDateString(),
             'OBSERVACAO' => $request->observacao,
             'updated_at' => now(),
         ]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Candidato não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);

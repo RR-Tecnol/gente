@@ -2,22 +2,15 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 
-if (!Schema::hasTable('EXAME_OCUPACIONAL')) {
-    Schema::create('EXAME_OCUPACIONAL', function (Blueprint $table) {
-        $table->increments('EXAME_ID');
-        $table->unsignedInteger('FUNCIONARIO_ID')->index();
-        $table->string('EXAME_TIPO', 50)->default('Periódico');
-        $table->string('EXAME_SUBTIPO', 100)->nullable();
-        $table->date('EXAME_DATA_REALIZACAO');
-        $table->date('EXAME_DATA_VENCIMENTO')->nullable();
-        $table->string('EXAME_MEDICO', 150)->nullable();
-        $table->boolean('EXAME_APTO')->default(true);
-        $table->text('EXAME_OBS')->nullable();
-        $table->timestamps();
-    });
+if (!function_exists('ensureExameOcupacionalTableFromRoutes')) {
+    function ensureExameOcupacionalTableFromRoutes(): void
+    {
+        if (!Schema::hasTable('EXAME_OCUPACIONAL')) {
+            throw new \RuntimeException('Tabela EXAME_OCUPACIONAL não encontrada. Execute migrations canônicas.');
+        }
+    }
 }
 
 // Prefix inherits "api/v3/" from its main module registration on web.php
@@ -25,6 +18,7 @@ Route::prefix('medicina-admin')->group(function () {
 
     // Lista de Exames (ASOs)
     Route::get('/exames', function (Request $request) {
+        ensureExameOcupacionalTableFromRoutes();
         try {
             $query = DB::table('EXAME_OCUPACIONAL as e')
                 ->join('FUNCIONARIO as f', 'e.FUNCIONARIO_ID', '=', 'f.FUNCIONARIO_ID')
@@ -57,6 +51,7 @@ Route::prefix('medicina-admin')->group(function () {
 
     // Registrar ou Atualizar Exame (ASO)
     Route::post('/exames', function (Request $request) {
+        ensureExameOcupacionalTableFromRoutes();
         try {
             $data = $request->validate([
                 'FUNCIONARIO_ID' => 'required|integer',
@@ -84,17 +79,18 @@ Route::prefix('medicina-admin')->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // Deletar Exame
     Route::delete('/exames/{id}', function ($id) {
+        ensureExameOcupacionalTableFromRoutes();
         try {
             DB::table('EXAME_OCUPACIONAL')->where('EXAME_ID', $id)->delete();
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // Agendamentos (Vindos do App do Servidor em AFASTAMENTO)
     Route::get('/agendamentos', function () {
@@ -124,7 +120,7 @@ Route::prefix('medicina-admin')->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    });
+    })->middleware('perfil:ADMINISTRADOR,Administrador,GESTOR');
 
     // Buscar Servidores AutoComplete (Fallback modular para não depender de rotas globais)
     Route::get('/servidores', function(Request $request) {
@@ -148,6 +144,7 @@ Route::prefix('medicina-admin')->group(function () {
 
     // KPIs Gerais para o Dashboard
     Route::get('/kpis', function () {
+        ensureExameOcupacionalTableFromRoutes();
         try {
             $hoje = date('Y-m-d');
             $avencer = date('Y-m-d', strtotime('+30 days'));

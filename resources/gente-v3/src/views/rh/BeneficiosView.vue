@@ -16,6 +16,7 @@
         </div>
       </div>
     </div>
+    <div v-if="dataWarning" class="data-warning" :class="{ loaded }">{{ dataWarning }}</div>
 
     <!-- BENEFÍCIOS ATIVOS -->
     <div class="section-title-row" :class="{ loaded }">
@@ -107,20 +108,7 @@ import api from '@/plugins/axios'
 const loaded = ref(false)
 const extratoAberto = ref(null)
 const toast = ref({ visible: false, msg: '' })
-
-// ── Mock de fallback ──────────────────────────────────────────
-const mockAtivos = [
-  { id: 1, ico: '🚌', nome: 'Vale-Transporte', cor: '#3b82f6', desc: 'Crédito diário para transporte público coletivo.', fornecedor: 'Ticket Log', valor: 440, detalhes: [{ label: 'Crédito/dia', val: 'R$ 22,00' }, { label: 'Dias úteis', val: '20d' }, { label: 'Desconto Folha', val: '6%' }], extrato: [] },
-  { id: 2, ico: '🍽️', nome: 'Vale-Refeição', cor: '#f59e0b', desc: 'Benefício para refeições em restaurantes.', fornecedor: 'Alelo', valor: 800, detalhes: [{ label: 'Crédito/dia', val: 'R$ 40,00' }, { label: 'Dias úteis', val: '20d' }, { label: 'Desconto Folha', val: 'R$ 44,00' }], extrato: [] },
-  { id: 3, ico: '🏥', nome: 'Plano de Saúde', cor: '#10b981', desc: 'Cobertura nacional em rede credenciada.', fornecedor: 'Unimed', valor: 650, detalhes: [{ label: 'Plano', val: 'Enfermaria Plus' }, { label: 'Dependentes', val: '2 incluídos' }, { label: 'Coparticipação', val: '20%' }], extrato: [] },
-  { id: 4, ico: '😁', nome: 'Plano Odontológico', cor: '#6366f1', desc: 'Cobertura para consultas e procedimentos básicos.', fornecedor: 'OdontoPrev', valor: 80, detalhes: [{ label: 'Plano', val: 'Dental Básico' }, { label: 'Cobertura', val: 'Nacional' }, { label: 'Desconto Folha', val: 'R$ 25,00' }], extrato: [] },
-]
-const mockDisponiveis = [
-  { id: 10, ico: '💊', nome: 'Farmácia Convênio', desc: 'Desconto de 30% em medicamentos nas farmácias parceiras.', cor: '#ef4444', valor: 200, custo: 0 },
-  { id: 11, ico: '🏋️', nome: 'Academia de Ginástica', desc: 'Acesso à rede de academias parceiras.', cor: '#0d9488', valor: 120, custo: 60 },
-  { id: 12, ico: '📚', nome: 'Auxílio-Educação', desc: 'Reembolso de até R$ 400/mês para cursos.', cor: '#6366f1', valor: 400, custo: 0 },
-  { id: 13, ico: '🍼', nome: 'Auxílio-Creche', desc: 'Para servidores com filhos até 3 anos.', cor: '#f59e0b', valor: 500, custo: 0 },
-]
+const dataWarning = ref('')
 
 const beneficiosAtivos = ref([])
 const beneficiosDisponiveis = ref([])
@@ -142,15 +130,13 @@ const mapBeneficio = (b) => ({
 onMounted(async () => {
   try {
     const { data } = await api.get('/api/v3/beneficios')
-    beneficiosAtivos.value = (!data.fallback && data.ativos?.length)
-      ? data.ativos.map(mapBeneficio)
-      : mockAtivos
-    beneficiosDisponiveis.value = (!data.fallback && data.disponiveis?.length)
-      ? data.disponiveis.map(mapBeneficio)
-      : mockDisponiveis
+    beneficiosAtivos.value = Array.isArray(data.ativos) ? data.ativos.map(mapBeneficio) : []
+    beneficiosDisponiveis.value = Array.isArray(data.disponiveis) ? data.disponiveis.map(mapBeneficio) : []
+    if (data.fallback) dataWarning.value = 'API retornou contingência. Benefícios podem estar incompletos.'
   } catch {
-    beneficiosAtivos.value = mockAtivos
-    beneficiosDisponiveis.value = mockDisponiveis
+    beneficiosAtivos.value = []
+    beneficiosDisponiveis.value = []
+    dataWarning.value = 'Não foi possível carregar dados reais de Benefícios.'
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
@@ -187,6 +173,8 @@ const fmtMoeda = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 
 .hero-cards-mini { display: flex; gap: 8px; }
 .hcm { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.07); border: 1px solid color-mix(in srgb, var(--bc) 30%, rgba(255,255,255,0.1)); border-radius: 10px; padding: 6px 12px; font-size: 12px; color: #e2e8f0; }
 .hcm-nome { font-weight: 600; }
+.data-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 10px 12px; font-size: 12px; font-weight: 700; opacity: 0; transform: translateY(6px); transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
+.data-warning.loaded { opacity: 1; transform: none; }
 .section-title-row { display: flex; align-items: center; gap: 12px; opacity: 0; transform: translateY(6px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.06s; }
 .section-title-row.loaded { opacity: 1; transform: none; }
 .sec-title { font-size: 16px; font-weight: 800; color: #1e293b; margin: 0; }

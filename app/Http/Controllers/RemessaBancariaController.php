@@ -26,16 +26,20 @@ class RemessaBancariaController extends Controller
 
             // Banco default: Banco do Brasil (001)
             $bancoCodigo = $request->get('banco', '001');
-            $this->cnabBuilder = new CNAB240Builder($bancoCodigo);
+            $builder = new CNAB240Builder($bancoCodigo);
 
-            $conteudoTxt = $this->cnabBuilder->gerarRemessa($folha);
-
-            // Envia como Stream de Download TXT
             $nomeArquivo = "REMESSA_PGTO_FOLHA_{$folha->FOLHA_COMPETENCIA}_B{$bancoCodigo}.txt";
 
-            return response($conteudoTxt)
-                ->header('Content-Type', 'text/plain')
-                ->header('Content-Disposition', "attachment; filename=\"{$nomeArquivo}\"");
+            // Fase 13.5: streaming + cursor — evita OOM em folhas grandes (~90k linhas)
+            return response()->streamDownload(function () use ($builder, $folha): void {
+                $out = fopen('php://output', 'wb');
+                if ($out === false) {
+                    return;
+                }
+                $builder->streamRemessa($folha, $out);
+            }, $nomeArquivo, [
+                'Content-Type' => 'text/plain; charset=ISO-8859-1',
+            ]);
 
         } catch (Exception $e) {
             return response()->json([

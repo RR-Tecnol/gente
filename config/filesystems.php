@@ -51,6 +51,15 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
         ],
+        'gente_secure_vault' => [
+            'driver' => 's3',
+            'key' => env('GENTE_VAULT_S3_KEY', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('GENTE_VAULT_S3_SECRET', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('GENTE_VAULT_S3_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket' => env('GENTE_VAULT_S3_BUCKET', env('AWS_BUCKET')),
+            'url' => env('GENTE_VAULT_S3_URL', env('AWS_URL')),
+            'endpoint' => env('GENTE_VAULT_S3_ENDPOINT', env('AWS_ENDPOINT')),
+        ],
 
     ],
 

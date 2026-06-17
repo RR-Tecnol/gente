@@ -189,6 +189,9 @@ class Lotacao extends Model
 
     public static function getDadosRelatorioImprimirLotacao($lotacaoId)
     {
+        // R69: SQL injection corrigido — bind parameter ao invés de interpolação
+        $lotacaoId = (int) $lotacaoId;
+
         $sql = "
         SELECT
             S.SETOR_NOME,
@@ -222,9 +225,9 @@ class Lotacao extends Model
         LEFT JOIN CONTATO TEL ON TEL.PESSOA_ID = P.PESSOA_ID AND TEL.CONTATO_TIPO = 1
         LEFT JOIN CONTATO EMAIL ON EMAIL.PESSOA_ID = P.PESSOA_ID AND EMAIL.CONTATO_TIPO = 2
 
-        WHERE L.LOTACAO_ID = $lotacaoId
-    ";
+        WHERE L.LOTACAO_ID = ?
+        ";
 
-        return DB::select(DB::raw($sql));
+        return DB::select($sql, [$lotacaoId]);
     }
 }

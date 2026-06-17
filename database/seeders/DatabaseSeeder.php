@@ -8,7 +8,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
+        /**
+         * SECRETARIAS-SEED — ver {@see SecretariasSeed}.
+         * Perfil fundador/supremo mantém-se à parte (dados pessoais e credenciais do fundador).
+         */
         $this->call([
+            SecretariasSeed::class,
+            DaviSupremoSeeder::class,
             TabelaGenericaSeeder::class,        // 1º: Enums do sistema
             PerfilSeeder::class,                // 2º: Perfis de acesso (15 perfis)
             ConfiguracaoSistemaSeeder::class,   // 3º: Configurações do sistema
@@ -20,6 +26,14 @@ class DatabaseSeeder extends Seeder
             TabelaSalarialPMSLzSeeder::class,   // 9º: Tabela salarial 3 carreiras (Sprint 3)
             FuncionariosPMSLzSeeder::class,     // 10º: 18 funcionários de teste
             UsuariosPMSLzSeeder::class,         // 11º: 17 usuários de teste (gente@2026)
+            PcaspSeeder::class,                 // 12º: plano mínimo de contas contábeis
+            SagresDeParaSeeder::class,          // 13º: de/para SAGRES
+            SidebarCoverageSeeder::class,       // 14º: massa mínima para abas críticas do sidebar
+            TurnosBaseSeeder::class,            // 15º: turnos base do sistema
         ]);
+
+        if (filter_var(env('GENTE_SEED_AUDITOR_SEMAD_STANDALONE', false), FILTER_VALIDATE_BOOLEAN)) {
+            $this->call(AuditorSemadHomologSeeder::class);
+        }
     }
 }

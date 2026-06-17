@@ -483,6 +483,24 @@ onUnmounted(() => {
   gap: 20px;
 }
 
+/* Coluna Ações: evitar sobreposição com células estreitas (ícones 30×30 + flex) */
+.view-container .data-table th:last-child,
+.view-container .data-table td:last-child {
+  width: 1%;
+  min-width: 88px;
+  vertical-align: middle;
+}
+.view-container .row-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.view-container .row-actions .act-btn {
+  flex-shrink: 0;
+}
+
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }

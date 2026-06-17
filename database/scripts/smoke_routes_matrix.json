@@ -1,0 +1,27 @@
+{
+  "descricao": "Rotas SPA + APIs de referência para smoke manual pós-seed (utilizador: davi@semed.local ou persona PMSLz).",
+  "rotas_spa": [
+    { "path": "/", "nota": "Dashboard" },
+    { "path": "/painel-executivo", "nota": "RBAC global.mde.25 ou unidade.dashboard.kpi" },
+    { "path": "/escala-trabalho", "nota": "Escala mensal + setores" },
+    { "path": "/hora-extra", "nota": "Lista / aprovação" },
+    { "path": "/plantoes-extras", "nota": "Plantões extras (distinto de hora extra)" },
+    { "path": "/progressao-admin", "nota": "Progressão funcional" },
+    { "path": "/avaliacoes-equipe", "nota": "Avaliações gestor" }
+  ],
+  "apis_get": [
+    "/api/auth/me",
+    "/api/v3/dashboard/operacional",
+    "/api/v3/escala-trabalho",
+    "/api/v3/hora-extra",
+    "/api/v3/plantoes-extras",
+    "/api/v3/progressao-funcional/lista-elegiveis",
+    "/api/v3/avaliacoes",
+    "/api/v3/folha/batch/{batchId}"
+  ],
+  "apis_folha_fase13": {
+    "post_processar": "/api/v3/folha/processar",
+    "get_batch_status": "/api/v3/folha/batch/{batchId}",
+    "nota": "POST com JSON { \"folha_id\": N }; resposta 202 inclui batch_id. Substituir {batchId} no GET pelo UUID devolvido."
+  }
+}

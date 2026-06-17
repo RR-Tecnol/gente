@@ -1,0 +1,176 @@
+version: 1
+orgaos: [SEMED, SEMAD]
+tenant_types: [SECRETARIA, UNIDADE, POLO, GLOBAL_SEMED, GLOBAL_SEMAD]
+
+roles:
+  - slug: global_semed_secretario
+    nome: Secretário(a) Municipal da Educação
+    camada: estrategica
+    layer: secretaria
+    level: 1
+    orgao: SEMED
+  - slug: operador_secretaria_escolar
+    nome: Operador(a) de Secretaria Escolar
+    camada: operacional
+    layer: setor
+    level: 4
+    orgao: SEMED
+  - slug: gestor_diretor_unidade
+    nome: Gestor(a) / Diretor(a) de Unidade
+    camada: operacional
+    layer: unidade
+    level: 3
+    orgao: SEMED
+  - slug: coordenador_gerente_polo
+    nome: Coordenador(a) / Gerente de Polo
+    camada: intermediaria
+    layer: diretoria_polo
+    level: 2
+    orgao: SEMED
+  - slug: analista_executivo_sagep
+    nome: Analista Executivo(a) SAGEP
+    camada: tatica
+    layer: superintendencia
+    level: 1
+    orgao: SEMED
+  - slug: auditoria_matriz_semad
+    nome: Auditoria Matriz SEMAD
+    camada: estrategica
+    layer: prefeitura_semad
+    level: 1
+    orgao: SEMAD
+  - slug: auditor_homologacao_ti
+    nome: Auditoria TI / Homologação (matriz completa de permissões para testes de carga e 78 abas)
+    camada: tatica
+    layer: homologacao
+    level: 0
+    orgao: SEMED
+
+permissions:
+  - slug: escala.grade.visualizar
+    recurso: escala
+    acao: visualizar
+  - slug: escala.grade.editar
+    recurso: escala
+    acao: editar
+  - slug: escala.workflow.homologar
+    recurso: escala
+    acao: homologar
+  - slug: escala.workflow.devolver
+    recurso: escala
+    acao: devolver
+  - slug: escala.macro.listar_setores
+    recurso: escala
+    acao: macro_listar
+  - slug: escala.override.sudo_grade
+    recurso: escala
+    acao: override_sudo_grade
+  - slug: organograma.unidade.visualizar
+    recurso: organograma
+    acao: visualizar
+  - slug: organograma.setor.criar
+    recurso: organograma
+    acao: criar
+  - slug: pessoal.regencia.alterar
+    recurso: pessoal
+    acao: alterar
+  - slug: auditoria.exportar.leitura
+    recurso: auditoria
+    acao: exportar
+  - slug: frequencia.lancar
+    recurso: frequencia
+    acao: lancar
+  - slug: substituicao.ss.gerar
+    recurso: substituicao
+    acao: gerar_formulario_ss
+  - slug: unidade.dashboard.kpi
+    recurso: unidade
+    acao: dashboard_kpi
+  - slug: rh.progressao.lei4928
+    recurso: rh_progressao
+    acao: gerir_lei_4928
+  - slug: global.mde.25
+    recurso: financeiro_mde
+    acao: visualizar_classificacao_25
+  - slug: auditoria.global.readonly
+    recurso: auditoria_global
+    acao: readonly
+  - slug: financeiro.previdencia.ipam
+    recurso: financeiro_previdencia
+    acao: visualizar_ipam
+
+role_permissions:
+  global_semed_secretario:
+    - escala.grade.visualizar
+    - escala.workflow.homologar
+    - escala.workflow.devolver
+    - escala.macro.listar_setores
+    - escala.override.sudo_grade
+    - organograma.unidade.visualizar
+    - organograma.setor.criar
+    - pessoal.regencia.alterar
+    - unidade.dashboard.kpi
+    - rh.progressao.lei4928
+    - global.mde.25
+    - financeiro.previdencia.ipam
+  operador_secretaria_escolar:
+    - escala.grade.visualizar
+    - escala.grade.editar
+    - frequencia.lancar
+    - substituicao.ss.gerar
+    - organograma.unidade.visualizar
+  gestor_diretor_unidade:
+    - escala.grade.visualizar
+    - escala.grade.editar
+    - escala.workflow.devolver
+    - frequencia.lancar
+    - substituicao.ss.gerar
+    - unidade.dashboard.kpi
+    - organograma.unidade.visualizar
+  coordenador_gerente_polo:
+    - escala.grade.visualizar
+    - escala.macro.listar_setores
+    - escala.grade.editar
+    - escala.workflow.devolver
+    - frequencia.lancar
+    - substituicao.ss.gerar
+    - unidade.dashboard.kpi
+    - organograma.unidade.visualizar
+  analista_executivo_sagep:
+    - escala.grade.visualizar
+    - escala.grade.editar
+    - escala.workflow.homologar
+    - escala.workflow.devolver
+    - escala.macro.listar_setores
+    - escala.override.sudo_grade
+    - pessoal.regencia.alterar
+    - organograma.setor.criar
+    - unidade.dashboard.kpi
+    - rh.progressao.lei4928
+    - global.mde.25
+    - financeiro.previdencia.ipam
+  auditoria_matriz_semad:
+    - escala.grade.visualizar
+    - organograma.unidade.visualizar
+    - auditoria.exportar.leitura
+    - auditoria.global.readonly
+    - global.mde.25
+  # União explícita de todos os slugs em permissions: (invariante anti-drift em teste PHP)
+  auditor_homologacao_ti:
+    - escala.grade.visualizar
+    - escala.grade.editar
+    - escala.workflow.homologar
+    - escala.workflow.devolver
+    - escala.macro.listar_setores
+    - escala.override.sudo_grade
+    - organograma.unidade.visualizar
+    - organograma.setor.criar
+    - pessoal.regencia.alterar
+    - auditoria.exportar.leitura
+    - frequencia.lancar
+    - substituicao.ss.gerar
+    - unidade.dashboard.kpi
+    - rh.progressao.lei4928
+    - global.mde.25
+    - auditoria.global.readonly
+    - financeiro.previdencia.ipam

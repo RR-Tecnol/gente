@@ -20,6 +20,17 @@
       </div>
     </div>
 
+    <div class="teia-box" :class="{ loaded }">
+      <div>
+        <strong>Teia RH/SESMT:</strong> treinamentos concluídos influenciam avaliações e conformidade de segurança.
+      </div>
+      <div class="teia-actions">
+        <button class="teia-btn" @click="irPara('/avaliacao-desempenho')">Ir para Avaliações</button>
+        <button class="teia-btn" @click="irPara('/seguranca-trabalho')">Ir para Segurança</button>
+      </div>
+    </div>
+    <div v-if="dataWarning" class="data-warning" :class="{ loaded }">{{ dataWarning }}</div>
+
     <!-- TABS -->
     <div class="tabs" :class="{ loaded }">
       <button v-for="t in tabs" :key="t.id" class="tab-btn" :class="{ active: tabAtiva === t.id }" @click="tabAtiva = t.id">
@@ -124,28 +135,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/plugins/axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const loaded = ref(false)
 const tabAtiva = ref('meus')
 const areaFiltro = ref('')
 const toast = ref({ visible: false, msg: '' })
-
-const MOCK_CURSOS = [
-  { id: 1, titulo: 'Suporte Avançado de Vida (ACLS)', desc: 'Ressuscitação cardiopulmonar avançada.', area: 'Saúde', carga: 16, status: 'concluido', progresso: 100, data: '2025-11-20', certificado: true },
-  { id: 2, titulo: 'NR-32 — Segurança em Serviços de Saúde', desc: 'Norma regulamentadora para estabelecimentos de saúde.', area: 'Segurança', carga: 8, status: 'concluido', progresso: 100, data: '2025-09-15', certificado: true },
-  { id: 3, titulo: 'Gestão de Resíduos Hospitalares', desc: 'Manejo correto de resíduos sólidos de serviços de saúde.', area: 'Saúde', carga: 4, status: 'concluido', progresso: 100, data: '2025-07-10', certificado: true },
-  { id: 4, titulo: 'Excel Avançado para Gestão Hospitalar', desc: 'Planilhas e análise de dados para o setor de saúde.', area: 'Tecnologia', carga: 20, status: 'andamento', progresso: 65, data: '2026-01-15', certificado: false },
-  { id: 5, titulo: 'Comunicação Não-Violenta no Trabalho', desc: 'Técnicas de comunicação assertiva.', area: 'Comportamental', carga: 8, status: 'andamento', progresso: 30, data: '2026-02-01', certificado: false },
-  { id: 6, titulo: 'Biossegurança Hospitalar', desc: 'EPIs, protocolos e procedimentos de biossegurança.', area: 'Segurança', carga: 6, status: 'inscrito', progresso: 0, data: '2026-03-10', certificado: false },
-]
-
-const MOCK_CATALOGO = [
-  { id: 10, titulo: 'Liderança em Saúde', desc: 'Desenvolvimento de lideranças no contexto hospitalar.', area: 'Comportamental', carga: 24, proxima: 'Mar/2026', vagas: 20, custo: 0, modalidade: 'EAD' },
-  { id: 11, titulo: 'PHTLS — Trauma Pré-Hospitalar', desc: 'Suporte de vida em trauma para profissionais de emergência.', area: 'Saúde', carga: 16, proxima: 'Abr/2026', vagas: 12, custo: 0, modalidade: 'Presencial' },
-  { id: 12, titulo: 'Power BI para Gestão Hospitalar', desc: 'Dashboards e visualização de dados no setor público.', area: 'Tecnologia', carga: 16, proxima: 'Mar/2026', vagas: 25, custo: 0, modalidade: 'Híbrido' },
-  { id: 13, titulo: 'Controle de Infecção Hospitalar', desc: 'Prevenção e controle de infecções relacionadas à assistência.', area: 'Saúde', carga: 8, proxima: 'Abr/2026', vagas: 30, custo: 0, modalidade: 'EAD' },
-  { id: 14, titulo: 'NR-35 — Trabalho em Altura', desc: 'Norma para atividades realizadas acima de 2 metros.', area: 'Segurança', carga: 8, proxima: 'Mai/2026', vagas: 15, custo: 0, modalidade: 'Presencial' },
-]
+const dataWarning = ref('')
 
 const meusCursos = ref([])
 const catalogo = ref([])
@@ -165,11 +163,13 @@ onMounted(async () => {
       api.get('/api/v3/treinamentos/meus'),
       api.get('/api/v3/treinamentos/catalogo'),
     ])
-    meusCursos.value = (!rMeus.data.fallback && rMeus.data.cursos?.length) ? rMeus.data.cursos : MOCK_CURSOS
-    catalogo.value = rCat.data.catalogo?.length ? rCat.data.catalogo : MOCK_CATALOGO
+    meusCursos.value = Array.isArray(rMeus.data?.cursos) ? rMeus.data.cursos : []
+    catalogo.value = Array.isArray(rCat.data?.catalogo) ? rCat.data.catalogo : []
+    if (rMeus.data?.fallback || rCat.data?.fallback) dataWarning.value = 'API retornou contingência. Catálogo e progresso podem estar incompletos.'
   } catch {
-    meusCursos.value = MOCK_CURSOS
-    catalogo.value = MOCK_CATALOGO
+    meusCursos.value = []
+    catalogo.value = []
+    dataWarning.value = 'Não foi possível carregar dados reais de Treinamentos.'
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
@@ -187,11 +187,17 @@ const inscrever = async (c) => {
   setTimeout(() => { toast.value.visible = false }, 3000)
 }
 const downloadCert = (c) => { toast.value = { visible: true, msg: `🎓 Certificado de "${c.titulo}" baixado!` }; setTimeout(() => { toast.value.visible = false }, 3000) }
+const irPara = (path) => router.push(path)
 </script>
 
 
 <style scoped>
 .tr-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
+.teia-box { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#ecfeff; border:1px solid #a5f3fc; color:#0f766e; padding:10px 14px; border-radius:12px; font-size:12px; font-weight:600; }
+.teia-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.teia-btn { border:1px solid #67e8f9; background:#fff; color:#0e7490; border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+.data-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 10px 12px; font-size: 12px; font-weight: 700; opacity: 0; transform: translateY(6px); transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
+.data-warning.loaded { opacity: 1; transform: none; }
 .hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #1e1a3a 55%, #0d2a14 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
 .hero-shapes { position: absolute; inset: 0; pointer-events: none; }

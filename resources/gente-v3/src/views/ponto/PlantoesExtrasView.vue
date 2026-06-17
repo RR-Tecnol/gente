@@ -30,6 +30,9 @@
 
     <!-- TAB: MEUS PLANTÕES -->
     <div v-if="tabAtiva === 'meus'" class="tab-content" :class="{ loaded }">
+      <div v-if="dadosIndisponiveis" class="state-warn">
+        ⚠️ Não foi possível carregar plantões agora. Tentando reconectar com o servidor.
+      </div>
       <div v-if="loading" class="loading-msg">⏳ Carregando plantões...</div>
       <div v-else-if="plantoes.length === 0" class="empty-state">
         <span class="empty-ico">📋</span>
@@ -48,10 +51,10 @@
           </div>
           <div class="pc-body">
             <div class="pcb-row">
-              <span class="pcb-ico">🏥</span><span class="pcb-val">{{ p.setor }}</span>
+              <span class="pcb-ico">🏥</span><span class="pcb-val">{{ p.setor || '—' }}</span>
             </div>
             <div class="pcb-row">
-              <span class="pcb-ico">⏰</span><span class="pcb-val">{{ p.horaIni }}h → {{ p.horaFim }}h ({{ p.duracaoH }}h)</span>
+              <span class="pcb-ico">⏰</span><span class="pcb-val">{{ textoPeriodo(p) }}</span>
             </div>
             <div v-if="p.valor" class="pcb-row">
               <span class="pcb-ico">💰</span><span class="pcb-val" style="font-weight:800;color:#059669">R$ {{ fmtMoeda(p.valor) }}</span>
@@ -59,7 +62,7 @@
           </div>
           <div class="pc-footer">
             <span class="pcf-tipo" :class="p.tipo === 'urgencia' ? 'pt-red' : 'pt-blue'">{{ p.tipo === 'urgencia' ? '🚨 Urgência' : '📅 Programado' }}</span>
-            <span class="pcf-pag" :class="p.pago ? 'pp-green' : 'pp-gray'">{{ p.pago ? '✓ Pago' : 'Aguardando' }}</span>
+            <span class="pcf-pag" :class="rodapePagClass(p)">{{ rodapePagTexto(p) }}</span>
           </div>
         </div>
       </div>
@@ -118,17 +121,54 @@
 
     <!-- TAB: HISTÓRICO -->
     <div v-if="tabAtiva === 'historico'" class="tab-content" :class="{ loaded }">
-      <div class="hist-resumo">
-        <div v-for="m in historicoPorMes" :key="m.mes" class="hm-item">
-          <div class="hm-header">
-            <span class="hm-mes">{{ m.mes }}</span>
-            <span class="hm-total">{{ m.plantoes }} plantões · {{ m.horas }}h</span>
+      <div class="hist-panel">
+        <div class="hist-top">
+          <div class="hist-kpi">
+            <span class="hk-label">Total de Solicitações</span>
+            <b class="hk-value">{{ historicoResumo.totalSolicitacoes }}</b>
           </div>
-          <div class="hm-bar"><div class="hm-fill" :style="{ width: (m.horas / 30 * 100) + '%' }"></div></div>
+          <div class="hist-kpi">
+            <span class="hk-label">Aprovadas/Pagas</span>
+            <b class="hk-value">{{ historicoResumo.totalAprovadas }}</b>
+          </div>
+          <div class="hist-kpi">
+            <span class="hk-label">Horas no Histórico</span>
+            <b class="hk-value">{{ formatHoras(historicoResumo.totalHoras) }}h</b>
+          </div>
         </div>
-        <div v-if="historicoPorMes.length === 0" class="empty-state">
-          <span class="empty-ico">📊</span>
-          <p>Nenhum histórico disponível</p>
+
+        <div class="hist-table-wrap">
+          <table class="hist-table" v-if="historicoLista.length">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Setor</th>
+                <th>Período</th>
+                <th>Horas</th>
+                <th>Status Plantão</th>
+                <th>Status Hora Extra</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in historicoLista" :key="`hist-${p.id}`">
+                <td>{{ formatDataBR(p.data) }}</td>
+                <td>{{ p.setor || '—' }}</td>
+                <td>{{ p.horaIni || '—' }} → {{ p.horaFim || '—' }}</td>
+                <td>{{ formatHoras(p.duracaoH) }}h</td>
+                <td><span class="hist-chip" :class="`hc-${p.status}`">{{ statusLabel(p.status) }}</span></td>
+                <td>
+                  <span v-if="p.horaExtraStatus" class="hist-chip hc-he">
+                    {{ statusHoraExtraLabel(p.horaExtraStatus) }}
+                  </span>
+                  <span v-else class="hist-chip hc-none">Sem vínculo</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty-state">
+            <span class="empty-ico">📊</span>
+            <p>Nenhum histórico disponível</p>
+          </div>
         </div>
       </div>
     </div>
@@ -145,72 +185,85 @@ const loading  = ref(false)
 const tabAtiva = ref('meus')
 const enviando = ref(false)
 const toast    = ref({ visible: false, msg: '' })
+const dadosIndisponiveis = ref(false)
 const novoP    = reactive({ data: '', tipo: 'programado', horaIni: '', horaFim: '', setor: '', justificativa: '' })
 const plantoes = ref([])
 
 // Mapeamento de colunas do backend para o formato esperado pelo frontend
-const mapearPlantao = (p) => ({
-  id:       p.PLANTAO_ID     ?? p.id,
-  data:     p.PLANTAO_DATA   ?? p.data,
-  setor:    p.PLANTAO_SETOR  ?? p.setor  ?? '—',
-  horaIni:  p.PLANTAO_HORA_INI ?? p.horaIni ?? '—',
-  horaFim:  p.PLANTAO_HORA_FIM ?? p.horaFim ?? '—',
-  duracaoH: p.PLANTAO_DURACAO  ?? p.duracaoH ?? '—',
-  valor:    p.PLANTAO_VALOR    ?? p.valor    ?? null,
-  tipo:     (p.PLANTAO_TIPO  ?? p.tipo  ?? 'programado').toLowerCase(),
-  status:   (p.PLANTAO_STATUS ?? p.status ?? 'pendente').toLowerCase(),
-  pago:     !!(p.PLANTAO_PAGO ?? p.pago ?? false),
-})
+const normalizarStatus = (s) => {
+  const raw = String(s ?? '').toLowerCase()
+  if (raw.includes('aprovad')) return 'aprovada'
+  if (raw.includes('reprov') || raw.includes('rejeit')) return 'rejeitada'
+  if (raw.includes('pago') || raw === 'paga') return 'paga'
+  if (raw.includes('inclu') && (raw.includes('folha') || raw.includes('folh'))) return 'incluida_folha'
+  if (raw.includes('pend')) return 'pendente'
+  return 'pendente'
+}
 
-const mockPlantoes = [
-  { id: 1, data: '2026-02-22', setor: 'UTI Adulto',      horaIni: '07:00', horaFim: '19:00', duracaoH: 12, valor: 520, tipo: 'programado', status: 'aprovado', pago: true },
-  { id: 2, data: '2026-02-15', setor: 'Pronto-Socorro',  horaIni: '19:00', horaFim: '07:00', duracaoH: 12, valor: 520, tipo: 'urgencia',   status: 'aprovado', pago: false },
-  { id: 3, data: '2026-02-08', setor: 'UTI Pediátrica',  horaIni: '07:00', horaFim: '19:00', duracaoH: 12, valor: 208, tipo: 'programado', status: 'aprovado', pago: true },
-  { id: 4, data: '2026-03-01', setor: 'Centro Cirúrgico',horaIni: '07:00', horaFim: '19:00', duracaoH: 12, valor: 520, tipo: 'programado', status: 'pendente', pago: false },
-]
+const mapearPlantao = (p) => {
+  const v = p.PLANTAO_VALOR ?? p.VALOR_CALCULADO ?? p.valor
+  const valorNum = v !== undefined && v !== null && v !== '' ? Number(v) : null
+  const st = normalizarStatus(p.PLANTAO_STATUS ?? p.STATUS ?? p.status ?? 'pendente')
+  const he = String(p.HORA_EXTRA_STATUS ?? p.hora_extra_status ?? '').toUpperCase()
+  const pagoFolha = he === 'PAGA' || he === 'INCLUIDA_FOLHA' || (st === 'paga' || st === 'incluida_folha')
+  return {
+    id:       p.PLANTAO_ID     ?? p.PLANTAO_EXTRA_ID ?? p.id,
+    data:     p.PLANTAO_DATA   ?? p.DATA_PLANTAO ?? p.data,
+    setor:    p.PLANTAO_SETOR  ?? p.setor  ?? null,
+    horaIni:  p.PLANTAO_HORA_INI ?? p.HORA_INICIO ?? p.horaIni ?? null,
+    horaFim:  p.PLANTAO_HORA_FIM ?? p.HORA_FIM ?? p.horaFim ?? null,
+    duracaoH: Number(p.PLANTAO_DURACAO  ?? p.PLANTAO_HORAS ?? p.TOTAL_HORAS ?? p.duracaoH ?? 0),
+    valor:    Number.isFinite(valorNum) ? valorNum : null,
+    tipo:     (p.PLANTAO_TIPO  ?? p.tipo  ?? 'programado').toLowerCase(),
+    status:   st,
+    horaExtraId: p.HORA_EXTRA_ID ?? p.hora_extra_id ?? null,
+    horaExtraStatus: p.HORA_EXTRA_STATUS ?? p.hora_extra_status ?? null,
+    pago:     pagoFolha,
+  }
+}
 
 onMounted(async () => {
   loading.value = true
+  dadosIndisponiveis.value = false
   try {
     const { data } = await api.get('/api/v3/plantoes-extras')
-    if (!data.fallback && data.plantoes?.length) {
-      plantoes.value = data.plantoes.map(mapearPlantao)
-    } else {
-      plantoes.value = mockPlantoes
-    }
+    plantoes.value = Array.isArray(data?.plantoes) ? data.plantoes.map(mapearPlantao) : []
   } catch {
-    // failed
+    plantoes.value = []
+    dadosIndisponiveis.value = true
+    showToast('⚠️ Não foi possível carregar plantões agora.')
   } finally {
     loading.value = false
     setTimeout(() => { loaded.value = true }, 80)
   }
 })
 
-// KPIs computados dinamicamente a partir dos plantões
+// KPIs: competência do mês corrente; horas/valor só de plantões aprovados (teia com HORA_EXTRA.VALOR_CALCULADO)
 const mesAtual = new Date().toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+const prefixoMes = (() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+})()
 const kpisComputados = computed(() => {
-  const aprovados = plantoes.value.filter(p => p.status === 'aprovado')
-  const horas     = aprovados.reduce((a, p) => a + (Number(p.duracaoH) || 0), 0)
-  const valor     = aprovados.reduce((a, p) => a + (Number(p.valor)    || 0), 0)
+  const noMes = plantoes.value.filter((p) => p.data && String(p.data).slice(0, 7) === prefixoMes)
+  const aprovados = noMes.filter((p) => ['aprovada', 'paga', 'incluida_folha'].includes(p.status))
+  const horas = aprovados.reduce((a, p) => a + (Number(p.duracaoH) || 0), 0)
+  const valor = aprovados.reduce((a, p) => a + (Number(p.valor) || 0), 0)
   return [
-    { ico: '📅', label: mesAtual,       val: `${aprovados.length} plantões`, cor: '#3b82f6' },
-    { ico: '⏱️', label: 'Horas Extras', val: `${horas}h`,                   cor: '#f59e0b' },
-    { ico: '💰', label: 'Valor Acumul.', val: valor > 0 ? `R$ ${fmtMoeda(valor)}` : '—',  cor: '#10b981' },
+    { ico: '📅', label: mesAtual, val: `${noMes.length} no mês`, cor: '#3b82f6' },
+    { ico: '⏱️', label: 'Horas aprovadas', val: `${horas.toFixed(2).replace('.', ',')}h`, cor: '#f59e0b' },
+    { ico: '💰', label: 'Valor (aprov. mês)', val: valor > 0 ? `R$ ${fmtMoeda(valor)}` : (aprovados.length ? 'R$ 0,00' : '—'), cor: '#10b981' },
   ]
 })
 
-// Histórico por mês a partir dos plantões carregados
-const historicoPorMes = computed(() => {
-  const mapa = {}
-  plantoes.value.filter(p => p.status === 'aprovado').forEach(p => {
-    if (!p.data) return
-    const [ano, mes] = p.data.split('-')
-    const key = `${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mes-1]}/${ano}`
-    if (!mapa[key]) mapa[key] = { mes: key, plantoes: 0, horas: 0 }
-    mapa[key].plantoes++
-    mapa[key].horas += Number(p.duracaoH) || 0
-  })
-  return Object.values(mapa).slice(0, 6)
+const historicoLista = computed(() => [...plantoes.value]
+  .sort((a, b) => String(b.data || '').localeCompare(String(a.data || ''))))
+
+const historicoResumo = computed(() => {
+  const totalSolicitacoes = historicoLista.value.length
+  const totalAprovadas = historicoLista.value.filter((p) => ['aprovada', 'paga', 'incluida_folha'].includes(p.status)).length
+  const totalHoras = historicoLista.value.reduce((acc, p) => acc + (Number(p.duracaoH) || 0), 0)
+  return { totalSolicitacoes, totalAprovadas, totalHoras }
 })
 
 const tabs = computed(() => [
@@ -221,9 +274,41 @@ const tabs = computed(() => [
 
 const novoPValido = computed(() => novoP.data && novoP.setor && novoP.horaIni && novoP.horaFim)
 
-const statusCor   = (s) => ({ aprovado: '#10b981', pendente: '#f59e0b', rejeitado: '#ef4444' })[s] ?? '#64748b'
-const statusLabel = (s) => ({ aprovado: '✅ Aprovado', pendente: '⏳ Pendente', rejeitado: '❌ Rejeitado' })[s] ?? s
+const statusCor   = (s) => ({ aprovada: '#10b981', pendente: '#f59e0b', rejeitada: '#ef4444', paga: '#0ea5e9', incluida_folha: '#6366f1' })[s] ?? '#64748b'
+const statusLabel = (s) => ({ aprovada: '✅ Aprovada', pendente: '⏳ Pendente', rejeitada: '❌ Rejeitada', paga: '💸 Paga', incluida_folha: '🧾 Em Folha' })[s] ?? s
 const fmtMoeda    = v  => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(v)
+
+const textoPeriodo = (p) => {
+  const a = p.horaIni ? String(p.horaIni).trim() : ''
+  const b = p.horaFim ? String(p.horaFim).trim() : ''
+  if (a && b) {
+    return `${a} → ${b} (${formatHoras(p.duracaoH)}h)`
+  }
+  if (p.duracaoH != null && Number(p.duracaoH) > 0) {
+    return `Duração: ${formatHoras(p.duracaoH)}h`
+  }
+  return '—'
+}
+const rodapePagTexto = (p) => {
+  if (p.pago) return '✓ Pago / Folha'
+  const he = String(p.horaExtraStatus || '').toUpperCase()
+  if (he === 'PENDENTE' || he === '') return p.status === 'pendente' ? 'Hora extra: análise' : 'Folha pendente'
+  if (he === 'APROVADA') return 'Hora extra OK'
+  if (he === 'REJEITADA') return 'Hora extra negada'
+  return 'Aguardando'
+}
+const rodapePagClass = (p) => (p.pago || String(p.horaExtraStatus || '').toUpperCase() === 'APROVADA' ? 'pp-green' : 'pp-gray')
+const formatHoras = (v) => Number(v || 0).toFixed(2).replace('.', ',')
+const formatDataBR = (d) => d ? new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR') : '—'
+const statusHoraExtraLabel = (s) => {
+  const raw = String(s || '').toUpperCase()
+  if (raw === 'APROVADA') return 'Hora Extra: Aprovada'
+  if (raw === 'REJEITADA') return 'Hora Extra: Rejeitada'
+  if (raw === 'PENDENTE') return 'Hora Extra: Pendente'
+  if (raw === 'PAGA') return 'Hora Extra: Paga'
+  if (raw === 'INCLUIDA_FOLHA') return 'Hora Extra: Em Folha'
+  return `Hora Extra: ${raw || '—'}`
+}
 
 const showToast = (msg) => { toast.value = { visible: true, msg }; setTimeout(() => toast.value.visible = false, 4000) }
 
@@ -232,12 +317,11 @@ const solicitarPlantao = async () => {
   try {
     await api.post('/api/v3/plantoes-extras', { ...novoP })
     const { data: newData } = await api.get('/api/v3/plantoes-extras')
-    if (!newData.fallback && newData.plantoes?.length) {
-      plantoes.value = newData.plantoes.map(mapearPlantao)
-    }
+    plantoes.value = Array.isArray(newData?.plantoes) ? newData.plantoes.map(mapearPlantao) : []
     showToast('✅ Solicitação enviada ao coordenador para aprovação!')
   } catch {
-    // failed
+    dadosIndisponiveis.value = true
+    showToast('❌ Falha ao enviar solicitação. Tente novamente.')
   } finally {
     Object.assign(novoP, { data: '', tipo: 'programado', horaIni: '', horaFim: '', setor: '', justificativa: '' })
     enviando.value = false
@@ -261,7 +345,7 @@ const solicitarPlantao = async () => {
 .hs-card { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 10px 16px; }
 .ks-ico { font-size: 20px; }
 .ks-val { display: block; font-size: 16px; font-weight: 900; }
-.ks-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+.ks-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; line-height: 1.25; max-width: 11rem; white-space: normal; }
 .tabs { display: flex; gap: 6px; opacity: 0; transform: translateY(6px); transition: all 0.4s cubic-bezier(0.22,1,0.36,1) 0.06s; }
 .tabs.loaded { opacity: 1; transform: none; }
 .tab-btn { display: flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; transition: all 0.18s; }
@@ -273,8 +357,25 @@ const solicitarPlantao = async () => {
 .empty-state { text-align: center; padding: 60px 20px; }
 .empty-ico { font-size: 48px; display: block; margin-bottom: 12px; }
 .empty-state p { color: #94a3b8; font-size: 14px; font-weight: 600; }
-.plantoes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-.plantao-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; border-left: 3px solid var(--pcc); animation: pcIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--pci) * 60ms) both; }
+.state-warn {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.plantoes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.plantao-card {
+  background: linear-gradient(130deg, rgba(226, 240, 252, 0.38), rgba(214, 247, 242, 0.22)), #fff;
+  border: 1px solid #c7deef;
+  border-radius: 18px;
+  overflow: hidden;
+  border-left: 4px solid var(--pcc);
+  animation: pcIn 0.35s cubic-bezier(0.22,1,0.36,1) calc(var(--pci) * 60ms) both;
+}
 @keyframes pcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .pc-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; }
 .pct-dia { display: block; font-size: 24px; font-weight: 900; color: #1e293b; line-height: 1; }
@@ -286,6 +387,7 @@ const solicitarPlantao = async () => {
 .pcb-val { font-size: 13px; color: #475569; font-weight: 600; }
 .pc-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid #f8fafc; }
 .pcf-tipo, .pcf-pag { font-size: 11px; font-weight: 700; }
+.pcf-pag { padding: 3px 9px; border-radius: 999px; border: 1px solid #e2e8f0; background: #f8fafc; }
 .pt-red { color: #ef4444; } .pt-blue { color: #3b82f6; }
 .pp-green { color: #10b981; } .pp-gray { color: #94a3b8; }
 .form-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 24px; max-width: 640px; display: flex; flex-direction: column; gap: 16px; }
@@ -302,12 +404,25 @@ const solicitarPlantao = async () => {
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-spin { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.hist-resumo { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 14px; max-width: 540px; }
-.hm-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
-.hm-mes { font-size: 13px; font-weight: 800; color: #1e293b; }
-.hm-total { font-size: 13px; font-weight: 700; color: #f59e0b; }
-.hm-bar { height: 7px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
-.hm-fill { height: 100%; background: linear-gradient(to right, #f59e0b, #d97706); border-radius: 99px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); }
+.hist-panel { background: #fff; border: 1px solid #d9e6f2; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.hist-top { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.hist-kpi { border: 1px solid #e2e8f0; background: linear-gradient(135deg, #f8fbff, #f9fffd); border-radius: 12px; padding: 10px; }
+.hk-label { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+.hk-value { font-size: 20px; color: #0f172a; }
+.hist-table-wrap { border: 1px solid #d9e6f2; border-radius: 14px; overflow: auto; background: #fcfeff; }
+.hist-table { width: 100%; border-collapse: collapse; min-width: 860px; }
+.hist-table thead tr { background: linear-gradient(135deg, rgba(226,240,252,.5), rgba(214,247,242,.38)); }
+.hist-table th { text-align: left; font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: .05em; padding: 10px; border-bottom: 1px solid #d9e6f2; }
+.hist-table td { font-size: 13px; color: #1e293b; padding: 10px; border-bottom: 1px solid #eef4f9; }
+.hist-table tbody tr:hover { background: #f8fbff; }
+.hist-chip { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 1px solid transparent; }
+.hc-aprovada { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.hc-pendente { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.hc-rejeitada { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.hc-paga { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.hc-incluida_folha { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.hc-he { background: #f8fafc; color: #334155; border-color: #cbd5e1; }
+.hc-none { background: #f8fafc; color: #94a3b8; border-color: #e2e8f0; }
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 13px 22px; border-radius: 14px; font-size: 14px; font-weight: 600; z-index: 200; box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
 .toast-enter-active, .toast-leave-active { transition: all 0.35s cubic-bezier(0.22,1,0.36,1); }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(16px); }
@@ -317,6 +432,7 @@ const solicitarPlantao = async () => {
   .hero-title { font-size: 22px !important; }
   .kpi-strip, .fin-cards, .stats-row { grid-template-columns: repeat(2, 1fr) !important; }
   .two-col, .form-two-col, .config-grid { grid-template-columns: 1fr !important; }
+  .hist-top { grid-template-columns: 1fr !important; }
   .table-scroll, .table-wrap { overflow-x: auto; }
   table { min-width: 500px; }
 }

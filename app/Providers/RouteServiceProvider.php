@@ -17,7 +17,9 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/home';
+    // Vue 3 SPA: dashboard renderizado via Vue Router em '/dashboard'
+    // '/' serve o SPA que via Vue Router decide se mostra login ou dashboard
+    public const HOME = '/dashboard';
 
     /**
      * The controller namespace for the application.

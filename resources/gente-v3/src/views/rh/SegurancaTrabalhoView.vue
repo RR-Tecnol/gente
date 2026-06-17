@@ -25,6 +25,18 @@
       </div>
     </div>
 
+    <div class="teia-box" :class="{ loaded }">
+      <div>
+        <strong>Teia SESMT:</strong> incidentes e EPIs se refletem em Treinamentos, Medicina do Trabalho e Relatórios.
+      </div>
+      <div class="teia-actions">
+        <button class="teia-btn" @click="irPara('/treinamentos')">Treinamentos</button>
+        <button class="teia-btn" @click="irPara('/medicina-trabalho')">Medicina</button>
+        <button class="teia-btn" @click="irPara('/relatorios')">Relatórios</button>
+      </div>
+    </div>
+    <div v-if="dataWarning" class="data-warning" :class="{ loaded }">{{ dataWarning }}</div>
+
     <!-- NRs APLICÁVEIS -->
     <div class="section-hdr" :class="{ loaded }">
       <h2 class="sh-title">📋 Normas Regulamentadoras Aplicáveis</h2>
@@ -141,11 +153,15 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import api from '@/plugins/axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const loaded = ref(false)
 const modalEpi = ref(false)
 const modalInc = ref(false)
 const toast = ref({ visible: false, msg: '' })
+const dataWarning = ref('')
 const novoEpi = reactive({ nome: '', obs: '' })
 const novoInc = reactive({ tipo: 'quase', local: '', descricao: '' })
 const salvandoInc = ref(false)
@@ -165,17 +181,6 @@ const nrs = [
   { id: 6, codigo: 'NR-35', nome: 'Trabalho em Altura', conformidade: 100, status: 'Conforme', cor: '#10b981', ultimaRevisao: '2025-08-01' },
 ]
 
-const MOCK_EPIS = [
-  { id: 1, ico: '🥾', nome: 'Bota de Borracha ESD', ca: '43298', validade: '2026-06-15', quantidade: 1, vencido: false, aVencer: false },
-  { id: 2, ico: '🧤', nome: 'Luva de Procedimento (cx100)', ca: '12578', validade: '2026-08-30', quantidade: 3, vencido: false, aVencer: false },
-  { id: 3, ico: '😷', nome: 'Máscara N95 PFF2', ca: '28574', validade: '2026-03-20', quantidade: 10, vencido: false, aVencer: true },
-]
-
-const MOCK_INCS = [
-  { id: 1, tipo: 'quase', data: '2026-02-10', descricao: 'Derramamento de solução fisiológica no corredor da UTI.', local: 'UTI Adulto — Corredor B', cat: null, closed: true },
-  { id: 2, tipo: 'acidente', data: '2026-01-22', descricao: 'Acidente com perfurocortante durante procedimento de punção venosa.', local: 'Pronto-Socorro — Box 3', cat: '2026-0047', closed: false },
-]
-
 const epis = ref([])
 const incidentes = ref([])
 
@@ -185,11 +190,13 @@ onMounted(async () => {
       api.get('/api/v3/seguranca/epis'),
       api.get('/api/v3/seguranca/incidentes'),
     ])
-    epis.value = (!rEpi.data.fallback && rEpi.data.epis?.length) ? rEpi.data.epis : MOCK_EPIS
-    incidentes.value = (!rInc.data.fallback && rInc.data.incidentes?.length) ? rInc.data.incidentes : MOCK_INCS
+    epis.value = Array.isArray(rEpi.data?.epis) ? rEpi.data.epis : []
+    incidentes.value = Array.isArray(rInc.data?.incidentes) ? rInc.data.incidentes : []
+    if (rEpi.data?.fallback || rInc.data?.fallback) dataWarning.value = 'API retornou contingência. Dados reais de Segurança podem estar incompletos.'
   } catch {
-    epis.value = MOCK_EPIS
-    incidentes.value = MOCK_INCS
+    epis.value = []
+    incidentes.value = []
+    dataWarning.value = 'Não foi possível carregar dados reais de Segurança do Trabalho.'
   } finally {
     setTimeout(() => { loaded.value = true }, 80)
   }
@@ -203,7 +210,7 @@ const solicitarEpi = async () => {
     await api.post('/api/v3/seguranca/epis', { nome: novoEpi.nome, obs: novoEpi.obs, ico: '🦺' })
     const { data } = await api.get('/api/v3/seguranca/epis')
     if (!data.fallback && data.epis?.length) epis.value = data.epis
-  } catch { /* mantém mock */ }
+  } catch { /* mantém estado atual */ }
   toast.value = { visible: true, msg: `✅ Solicitação de "${novoEpi.nome}" enviada ao SESMT!` }
   Object.assign(novoEpi, { nome: '', obs: '' }); modalEpi.value = false
   setTimeout(() => toast.value.visible = false, 3000)
@@ -239,11 +246,17 @@ const notificarInc = async () => {
     salvandoInc.value = false
   }
 }
+const irPara = (path) => router.push(path)
 </script>
 
 
 <style scoped>
 .st-page { display: flex; flex-direction: column; gap: 18px; font-family: 'Inter', system-ui, sans-serif; }
+.teia-box { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:12px; padding:10px 14px; font-size:12px; font-weight:600; }
+.teia-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.teia-btn { border:1px solid #93c5fd; background:#fff; color:#1d4ed8; border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+.data-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 10px 12px; font-size: 12px; font-weight: 700; opacity: 0; transform: translateY(6px); transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
+.data-warning.loaded { opacity: 1; transform: none; }
 .hero { position: relative; border-radius: 22px; padding: 26px 34px; overflow: hidden; background: linear-gradient(135deg, #0f172a 0%, #1a0a0a 55%, #0a1a10 100%); opacity: 0; transform: translateY(-10px); transition: all 0.5s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
 .hero-shapes { position: absolute; inset: 0; pointer-events: none; }

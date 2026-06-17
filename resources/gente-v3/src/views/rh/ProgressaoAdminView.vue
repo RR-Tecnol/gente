@@ -1,5 +1,12 @@
 <template>
   <div class="pa-page">
+    <div v-if="bootstrapping" class="pa-boot-overlay" role="status" aria-live="polite">
+      <div class="pa-boot-card">
+        <div class="pa-boot-spinner" />
+        <p>A carregar dados de progressão…</p>
+      </div>
+    </div>
+
     <!-- HERO -->
     <div class="hero" :class="{ loaded }">
       <div class="hero-inner">
@@ -10,7 +17,7 @@
         </div>
         <div class="hero-badges">
           <div class="hb-item hb-blue">
-            <span class="hb-num">{{ elegiveis.length }}</span>
+            <span class="hb-num">{{ totalElegiveisHero }}</span>
             <span class="hb-lbl">Elegíveis</span>
           </div>
           <div class="hb-item" :class="lrfClass">
@@ -37,14 +44,20 @@
       <div class="card-hdr">
         <h2 class="card-title">✅ Servidores Elegíveis — {{ now }}</h2>
         <div class="card-acts">
+          <select v-model="filtroSetor" class="search-input" @change="onFiltroSetorChange">
+            <option value="">Todos os setores</option>
+            <option v-for="s in setores" :key="s.SETOR_ID ?? s.id" :value="String(s.SETOR_ID ?? s.id)">{{ s.SETOR_NOME ?? s.nome }}</option>
+          </select>
+          <input v-model="buscaElegiveis" class="search-input" placeholder="🔍 Matrícula/CPF ou nome…" @input="debounceCarregarElegiveis" />
           <button class="act-btn act-outline" @click="exportarLista">📄 Exportar</button>
-          <button class="act-btn act-primary" :disabled="selecionados.length === 0 || aplicandoLote" @click="aplicarLote">
+          <button v-if="canMutateProgressao" class="act-btn act-primary" :disabled="aplicandoLote" @click="aplicarLote">
             <span v-if="aplicandoLote">⏳</span><template v-else>⚡ Aplicar Selecionados ({{ selecionados.length }})</template>
           </button>
         </div>
       </div>
 
-      <div v-if="carregando" class="loading-txt">⏳ Calculando elegibilidade...</div>
+      <div v-if="carregandoElegiveis" class="loading-txt">⏳ Calculando elegibilidade...</div>
+      <div v-else-if="erroElegiveis" class="err-msg" style="padding:16px">⚠️ {{ erroElegiveis }}</div>
       <div v-else-if="elegiveis.length === 0" class="empty-msg">Nenhum servidor elegível neste momento.</div>
       <div v-else class="table-wrap">
         <table class="data-table">
@@ -66,11 +79,11 @@
               <td class="td-aumento">+R$ {{ fmtMoeda(s.aumento) }}</td>
               <td class="td-meses">{{ s.meses_na_ref }}m</td>
               <td>
-                <span v-if="s.nota !== null" class="nota-badge" :class="s.nota >= 7 ? 'nb-ok' : 'nb-bad'">{{ s.nota }}</span>
+                <span v-if="Number.isFinite(Number(s.nota))" class="nota-badge" :class="Number(s.nota) >= 7 ? 'nb-ok' : 'nb-bad'">{{ Number(s.nota).toFixed(1) }}</span>
                 <span v-else class="nota-badge nb-null">—</span>
               </td>
               <td>
-                <button class="mini-btn" @click="aplicarUm(s)" :disabled="aplicandoId === s.id">
+                <button v-if="canMutateProgressao" class="mini-btn" @click="aplicarUm(s)" :disabled="aplicandoId === s.id">
                   {{ aplicandoId === s.id ? '⏳' : '⚡' }}
                 </button>
               </td>
@@ -78,6 +91,7 @@
           </tbody>
         </table>
       </div>
+      <ProgressaoPaginacaoBar v-if="!carregandoElegiveis && metaElegiveis" :meta="metaElegiveis" @page="irPaginaElegiveis" />
 
       <!-- Modal de aplicação -->
       <transition name="modal">
@@ -92,7 +106,7 @@
               <div v-if="modalAto.ok" class="ok-msg">✅ {{ modalAto.ok }}</div>
               <div class="modal-actions">
                 <button class="modal-cancel" @click="modalAto.visible = false">Cancelar</button>
-                <button class="modal-submit" @click="confirmarAplicacao" :disabled="modalAto.salvando">
+                <button v-if="canMutateProgressao" class="modal-submit" @click="confirmarAplicacao" :disabled="modalAto.salvando">
                   {{ modalAto.salvando ? '⏳ Aplicando...' : 'Confirmar' }}
                 </button>
               </div>
@@ -108,21 +122,23 @@
         <h2 class="card-title">👥 Todos os Servidores</h2>
         <div class="card-acts">
           <!-- BUG-EST-12: filtro por setor -->
-          <select v-model="filtroSetor" class="search-input" style="width:200px">
+          <select v-model="filtroSetor" class="search-input" @change="onFiltroSetorChange">
             <option value="">Todos os setores</option>
-            <option v-for="s in setores" :key="s.SETOR_ID ?? s.id" :value="s.SETOR_ID ?? s.id">{{ s.SETOR_NOME ?? s.nome }}</option>
+            <option v-for="s in setores" :key="s.SETOR_ID ?? s.id" :value="String(s.SETOR_ID ?? s.id)">{{ s.SETOR_NOME ?? s.nome }}</option>
           </select>
-          <input v-model="buscaTodos" class="search-input" placeholder="🔍 Buscar..." />
+          <input v-model="buscaTodos" class="search-input" placeholder="🔍 Matrícula/CPF ou nome…" @input="debounceCarregarTodos" />
         </div>
       </div>
-      <div v-if="carregando" class="loading-txt">⏳ Carregando...</div>
+      <div v-if="carregandoTodos" class="loading-txt">⏳ Carregando...</div>
+      <div v-else-if="erroTodos" class="err-msg" style="padding:16px">⚠️ {{ erroTodos }}</div>
+      <div v-else-if="todos.length === 0" class="empty-msg">Nenhum servidor encontrado com estes filtros.</div>
       <div v-else class="table-wrap">
         <table class="data-table">
           <thead><tr>
             <th>Servidor</th><th>Cargo</th><th>Classe/Ref</th><th>Salário</th><th>Status</th><th>Bloqueios</th><th>Meses</th>
           </tr></thead>
           <tbody>
-            <tr v-for="s in todosFiltered" :key="s.id">
+            <tr v-for="s in todos" :key="s.id">
               <td class="td-nome">{{ s.nome }}</td>
               <td class="td-cargo">{{ s.cargo }}</td>
               <td><span class="badge-classe">{{ s.classe }}</span> <code class="ref-badge">{{ s.referencia }}</code></td>
@@ -142,14 +158,18 @@
           </tbody>
         </table>
       </div>
+      <ProgressaoPaginacaoBar v-if="!carregandoTodos && metaTodos" :meta="metaTodos" @page="irPaginaTodos" />
     </div>
 
     <!-- ABA 3: Impacto Financeiro LRF -->
     <div v-if="abaAtiva === 'impacto'" class="card" :class="{ loaded }">
       <div class="card-hdr">
         <h2 class="card-title">💰 Simulador de Impacto Financeiro</h2>
-        <button class="act-btn act-outline" @click="carregarImpacto">🔄 Recalcular</button>
+        <button class="act-btn act-outline" :disabled="carregandoImpacto" @click="recalcularImpacto">🔄 Recalcular</button>
       </div>
+      <div v-if="carregandoImpacto" class="loading-txt">⏳ A calcular impacto (pode demorar em bases grandes)…</div>
+      <div v-else-if="erroImpacto" class="err-msg" style="padding:16px">⚠️ {{ erroImpacto }}</div>
+      <template v-else>
 
       <!-- Painel LRF -->
       <div class="lrf-panel" :class="'lrf-' + (impacto.status_lrf ?? 'seguro')">
@@ -165,7 +185,10 @@
         </div>
         <div class="lrf-status-row">
           <span class="lrf-pct-big">{{ impacto.percentual_lrf ?? '—' }}%</span>
-          <span class="lrf-status-badge lrf-badge-{{ impacto.status_lrf ?? 'seguro' }}">
+          <span
+            class="lrf-status-badge"
+            :class="'lrf-badge-' + String(impacto.status_lrf ?? 'seguro')"
+          >
             {{ { seguro: '✅ Seguro', alerta: '⚠️ Alerta', limite_prudencial: '🟠 Limite Prudencial', limite_excedido: '🔴 Limite Excedido' }[impacto.status_lrf ?? 'seguro'] }}
           </span>
         </div>
@@ -183,16 +206,18 @@
         <div class="kpi-card"><span class="kc-ico">⚖️</span><span class="kc-val">R$ {{ fmtMoeda(impacto.despesa_anual ?? 0) }}</span><span class="kc-lbl">Despesa Anual Pessoal</span></div>
       </div>
 
-      <!-- Tabela detalhada por servidor -->
+      <!-- Tabela detalhada por servidor (paginada) -->
       <h3 class="sub-title">Impacto por Servidor</h3>
-      <div class="table-wrap">
+      <div v-if="carregandoImpactoDetalhes" class="loading-txt">⏳ A carregar detalhes…</div>
+      <div v-else-if="!impactoDetalhes.length" class="empty-msg">Sem linhas de detalhe nesta página (ou nenhum servidor com impacto positivo).</div>
+      <div v-else class="table-wrap">
         <table class="data-table">
           <thead><tr>
             <th>Servidor</th><th>Cargo</th><th>Classe</th><th>Ref. Atual</th><th>Nova Ref.</th>
             <th>Salário Atual</th><th>Novo Salário</th><th>Diferença</th>
           </tr></thead>
           <tbody>
-            <tr v-for="d in (impacto.detalhes ?? [])" :key="d.id">
+            <tr v-for="d in impactoDetalhes" :key="d.id">
               <td class="td-nome">{{ d.nome }}</td>
               <td>{{ d.cargo }}</td>
               <td><span class="badge-classe">{{ d.classe }}</span></td>
@@ -205,6 +230,7 @@
           </tbody>
         </table>
       </div>
+      <ProgressaoPaginacaoBar v-if="!carregandoImpactoDetalhes && metaImpactoDetalhes" :meta="metaImpactoDetalhes" @page="irPaginaImpactoDetalhes" />
 
       <!-- Configurar RCL -->
       <div class="rcl-config">
@@ -213,9 +239,10 @@
           <div class="rcl-field"><label>Ano</label><input v-model.number="formRcl.ano" class="field-input" type="number" /></div>
           <div class="rcl-field"><label>RCL Anual (R$)</label><input v-model.number="formRcl.rcl" class="field-input" type="number" /></div>
           <div class="rcl-field"><label>Folha Mensal Atual (R$)</label><input v-model.number="formRcl.folha_mensal" class="field-input" type="number" /></div>
-          <button class="act-btn act-primary" @click="salvarRcl" :disabled="salvandoRcl">{{ salvandoRcl ? '⏳' : '💾 Salvar' }}</button>
+          <button v-if="canMutateProgressao" class="act-btn act-primary" @click="salvarRcl" :disabled="salvandoRcl">{{ salvandoRcl ? '⏳' : '💾 Salvar' }}</button>
         </div>
       </div>
+      </template>
     </div>
 
     <!-- ABA 4: Tabela Salarial (TASK-14) -->
@@ -254,7 +281,7 @@
                     <td class="td-money td-new">{{ c.salario_base != null ? 'R$ ' + fmtMoeda(c.salario_base) : '—' }}</td>
                     <td class="td-meses">{{ c.carga_horaria ? c.carga_horaria + 'h' : '—' }}</td>
                     <td class="td-cargo">{{ c.cbo || '—' }}</td>
-                    <td><button class="mini-btn" title="Editar" @click="iniciarEdicaoCargo(c)">✏️</button></td>
+                    <td><button v-if="canMutateProgressao" class="mini-btn" title="Editar" @click="iniciarEdicaoCargo(c)">✏️</button></td>
                   </template>
                   <!-- Modo edição inline -->
                   <template v-else>
@@ -265,10 +292,10 @@
                     <td><input v-model.number="editandoCargo.carga_horaria" class="field-input-sm" type="number" placeholder="200" /></td>
                     <td><input v-model="editandoCargo.cbo" class="field-input-sm" placeholder="13124" /></td>
                     <td style="display:flex;gap:4px">
-                      <button class="act-btn act-primary act-sm" :disabled="salvandoTabela" @click="salvarCargo">
+                      <button v-if="canMutateProgressao" class="act-btn act-primary act-sm" :disabled="salvandoTabela" @click="salvarCargo">
                         {{ salvandoTabela ? '⏳' : '💾' }}
                       </button>
-                      <button class="act-btn act-outline act-sm" @click="cancelarEdicaoCargo">✕</button>
+                      <button v-if="canMutateProgressao" class="act-btn act-outline act-sm" @click="cancelarEdicaoCargo">✕</button>
                     </td>
                   </template>
                 </tr>
@@ -350,13 +377,13 @@
           <div class="cfg-field"><label>Nota Mínima de Avaliação</label><input v-model.number="cfg.nota_minima" class="field-input" type="number" step="0.1" /></div>
           <div class="cfg-field"><label>Anuênio (% por ano)</label><input v-model.number="cfg.anuenio_pct" class="field-input" type="number" step="0.1" /></div>
         </div>
-        <button class="act-btn act-primary" @click="salvarConfig" :disabled="salvandoCfg">{{ salvandoCfg ? '⏳' : '💾 Salvar Config' }}</button>
+        <button v-if="canMutateProgressao" class="act-btn act-primary" @click="salvarConfig" :disabled="salvandoCfg">{{ salvandoCfg ? '⏳' : '💾 Salvar Config' }}</button>
         <div v-if="cfgOk" class="ok-msg" style="margin-top:8px">{{ cfgOk }}</div>
       </div>
 
       <div class="config-section">
         <div class="sub-hdr"><h3 class="sub-title">Carreiras Cadastradas</h3>
-          <button class="act-btn act-primary act-sm" @click="modalCarreira = true">+ Nova Carreira</button>
+          <button v-if="canMutateProgressao" class="act-btn act-primary act-sm" @click="modalCarreira = true">+ Nova Carreira</button>
         </div>
         <div class="carreira-list">
           <div v-for="c in carreiras" :key="c.id" class="carreira-item">
@@ -383,7 +410,7 @@
             </select>
             <div class="modal-actions" style="margin-top:14px">
               <button class="modal-cancel" @click="modalCarreira = false">Cancelar</button>
-              <button class="modal-submit" @click="criarCarreira" :disabled="criandoCarreira">{{ criandoCarreira ? '⏳' : 'Criar' }}</button>
+              <button v-if="canMutateProgressao" class="modal-submit" @click="criarCarreira" :disabled="criandoCarreira">{{ criandoCarreira ? '⏳' : 'Criar' }}</button>
             </div>
           </div>
         </div>
@@ -412,7 +439,7 @@
             <div v-if="modalLote.erro" class="err-msg">⚠️ {{ modalLote.erro }}</div>
             <div class="modal-actions">
               <button class="modal-cancel" @click="modalLote.visible = false">Cancelar</button>
-              <button class="modal-submit" @click="confirmarLote" :disabled="modalLote.salvando">
+              <button v-if="canMutateProgressao" class="modal-submit" @click="confirmarLote" :disabled="modalLote.salvando">
                 {{ modalLote.salvando ? '⏳ Aplicando...' : 'Confirmar' }}
               </button>
             </div>
@@ -426,11 +453,28 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/plugins/axios'
+import ProgressaoPaginacaoBar from '@/components/rh/ProgressaoPaginacaoBar.vue'
+import { useAuthStore } from '@/store/auth'
+import { useSemadReadOnlyShell } from '@/composables/useSemadReadOnlyShell'
+import { legacyRolesAllow, passesRequiredSlugs } from '@/navigation/navManifest.js'
 
-const loaded      = ref(false)
-const carregando  = ref(false)
+const authStore = useAuthStore()
+const { isReadOnly: semadReadOnly } = useSemadReadOnlyShell()
+const canMutateProgressao = computed(() => {
+  if (semadReadOnly.value) return false
+  if (!legacyRolesAllow(authStore, ['admin', 'rh'])) return false
+  return passesRequiredSlugs(authStore, ['rh.progressao.lei4928'], ['admin', 'rh'])
+})
+
+const loaded       = ref(false)
+const bootstrapping = ref(true)
+const carregandoElegiveis = ref(false)
+const carregandoTodos = ref(false)
+const carregandoImpacto = ref(false)
+const carregandoImpactoDetalhes = ref(false)
 const abaAtiva    = ref('elegiveis')
 const buscaTodos  = ref('')
+const buscaElegiveis = ref('')
 const selecionados= ref([])
 const aplicandoLote = ref(false)
 const aplicandoId   = ref(null)
@@ -462,6 +506,18 @@ const formRcl    = ref({ ano: new Date().getFullYear(), rcl: 0, folha_mensal: 0 
 // BUG-EST-12: filtro de setor
 const filtroSetor  = ref('')
 const setores      = ref([])
+const paginaElegiveis = ref(1)
+const paginaTodos = ref(1)
+const paginaImpactoDetalhes = ref(1)
+const metaElegiveis = ref({ current_page: 1, last_page: 1, per_page: 50, total: 0 })
+const metaTodos = ref({ current_page: 1, last_page: 1, per_page: 50, total: 0 })
+const metaImpactoDetalhes = ref({ current_page: 1, last_page: 1, per_page: 50, total: 0 })
+const erroElegiveis = ref('')
+const erroTodos = ref('')
+const erroImpacto = ref('')
+const impactoDetalhes = ref([])
+let timerBuscaTodos = null
+let timerBuscaEleg = null
 // BUG-EST-13: histórico
 const historico    = ref({ itens: [], total: 0, pagina: 1, total_paginas: 1 })
 const buscaHist    = ref('')
@@ -501,6 +557,7 @@ const carregarTabelaSalarial = async () => {
 }
 
 const iniciarEdicaoCargo = (c) => {
+  if (!canMutateProgressao.value) return
   editandoCargoId.value = c.cargo_id
   editandoCargo.value = { ...c }
 }
@@ -511,6 +568,7 @@ const cancelarEdicaoCargo = () => {
 }
 
 const salvarCargo = async () => {
+  if (!canMutateProgressao.value) return
   salvandoTabela.value = true
   try {
     await api.put(`/api/v3/cargos/${editandoCargoId.value}`, {
@@ -539,17 +597,9 @@ const mostrarToast = (type, ico, msg) => {
 
 const fmtMoeda = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(Number(v) || 0)
 
-const todosFiltered = computed(() => {
-  let list = todos.value
-  if (filtroSetor.value) {
-    // BUG-EST-12: filtro local por setor (setor_nome vem do backend via join)
-    list = list.filter(s => String(s.setor_id) === String(filtroSetor.value))
-  }
-  if (buscaTodos.value) {
-    const q = buscaTodos.value.toLowerCase()
-    list = list.filter(s => s.nome?.toLowerCase().includes(q) || s.cargo?.toLowerCase().includes(q))
-  }
-  return list
+const totalElegiveisHero = computed(() => {
+  const t = metaElegiveis.value?.total
+  return typeof t === 'number' && t >= 0 ? t : elegiveis.value.length
 })
 
 const lrfClass = computed(() => {
@@ -557,28 +607,112 @@ const lrfClass = computed(() => {
   return { 'hb-green': s === 'seguro', 'hb-yellow': s === 'alerta', 'hb-orange': s === 'limite_prudencial', 'hb-red': s === 'limite_excedido' }
 })
 
-const carregarElegiveis = async () => {
-  carregando.value = true
+const carregarElegiveis = async (pagina = 1) => {
+  paginaElegiveis.value = pagina
+  carregandoElegiveis.value = true
+  erroElegiveis.value = ''
   try {
-    const { data } = await api.get('/api/v3/progressao-funcional/lista-elegiveis')
+    const { data } = await api.get('/api/v3/progressao-funcional/lista-elegiveis', {
+      params: {
+        page: pagina,
+        per_page: 50,
+        busca: buscaElegiveis.value?.trim() || undefined,
+        setor_id: filtroSetor.value || undefined,
+      },
+    })
     elegiveis.value = data.elegiveis ?? []
-  } catch { elegiveis.value = [] } finally { carregando.value = false }
+    metaElegiveis.value = data.meta ?? metaElegiveis.value
+  } catch (e) {
+    elegiveis.value = []
+    erroElegiveis.value = e.response?.data?.erro || 'Não foi possível carregar os elegíveis.'
+    mostrarToast('error', '❌', erroElegiveis.value)
+  } finally {
+    carregandoElegiveis.value = false
+  }
 }
 
-const carregarTodos = async () => {
+const carregarTodos = async (pagina = 1) => {
+  paginaTodos.value = pagina
+  carregandoTodos.value = true
+  erroTodos.value = ''
   try {
-    const { data } = await api.get('/api/v3/progressao-funcional/admin')
+    const { data } = await api.get('/api/v3/progressao-funcional/admin', {
+      params: {
+        page: pagina,
+        per_page: 50,
+        busca: buscaTodos.value?.trim() || undefined,
+        setor_id: filtroSetor.value || undefined,
+      },
+    })
     todos.value = data.servidores ?? []
-  } catch { todos.value = [] }
+    metaTodos.value = data.meta ?? metaTodos.value
+  } catch (e) {
+    todos.value = []
+    erroTodos.value = e.response?.data?.erro || 'Não foi possível carregar a listagem.'
+    mostrarToast('error', '❌', erroTodos.value)
+  } finally {
+    carregandoTodos.value = false
+  }
 }
 
 const carregarImpacto = async () => {
+  carregandoImpacto.value = true
+  erroImpacto.value = ''
   try {
     const { data } = await api.get('/api/v3/progressao-funcional/impacto')
     impacto.value = data
     formRcl.value.rcl = data.rcl ?? 0
     formRcl.value.folha_mensal = data.folha_atual ?? 0
-  } catch { impacto.value = {} }
+  } catch (e) {
+    impacto.value = {}
+    erroImpacto.value = e.response?.data?.erro || 'Não foi possível calcular o impacto.'
+    mostrarToast('error', '❌', erroImpacto.value)
+  } finally {
+    carregandoImpacto.value = false
+  }
+}
+
+const carregarImpactoDetalhes = async (pagina = 1) => {
+  paginaImpactoDetalhes.value = pagina
+  carregandoImpactoDetalhes.value = true
+  try {
+    const { data } = await api.get('/api/v3/progressao-funcional/impacto/detalhes', {
+      params: { page: pagina, per_page: 50 },
+    })
+    impactoDetalhes.value = data.detalhes ?? []
+    metaImpactoDetalhes.value = data.meta ?? metaImpactoDetalhes.value
+  } catch (e) {
+    impactoDetalhes.value = []
+    mostrarToast('error', '❌', e.response?.data?.erro || 'Erro ao carregar detalhes do impacto.')
+  } finally {
+    carregandoImpactoDetalhes.value = false
+  }
+}
+
+const recalcularImpacto = async () => {
+  await carregarImpacto()
+  if (!erroImpacto.value) {
+    await carregarImpactoDetalhes(1)
+  }
+}
+
+const irPaginaElegiveis = (p) => { carregarElegiveis(p) }
+const irPaginaTodos = (p) => { carregarTodos(p) }
+const irPaginaImpactoDetalhes = (p) => { carregarImpactoDetalhes(p) }
+
+const debounceCarregarTodos = () => {
+  clearTimeout(timerBuscaTodos)
+  timerBuscaTodos = setTimeout(() => { carregarTodos(1) }, 380)
+}
+
+const debounceCarregarElegiveis = () => {
+  clearTimeout(timerBuscaEleg)
+  timerBuscaEleg = setTimeout(() => { carregarElegiveis(1) }, 380)
+}
+
+const onFiltroSetorChange = () => {
+  if (abaAtiva.value === 'todos') carregarTodos(1)
+  if (abaAtiva.value === 'elegiveis') carregarElegiveis(1)
 }
 
 const carregarSetores = async () => {
@@ -613,13 +747,26 @@ const carregarConfig = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([carregarElegiveis(), carregarTodos(), carregarImpacto(), carregarConfig(), carregarTabelaSalarial(), carregarSetores()])
-  setTimeout(() => { loaded.value = true }, 80)
+  bootstrapping.value = true
+  try {
+    await Promise.all([
+      carregarElegiveis(1),
+      carregarTodos(1),
+      carregarImpacto(),
+      carregarConfig(),
+      carregarTabelaSalarial(),
+      carregarSetores(),
+    ])
+  } finally {
+    bootstrapping.value = false
+    setTimeout(() => { loaded.value = true }, 80)
+  }
 })
 
 watch(abaAtiva, (v) => {
   if (v === 'tabela') carregarTabelaSalarial()
   if (v === 'historico') buscarHistorico() // BUG-EST-13
+  if (v === 'impacto') carregarImpactoDetalhes(1)
 })
 
 const toggleAll = (e) => {
@@ -630,10 +777,12 @@ const toggleAll = (e) => {
 const modalLote = ref({ visible: false, ato: '', salvando: false, erro: '' })
 
 const aplicarUm = (s) => {
+  if (!canMutateProgressao.value) return
   modalAto.value = { visible: true, id: s.id, nome: s.nome, ato: '', salvando: false, erro: '', ok: '' }
 }
 
 const confirmarAplicacao = async () => {
+  if (!canMutateProgressao.value) return
   modalAto.value.salvando = true; modalAto.value.erro = ''; modalAto.value.ok = ''
   try {
     await api.post(`/api/v3/progressao-funcional/aplicar/${modalAto.value.id}`, { ato: modalAto.value.ato })
@@ -641,7 +790,8 @@ const confirmarAplicacao = async () => {
     mostrarToast('success', '✅', 'Progressão aplicada!')
     setTimeout(async () => {
       modalAto.value.visible = false
-      await Promise.all([carregarElegiveis(), carregarTodos(), carregarImpacto()])
+      await Promise.all([carregarElegiveis(paginaElegiveis.value), carregarTodos(paginaTodos.value), carregarImpacto()])
+      if (abaAtiva.value === 'impacto') await carregarImpactoDetalhes(paginaImpactoDetalhes.value)
     }, 1200)
   } catch (e) {
     const msg = e.response?.data?.erro || 'Erro ao aplicar progressão.'
@@ -654,11 +804,16 @@ const confirmarAplicacao = async () => {
 }
 
 const aplicarLote = () => {
-  if (selecionados.value.length === 0) return
+  if (!canMutateProgressao.value) return
+  if (selecionados.value.length === 0) {
+    mostrarToast('error', '⚠️', 'Selecione ao menos um servidor para aplicar em lote.')
+    return
+  }
   modalLote.value = { visible: true, ato: '', salvando: false, erro: '' }
 }
 
 const confirmarLote = async () => {
+  if (!canMutateProgressao.value) return
   modalLote.value.salvando = true; modalLote.value.erro = ''
   aplicandoLote.value = true
   let ok = 0
@@ -685,20 +840,24 @@ const confirmarLote = async () => {
   selecionados.value = detalhes.length ? selecionados.value : []
   aplicandoLote.value = false
   modalLote.value.salvando = false
-  await Promise.all([carregarElegiveis(), carregarTodos(), carregarImpacto()])
+  await Promise.all([carregarElegiveis(paginaElegiveis.value), carregarTodos(paginaTodos.value), carregarImpacto()])
+  if (abaAtiva.value === 'impacto') await carregarImpactoDetalhes(paginaImpactoDetalhes.value)
 }
 
 const salvarRcl = async () => {
+  if (!canMutateProgressao.value) return
   salvandoRcl.value = true
   try {
     await api.put('/api/v3/progressao-funcional/receita', formRcl.value)
     mostrarToast('success', '✅', 'RCL atualizada!')
     await carregarImpacto()
+    if (abaAtiva.value === 'impacto') await carregarImpactoDetalhes(paginaImpactoDetalhes.value)
   } catch (e) { mostrarToast('error', '❌', e.response?.data?.erro || 'Erro ao salvar RCL.') }
   finally { salvandoRcl.value = false }
 }
 
 const salvarConfig = async () => {
+  if (!canMutateProgressao.value) return
   salvandoCfg.value = true; cfgOk.value = ''
   try {
     await api.put('/api/v3/progressao-funcional/config', cfg.value)
@@ -709,6 +868,7 @@ const salvarConfig = async () => {
 }
 
 const criarCarreira = async () => {
+  if (!canMutateProgressao.value) return
   criandoCarreira.value = true
   try {
     await api.post('/api/v3/progressao-funcional/carreiras', novaCarreira.value)
@@ -732,7 +892,44 @@ const exportarLista = () => {
 </script>
 
 <style scoped>
-.pa-page { display: flex; flex-direction: column; gap: 16px; font-family: 'Inter', system-ui, sans-serif; }
+.pa-page { display: flex; flex-direction: column; gap: 16px; font-family: 'Inter', system-ui, sans-serif; position: relative; }
+
+.pa-boot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.82);
+  backdrop-filter: blur(8px);
+}
+.pa-boot-card {
+  text-align: center;
+  padding: 28px 36px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+}
+.pa-boot-card p {
+  margin: 14px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+.pa-boot-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 3px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: pa-spin 0.75s linear infinite;
+}
+@keyframes pa-spin {
+  to { transform: rotate(360deg); }
+}
 .hero { border-radius: 22px; padding: 26px 32px; background: linear-gradient(135deg, #0f172a 0%, #1e1060 55%, #0f172a 100%); opacity: 0; transform: translateY(-10px); transition: all 0.45s cubic-bezier(0.22,1,0.36,1); }
 .hero.loaded { opacity: 1; transform: none; }
 .hero-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
@@ -753,23 +950,69 @@ const exportarLista = () => {
 .tab-btn { padding: 9px 18px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 700; color: #64748b; cursor: pointer; transition: all 0.15s; }
 .tab-btn.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
 .tab-btn:hover:not(.active) { border-color: #a5b4fc; color: #4f46e5; }
-.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; opacity: 0; transform: translateY(6px); transition: all 0.35s 0.08s; }
+.card {
+  position: relative;
+  background:
+    linear-gradient(130deg, rgba(226, 240, 252, 0.45), rgba(214, 247, 242, 0.28)),
+    rgba(255,255,255,0.96);
+  border: 1px solid #c7deef;
+  border-radius: 22px;
+  padding: 20px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.35s 0.08s;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 22px;
+  border: 8px solid transparent;
+  background: repeating-linear-gradient(-45deg, rgba(56,189,248,0.16) 0 6px, rgba(56,189,248,0.06) 6px 12px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 6px;
+}
 .card.loaded { opacity: 1; transform: none; }
-.card-hdr { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-.card-title { font-size: 15px; font-weight: 800; color: #1e293b; margin: 0; }
-.card-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.card-hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.card-title { font-size: 15px; font-weight: 800; color: #1e293b; margin: 0; flex: 1 1 200px; min-width: 0; line-height: 1.35; }
+.card-acts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+.card-acts .act-btn,
+.card-acts .search-input {
+  flex-shrink: 0;
+}
+.lrf-badge-seguro { color: #166534; }
+.lrf-badge-alerta { color: #b45309; }
+.lrf-badge-limite_prudencial { color: #c2410c; }
+.lrf-badge-limite_excedido { color: #b91c1c; }
 .hist-pag { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9; } /* BUG-EST-13 */
-.act-btn { padding: 9px 16px; border-radius: 12px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.act-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 12px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; line-height: 1; white-space: nowrap; min-height: 38px; }
 .act-primary { background: linear-gradient(135deg,#4f46e5,#6366f1); color: #fff; }
 .act-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .act-outline { background: #f8fafc; border: 1.5px solid #e2e8f0; color: #475569; }
 .act-sm { padding: 6px 12px; font-size: 12px; }
-.search-input { padding: 8px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; outline: none; }
+.search-input { padding: 8px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; outline: none; width: 220px; max-width: 100%; box-sizing: border-box; }
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.data-table th { text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; padding: 0 10px 10px; border-bottom: 2px solid #f1f5f9; }
-.data-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-.data-table tr:hover td { background: #f8fafc; }
+.data-table th { text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; padding: 0 10px 10px; border-bottom: 2px solid #f1f5f9; background: rgba(248, 250, 252, 0.82); }
+.data-table td { padding: 10px; border-bottom: 1px solid rgba(226,232,240,0.65); vertical-align: middle; }
+.data-table tr:hover td { background: rgba(255,255,255,0.86); box-shadow: inset 0 0 0 1px rgba(186,230,253,0.7); }
 .td-nome { font-weight: 700; color: #1e293b; max-width: 180px; }
 .td-cargo { color: #475569; font-size: 12px; }
 .td-money { font-family: monospace; font-weight: 700; color: #475569; }
@@ -871,5 +1114,9 @@ const exportarLista = () => {
 .field-input-sm { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-family: inherit; outline: none; width: 100%; box-sizing: border-box; }
 .field-input-sm:focus { border-color: #6366f1; }
 .field-input-sm:disabled { background: #f8fafc; color: #94a3b8; }
-@media (max-width: 700px) { .config-grid { grid-template-columns: 1fr; } .hero-inner { flex-direction: column; } }
+@media (max-width: 700px) {
+  .config-grid { grid-template-columns: 1fr; }
+  .hero-inner { flex-direction: column; }
+  .card-acts { width: 100%; justify-content: flex-start; }
+}
 </style>

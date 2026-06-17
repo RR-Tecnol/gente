@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -64,7 +65,7 @@ class Funcionario extends Model
 
     public function usuario()
     {
-        return $this->hasOne(Usuario::class, 'FUNCIONARIO_ID', 'FUNCIONARIO_ID');
+        return $this->hasOne(Usuario::class, 'USUARIO_ID', 'USUARIO_ID');
     }
 
     public function detalheEscalas()
@@ -77,6 +78,63 @@ class Funcionario extends Model
         return $this->hasMany(Lotacao::class, 'FUNCIONARIO_ID', 'FUNCIONARIO_ID');
     }
 
+    /**
+     * Lotação vigente em pelo menos um dos setores (DATA_FIM nula ou futura — ex.: seeds com 2099-12-31).
+     *
+     * @param  list<int>|null  $setoresIds  null = sem filtro de setor; [] = nenhum resultado
+     */
+    public function scopeLotacaoVigenteEmSetores(Builder $query, ?array $setoresIds, ?string $dataReferencia = null): Builder
+    {
+        if ($setoresIds === null) {
+            return $query;
+        }
+        if ($setoresIds === []) {
+            return $query->whereRaw('0 = 1');
+        }
+        $hoje = $dataReferencia ?? now()->toDateString();
+
+        return $query->whereHas('lotacoes', function (Builder $lq) use ($setoresIds, $hoje) {
+            if (Schema::hasColumn('LOTACAO', 'LOTACAO_DATA_FIM')) {
+                $lq->where(function (Builder $w) use ($hoje) {
+                    $w->whereNull('LOTACAO_DATA_FIM')
+                        ->orWhere('LOTACAO_DATA_FIM', '>', $hoje);
+                });
+            }
+            $lq->whereIn('SETOR_ID', $setoresIds);
+        });
+    }
+
+    /**
+     * Servidor ativo (vínculo) com lotação vigente em setores do escopo — fonte única para KPI e listagens alinhadas.
+     *
+     * @param  list<int>|null  $setoresIds  null = sem filtro territorial (ex.: Sudo); [] = vazio
+     */
+    public function scopeAtivosNoEscopo(Builder $query, ?array $setoresIds, ?string $dataReferencia = null): Builder
+    {
+        $hoje = $dataReferencia ?? now()->toDateString();
+
+        $temFim = Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_FIM');
+        $temDemissao = Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_DEMISSAO');
+        if ($temFim || $temDemissao) {
+            $query->where(function (Builder $outer) use ($hoje, $temFim, $temDemissao) {
+                if ($temFim) {
+                    $outer->where(function (Builder $w) use ($hoje) {
+                        $w->whereNull('FUNCIONARIO.FUNCIONARIO_DATA_FIM')
+                            ->orWhere('FUNCIONARIO.FUNCIONARIO_DATA_FIM', '>', $hoje);
+                    });
+                }
+                if ($temDemissao) {
+                    $outer->where(function (Builder $w) use ($hoje) {
+                        $w->whereNull('FUNCIONARIO.FUNCIONARIO_DATA_DEMISSAO')
+                            ->orWhere('FUNCIONARIO.FUNCIONARIO_DATA_DEMISSAO', '>', $hoje);
+                    });
+                }
+            });
+        }
+
+        return $query->lotacaoVigenteEmSetores($setoresIds, $hoje);
+    }
+
     public function ferias()
     {
         return $this->hasMany(Ferias::class, 'FUNCIONARIO_ID', 'FUNCIONARIO_ID');
@@ -84,6 +142,16 @@ class Funcionario extends Model
     public function afastamentos()
     {
         return $this->hasMany(Afastamento::class, "FUNCIONARIO_ID", "FUNCIONARIO_ID");
+    }
+
+    public function cargo()
+    {
+        return $this->belongsTo(Cargo::class, 'CARGO_ID', 'CARGO_ID');
+    }
+
+    public function avaliacoesDesempenho()
+    {
+        return $this->hasMany(AvaliacaoDesempenho::class, 'FUNCIONARIO_ID', 'FUNCIONARIO_ID');
     }
 
     public function funcionarioTipoEntrada()

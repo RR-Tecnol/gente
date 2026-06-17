@@ -26,12 +26,10 @@ class CNAB240Builder
     }
 
     /**
-     * Gera o arquivo .txt em formato string para download
+     * Gera o arquivo .txt em formato string (carrega todos os detalhes — usar só para folhas pequenas ou testes).
      */
-    public function gerarRemessa(Folha $folha)
+    public function gerarRemessa(Folha $folha): string
     {
-        $linhas = [];
-
         $detalhes = DetalheFolha::with([
             'funcionario.pessoa',
         ])
@@ -42,42 +40,89 @@ class CNAB240Builder
             throw new Exception("Nenhum funcionário encontrado nesta folha para gerar remessa.");
         }
 
-        // 1. HEADER DE ARQUIVO
+        $linhas = [];
+        $this->preencherLinhasRemessa($detalhes, $linhas);
+
+        return implode("\r\n", $linhas) . "\r\n";
+    }
+
+    /**
+     * Gera CNAB escrevendo linha a linha em $out (ex.: php://output) com {@see DetalheFolha::cursor()} — memória acotada.
+     */
+    public function streamRemessa(Folha $folha, $out): void
+    {
+        if (! is_resource($out)) {
+            throw new Exception('streamRemessa requer um resource de escrita.');
+        }
+
+        $baseQuery = DetalheFolha::with([
+            'funcionario.pessoa',
+        ])
+            ->where('FOLHA_ID', $folha->FOLHA_ID)
+            ->orderBy('DETALHE_FOLHA_ID');
+
+        if (! (clone $baseQuery)->exists()) {
+            throw new Exception("Nenhum funcionário encontrado nesta folha para gerar remessa.");
+        }
+
+        $emit = function (string $linha) use ($out): void {
+            fwrite($out, $linha . "\r\n");
+        };
+
+        $loteId = 1;
+        $emit($this->gerarHeaderArquivo());
+        $emit($this->gerarHeaderLote($loteId));
+
+        $numeroRegistro = 1;
+        $totalLiquidoLote = 0.0;
+
+        foreach ($baseQuery->cursor() as $det) {
+            $liquido = (float) $det->DETALHE_FOLHA_PROVENTOS - (float) $det->DETALHE_FOLHA_DESCONTOS;
+            if ($liquido <= 0) {
+                continue;
+            }
+            $emit($this->gerarSegmentoA($loteId, $numeroRegistro++, $det, $liquido));
+            $emit($this->gerarSegmentoB($loteId, $numeroRegistro++, $det));
+            $totalLiquidoLote += $liquido;
+        }
+
+        $qtdRegistrosLote = $numeroRegistro + 1;
+        $emit($this->gerarTrailerLote($loteId, $qtdRegistrosLote, $totalLiquidoLote));
+
+        $qtdLotes = 1;
+        $qtdRegistrosTotais = $qtdRegistrosLote + 2;
+        $emit($this->gerarTrailerArquivo($qtdLotes, $qtdRegistrosTotais));
+    }
+
+    /**
+     * @param  iterable<int, DetalheFolha>  $detalhes
+     * @param  array<int, string>  $linhas
+     */
+    private function preencherLinhasRemessa(iterable $detalhes, array &$linhas): void
+    {
         $linhas[] = $this->gerarHeaderArquivo();
 
-        // 2. HEADER DE LOTE (Lote de Pagamento de Salários - 30)
         $loteId = 1;
         $linhas[] = $this->gerarHeaderLote($loteId);
 
-        // 3. DETALHES (Segmento A e B por Funcionário)
         $numeroRegistro = 1;
         $totalLiquidoLote = 0.0;
 
         foreach ($detalhes as $det) {
-            $liquido = $det->DETALHE_FOLHA_PROVENTOS - $det->DETALHE_FOLHA_DESCONTOS;
-
-            // Só paga se for maior que zero
+            $liquido = (float) $det->DETALHE_FOLHA_PROVENTOS - (float) $det->DETALHE_FOLHA_DESCONTOS;
             if ($liquido > 0) {
-                // Segmento A
                 $linhas[] = $this->gerarSegmentoA($loteId, $numeroRegistro++, $det, $liquido);
-
-                // Segmento B (Opcional, mas comum em folhas para CPF/Nome)
                 $linhas[] = $this->gerarSegmentoB($loteId, $numeroRegistro++, $det);
-
                 $totalLiquidoLote += $liquido;
             }
         }
 
-        // 4. TRAILER DE LOTE
-        $qtdRegistrosLote = $numeroRegistro + 1; // Header(1) + Segmentos + Trailer(1)
+        $qtdRegistrosLote = $numeroRegistro + 1;
         $linhas[] = $this->gerarTrailerLote($loteId, $qtdRegistrosLote, $totalLiquidoLote);
 
-        // 5. TRAILER DE ARQUIVO
         $qtdLotes = 1;
-        $qtdRegistrosTotais = $qtdRegistrosLote + 2; // Arquivo Head(1) + Arquivo Trail(1)
+        $qtdRegistrosTotais = $qtdRegistrosLote + 2;
         $linhas[] = $this->gerarTrailerArquivo($qtdLotes, $qtdRegistrosTotais);
-
-        return implode("\r\n", $linhas) . "\r\n";
     }
 
     // --- MÉTODOS DE FORMATAÇÃO POSICIONAL (MOCK SIMPLIFICADO P/ PoC) ---

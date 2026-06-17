@@ -7,6 +7,7 @@ use App\Http\Requests\Usuario\UsuarioUpdatePasswordRequest;
 use App\Http\Requests\Usuario\UsuarioUpdateRequest;
 use App\Models\Unidade;
 use App\Models\Usuario;
+use App\Support\LoginLookupNormalizer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,12 @@ class UsuarioController extends Controller
     public function inserir(UsuarioCreateRequest $request)
     {
         $usuario = new Usuario($request->input());
+        if (!empty($usuario->USUARIO_LOGIN)) {
+            $usuario->USUARIO_LOGIN = LoginLookupNormalizer::forStorage((string) $usuario->USUARIO_LOGIN);
+        }
+        if (!empty($usuario->USUARIO_EMAIL)) {
+            $usuario->USUARIO_EMAIL = LoginLookupNormalizer::forStorage((string) $usuario->USUARIO_EMAIL);
+        }
         $usuario->USUARIO_ATIVO = 1;
         $usuario->USUARIO_SENHA = md5($request->USUARIO_SENHA);
         $usuario->save();
@@ -66,6 +73,12 @@ class UsuarioController extends Controller
         $usuario = Usuario::buscar($request->USUARIO_ID);
         $senha_original = $usuario->USUARIO_SENHA;
         $usuario->fill($request->post());
+        if (!empty($usuario->USUARIO_LOGIN)) {
+            $usuario->USUARIO_LOGIN = LoginLookupNormalizer::forStorage((string) $usuario->USUARIO_LOGIN);
+        }
+        if (!empty($usuario->USUARIO_EMAIL)) {
+            $usuario->USUARIO_EMAIL = LoginLookupNormalizer::forStorage((string) $usuario->USUARIO_EMAIL);
+        }
         if ($request->USUARIO_SENHA == null || $request->USUARIO_SENHA == '') {
             $usuario->USUARIO_SENHA = $senha_original;
         } else {

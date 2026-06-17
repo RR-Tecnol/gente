@@ -30,9 +30,9 @@
           <div class="hero-avatar" :style="{ '--hue': avatarHue(funcionario.FUNCIONARIO_ID) }">{{ iniciais(funcionario.pessoa?.PESSOA_NOME) }}</div>
           <div class="hero-info">
             <div class="hero-badges">
-              <span class="status-chip" :class="funcionario.FUNCIONARIO_DATA_FIM ? 'inactive' : 'active'">
+              <span class="status-chip" :class="isFuncionarioAtivo(funcionario) ? 'active' : 'inactive'">
                 <span class="chip-dot"></span>
-                {{ funcionario.FUNCIONARIO_DATA_FIM ? 'Inativo' : 'Ativo' }}
+                {{ isFuncionarioAtivo(funcionario) ? 'Ativo' : 'Inativo' }}
               </span>
               <span class="matricula-chip">🪪 Matrícula: <strong>{{ funcionario.FUNCIONARIO_MATRICULA || 'N/D' }}</strong></span>
             </div>
@@ -93,8 +93,8 @@
               <div class="tl-line"></div>
               <div class="tl-item" v-if="funcionario.setor"><div class="tl-dot setor"></div><div class="tl-content"><span class="tl-title">Lotação: {{ funcionario.setor }}</span><span class="tl-date">Vigente</span></div></div>
               <div class="tl-line" v-if="funcionario.setor"></div>
-              <div class="tl-item"><div class="tl-dot" :class="funcionario.FUNCIONARIO_DATA_FIM ? 'demitido' : 'atual'"></div><div class="tl-content">
-                <span class="tl-title">{{ !funcionario.FUNCIONARIO_DATA_FIM ? '🟢 Ativo até hoje' : '🔴 Desligamento' }}</span>
+              <div class="tl-item"><div class="tl-dot" :class="isFuncionarioAtivo(funcionario) ? 'atual' : 'demitido'"></div><div class="tl-content">
+                <span class="tl-title">{{ !funcionario.FUNCIONARIO_DATA_FIM ? '🟢 Ativo até hoje' : (isFuncionarioAtivo(funcionario) ? '🟡 Desligamento previsto' : '🔴 Desligamento') }}</span>
                 <span class="tl-date">{{ funcionario.FUNCIONARIO_DATA_FIM ? formatDate(funcionario.FUNCIONARIO_DATA_FIM) : 'Atualmente' }}</span>
               </div></div>
             </div>
@@ -649,7 +649,7 @@ const showToast = (msg, tipo = 'ok') => {
 const tempoServico = computed(() => {
   if (!funcionario.value?.FUNCIONARIO_DATA_INICIO) return null
   const inicio = new Date(funcionario.value.FUNCIONARIO_DATA_INICIO)
-  const fim = funcionario.value.FUNCIONARIO_DATA_FIM ? new Date(funcionario.value.FUNCIONARIO_DATA_FIM) : new Date()
+  const fim = isFuncionarioAtivo(funcionario.value) ? new Date() : new Date(funcionario.value.FUNCIONARIO_DATA_FIM)
   const meses = Math.floor((fim - inicio) / (1000 * 60 * 60 * 24 * 30.44))
   const anos = Math.floor(meses / 12); const m = meses % 12
   if (anos > 0) return `${anos} ano${anos > 1 ? 's' : ''}${m > 0 ? ` e ${m} mês${m > 1 ? 'es' : ''}` : ''}`
@@ -665,6 +665,12 @@ const formatCompetencia = (c) => { if (!c || String(c).length !== 6) return c ||
 const sexoLabel = (v) => (['Masculino','Feminino','Outro'])[v - 1] || v
 const estadoCivilLabel = (v) => (['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'])[v - 1] || v
 const escolaridadeLabel = (v) => ({ 1:'Fundamental Incompleto',2:'Fundamental Completo',3:'Médio Incompleto',4:'Médio Completo',5:'Superior Incompleto',6:'Superior Completo',7:'Pós-Graduação',8:'Mestrado',9:'Doutorado' })[v] || v
+const isFuncionarioAtivo = (f) => {
+  const fim = f?.FUNCIONARIO_DATA_FIM
+  if (!fim) return true
+  const d = new Date(`${String(fim).slice(0, 10)}T23:59:59`)
+  return !Number.isNaN(d.getTime()) && d.getTime() > Date.now()
+}
 
 const maskPis = (v) => {
   const d = (v || '').replace(/\D/g, '').slice(0, 11)

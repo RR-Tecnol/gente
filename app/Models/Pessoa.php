@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use App\Casts\Cpf;
+use App\Casts\PiiCpf;
+use App\Support\PiiBlindIndex;
 use App\Mail\UsuarioMail;
 use App\MyLibs\ContatoEnum;
 use App\MyLibs\PerfilEnum;
@@ -107,6 +108,7 @@ class Pessoa extends Model
         "PESSOA_CNH_VALIDADE",
         "UF_ID_CNH",
         "PESSOA_CPF_NUMERO",
+        "PESSOA_CPF_HASH",
         "PESSOA_DATA_CADASTRO",
         "USUARIO_ID",
         "PESSOA_PRE_CADASTRO",
@@ -152,10 +154,42 @@ class Pessoa extends Model
         "PESSOA_CNH_NUMERO" => "integer",
         "PESSOA_CNH_CATEGORIA" => "integer",
         "UF_ID_CNH" => "integer",
-        "PESSOA_CPF_NUMERO" => Cpf::class,
+        "PESSOA_CPF_NUMERO" => PiiCpf::class,
         "USUARIO_ID" => "integer",
         "PESSOA_PRE_CADASTRO" => "integer"
     ];
+
+    public function getHidden()
+    {
+        $h = $this->hidden;
+        if (config('gente.pii.model_hide_cpf', false)) {
+            $h = array_values(array_unique(array_merge($h, [
+                'PESSOA_CPF_NUMERO', 'PESSOA_CPF', 'PESSOA_CPF_HASH',
+            ])));
+        }
+
+        return $h;
+    }
+
+    protected static function booted()
+    {
+        static::saving(function (Pessoa $p) {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('PESSOA')
+                || ! \Illuminate\Support\Facades\Schema::hasColumn('PESSOA', 'PESSOA_CPF_HASH')) {
+                return;
+            }
+            $raw = $p->getAttribute('PESSOA_CPF_NUMERO');
+            if ($raw === null || $raw === '') {
+                $p->PESSOA_CPF_HASH = null;
+
+                return;
+            }
+            $digits = preg_replace('/\D+/', '', (string) $raw) ?? '';
+            if (strlen($digits) >= 3) {
+                $p->PESSOA_CPF_HASH = PiiBlindIndex::cpfHash($raw);
+            }
+        });
+    }
 
     public static $relCadPessoaView = [
         "bairro",

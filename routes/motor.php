@@ -15,14 +15,18 @@ Route::get('/vinculos', function () {
     try {
         $cols = \Illuminate\Support\Facades\Schema::getColumnListing('VINCULO');
         $query = DB::table('VINCULO')->orderBy('VINCULO_NOME');
-        $vinculos = $query->get()->map(function ($v) use ($cols) {
-            $row = (array) $v;
-            // Normaliza flags boolean para front
-            foreach (['VINCULO_FGTS', 'VINCULO_INSS', 'VINCULO_IRRF'] as $flag) {
-                if (isset($row[$flag]))
-                    $row[$flag] = (bool) $row[$flag];
-            }
-            return $row;
+        $vinculos = $query->get()->map(function ($v) {
+            return [
+                'id' => $v->VINCULO_ID,
+                'nome' => $v->VINCULO_NOME ?? '',
+                'sigla' => $v->VINCULO_SIGLA ?? '',
+                'descricao' => $v->VINCULO_DESCRICAO ?? '',
+                'tipo_esocial' => $v->VINCULO_TIPO_ESOCIAL ?? '',
+                'fgts' => (bool) ($v->VINCULO_FGTS ?? false),
+                'inss' => (bool) ($v->VINCULO_INSS ?? false),
+                'irrf' => (bool) ($v->VINCULO_IRRF ?? false),
+                'ativo' => (bool) ($v->VINCULO_ATIVO ?? true),
+            ];
         });
         return response()->json(['vinculos' => $vinculos]);
     } catch (\Throwable $e) {
@@ -45,7 +49,10 @@ Route::patch('/vinculos/{id}', function (int $id, Request $request) {
         }
         if (empty($data))
             return response()->json(['ok' => true, 'aviso' => 'Nada para atualizar.']);
-        DB::table('VINCULO')->where('VINCULO_ID', $id)->update($data);
+        $updated = DB::table('VINCULO')->where('VINCULO_ID', $id)->update($data);
+        if (!$updated) {
+            return response()->json(['erro' => 'Vínculo não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
@@ -173,14 +180,20 @@ Route::put('/vinculos/{id}', function (int $id, \Illuminate\Http\Request $reques
         foreach (['VINCULO_FGTS','VINCULO_INSS','VINCULO_IRRF'] as $flag) {
             if ($request->has($flag)) $data[$flag] = $request->input($flag) ? 1 : 0;
         }
-        \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)->update($data);
+        $updated = \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)->update($data);
+        if (!$updated) {
+            return response()->json(['erro' => 'Vínculo não encontrado ou sem alterações.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
 });
 Route::delete('/vinculos/{id}', function (int $id) {
     try {
-        \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)
+        $updated = \Illuminate\Support\Facades\DB::table('VINCULO')->where('VINCULO_ID', $id)
             ->update(['VINCULO_ATIVO' => 0, 'updated_at' => now()]);
+        if (!$updated) {
+            return response()->json(['erro' => 'Vínculo não encontrado.'], 404);
+        }
         return response()->json(['ok' => true]);
     } catch (\Throwable $e) { return response()->json(['erro' => $e->getMessage()], 500); }
 });

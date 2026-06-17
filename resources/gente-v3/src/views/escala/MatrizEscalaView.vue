@@ -17,6 +17,10 @@
 
         <!-- Controles do hero -->
         <div class="hero-controls">
+          <div class="mode-switch" title="Alternar tipo de escala">
+            <button class="mode-btn" type="button" @click="irParaEscalaGeral">Funcionários gerais</button>
+            <button class="mode-btn active" type="button">Escalas médicas</button>
+          </div>
           <!-- Filtros -->
           <div class="ctrl-group">
             <label class="ctrl-label">Setor</label>
@@ -76,11 +80,44 @@
       </div>
     </div>
 
-    <!-- ESTADO INICIAL ──────────────────────────────────────── -->
+    <!-- LISTAGEM INICIAL DE ESCALAS ─────────────────────────── -->
     <div v-if="!escalaSelecionadaId && !loadingGrade" class="state-box init-state" :class="{ loaded }">
-      <span class="state-ico">📋</span>
-      <h3>Selecione uma Escala</h3>
-      <p>Escolha uma escala no topo para visualizar e editar a grade de plantões</p>
+      <div class="state-head">
+        <span class="state-ico">📋</span>
+        <div>
+          <h3>Todas as Escalas</h3>
+          <p>Expanda um card para ver resumo e abrir a grade para edição.</p>
+        </div>
+      </div>
+      <div class="escala-cards-wrap">
+        <div v-if="!escalasFiltradas.length" class="escala-cards-empty">
+          Nenhuma escala encontrada para os filtros aplicados.
+        </div>
+        <div
+          v-for="esc in escalasFiltradas"
+          :key="esc.ESCALA_ID"
+          class="escala-card"
+          :class="{ expanded: escalaExpandidaId === esc.ESCALA_ID }"
+        >
+          <button class="escala-card-head" @click="toggleEscalaCard(esc.ESCALA_ID)">
+            <div>
+              <div class="ec-title">{{ esc.ESCALA_COMPETENCIA || 'Sem competência' }}</div>
+              <div class="ec-sub">{{ esc.setor || 'Setor não informado' }}</div>
+            </div>
+            <span class="ec-arrow">{{ escalaExpandidaId === esc.ESCALA_ID ? '▾' : '▸' }}</span>
+          </button>
+          <div v-if="escalaExpandidaId === esc.ESCALA_ID" class="escala-card-body">
+            <div class="ec-metrics">
+              <span><b>ID:</b> {{ esc.ESCALA_ID }}</span>
+              <span><b>Profissionais:</b> {{ resumoEscala[esc.ESCALA_ID]?.profissionais ?? '—' }}</span>
+              <span><b>Cobertura:</b> {{ resumoEscala[esc.ESCALA_ID]?.cobertura ?? '—' }}</span>
+            </div>
+            <button class="ec-open-btn" @click="abrirEscalaPorCard(esc.ESCALA_ID)">
+              Abrir grade desta escala
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- LOADING GRADE ───────────────────────────────────────── -->
@@ -208,6 +245,20 @@
           </div>
           <span class="grade-tip">💡 Duplo clique em um turno para apagar · Arraste para preencher</span>
         </div>
+      </div>
+
+      <div v-if="diagnosticoEscala" class="diag-card" :class="`diag-${diagnosticoEscala.impacto?.severidade || 'baixo'}`">
+        <div class="diag-head">
+          <strong>🧠 Diagnóstico de Conectividade da Escala</strong>
+          <span class="diag-badge">{{ severidadeLabel(diagnosticoEscala.impacto?.severidade) }} · Score {{ diagnosticoEscala.impacto?.score_risco ?? 0 }}</span>
+        </div>
+        <div class="diag-metrics">
+          <span>Profissionais: <b>{{ diagnosticoEscala.impacto?.total_profissionais ?? 0 }}</b></span>
+          <span>Slots: <b>{{ diagnosticoEscala.impacto?.total_slots ?? 0 }}</b></span>
+          <span>Cobertura: <b>{{ diagnosticoEscala.impacto?.cobertura_pct ?? 0 }}%</b></span>
+          <span>Inconsistências: <b>{{ diagnosticoEscala.validacao?.total_inconsistencias ?? 0 }}</b></span>
+        </div>
+        <p class="diag-rec">{{ diagnosticoEscala.impacto?.recomendacao }}</p>
       </div>
     </template>
 
@@ -343,6 +394,7 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 
 const loaded = ref(false)
@@ -358,6 +410,10 @@ const dragTurno = ref(null)
 const dragOver = ref(null)
 const grid = reactive({})
 const toast = ref({ visible: false, msg: '', type: '', ico: '' })
+const diagnosticoEscala = ref(null)
+const escalaExpandidaId = ref(null)
+const resumoEscala = reactive({})
+const router = useRouter()
 
 // ── Filtros ─────────────────────────────────────────────────
 const filtroSetor = ref('')
@@ -370,7 +426,14 @@ const escalasFiltradas = computed(() => escalas.value.filter(e => {
   if (filtroComp.value  && e.ESCALA_COMPETENCIA !== filtroComp.value) return false
   return true
 }))
-const aplicarFiltros = () => { escalaSelecionadaId.value = ''; funcionariosDaEscala.value = [] }
+const aplicarFiltros = () => {
+  escalaSelecionadaId.value = ''
+  funcionariosDaEscala.value = []
+  escalaExpandidaId.value = null
+}
+const irParaEscalaGeral = () => {
+  router.push('/escala-trabalho')
+}
 
 // ── Modal Substituição Rápida ─────────────────────────────────
 const modalSub = reactive({
@@ -401,9 +464,13 @@ const enviarSubModal = async () => {
       turno:          modalSub.turno,
       motivo:         modalSub.motivo,
     })
-  } catch { /* fallback: ignora erro de rede */ }
-  modalSub.aberto = false
-  mostrarToast('success', '🔄', `Substituição de ${modalSub.func?.nome} → ${subObj?.nome ?? '?'} solicitada!`)
+    modalSub.aberto = false
+    mostrarToast('success', '🔄', `Substituição de ${modalSub.func?.nome} → ${subObj?.nome ?? '?'} solicitada!`)
+  } catch (e) {
+    modalSub.erro = e?.response?.data?.erro || 'Falha ao solicitar substituição. Tente novamente.'
+  } finally {
+    modalSub.enviando = false
+  }
 }
 
 // ── Modal Nova Escala ────────────────────────────────────────
@@ -417,7 +484,12 @@ const novaEscala = reactive({ mes: new Date().getMonth() + 1, ano: new Date().ge
 const carregarSetores = async () => {
   try {
     const { data } = await api.get('/api/v3/setores')
-    setoresDisponiveis.value = (data.setores ?? data).map(s => ({ id: s.SETOR_ID, nome: s.SETOR_NOME }))
+    setoresDisponiveis.value = (data.setores ?? data ?? [])
+      .map((s) => ({
+        id: s?.id ?? s?.SETOR_ID ?? null,
+        nome: s?.nome ?? s?.SETOR_NOME ?? '',
+      }))
+      .filter((s) => s.id && s.nome)
   } catch {
     // Extrai setores únicos das escalas já carregadas como fallback
     setoresDisponiveis.value = [...new Set(escalas.value.map(e => e.setor).filter(Boolean))]
@@ -485,9 +557,39 @@ const fetchEscalas = async () => {
   }
 }
 
+const carregarResumoEscala = async (escalaId) => {
+  if (!escalaId || resumoEscala[escalaId]) return
+  resumoEscala[escalaId] = { profissionais: '…', cobertura: '…' }
+  try {
+    const [{ data }, diag] = await Promise.all([
+      api.get(`/api/v3/escalas/${escalaId}`),
+      api.get(`/api/v3/escalas/${escalaId}/diagnostico`).catch(() => null),
+    ])
+    const totalProf = Array.isArray(data?.funcionarios) ? data.funcionarios.length : 0
+    const cobertura = diag?.data?.diagnostico?.impacto?.cobertura_pct
+    resumoEscala[escalaId] = {
+      profissionais: totalProf,
+      cobertura: Number.isFinite(cobertura) ? `${cobertura}%` : '—',
+    }
+  } catch {
+    resumoEscala[escalaId] = { profissionais: '—', cobertura: '—' }
+  }
+}
+
+const toggleEscalaCard = async (escalaId) => {
+  escalaExpandidaId.value = escalaExpandidaId.value === escalaId ? null : escalaId
+  if (escalaExpandidaId.value) await carregarResumoEscala(escalaId)
+}
+
+const abrirEscalaPorCard = async (escalaId) => {
+  escalaSelecionadaId.value = escalaId
+  await carregarEscala()
+}
+
 const carregarEscala = async () => {
   if (!escalaSelecionadaId.value || String(escalaSelecionadaId.value).startsWith('MOCK')) { funcionariosDaEscala.value = []; return }
   loadingGrade.value = true
+  diagnosticoEscala.value = null
   // Limpa grade anterior
   Object.keys(grid).forEach(k => delete grid[k])
   try {
@@ -511,6 +613,12 @@ const carregarEscala = async () => {
           grid[f.detalhe_id][dia] = turno
         }
       }
+    }
+    try {
+      const diag = await api.get(`/api/v3/escalas/${escalaSelecionadaId.value}/diagnostico`)
+      diagnosticoEscala.value = diag?.data?.diagnostico ?? null
+    } catch {
+      diagnosticoEscala.value = null
     }
   } catch (e) {
     // mock para quando não existir escala real
@@ -542,6 +650,7 @@ const salvarTodasAsLinhas = async () => {
   if (!escalaSelecionadaId.value || String(escalaSelecionadaId.value).startsWith('MOCK')) return
   salvando.value = true
   try {
+    let ultimoPayload = null
     for (const func of funcionariosDaEscala.value) {
       const itens = []
       const { ano, mes } = escalaAnoMes.value
@@ -550,12 +659,14 @@ const salvarTodasAsLinhas = async () => {
         const mStr = String(mes + 1).padStart(2, '0')
         itens.push({ turno_id: turno.id, data: `${ano}-${mStr}-${dStr}` })
       }
-      await api.post(`/api/v3/escalas/${escalaSelecionadaId.value}/salvar`, {
+      const { data } = await api.post(`/api/v3/escalas/${escalaSelecionadaId.value}/salvar`, {
         escala_id: escalaSelecionadaId.value,
         detalhe_escala_id: func.detalheId,
         itens,
       })
+      ultimoPayload = data
     }
+    diagnosticoEscala.value = ultimoPayload
     mostrarToast('success', '✅', 'Escala salva com sucesso!')
   } catch (e) {
     const msg = e.response?.data?.msg || 'Falha ao salvar a escala. Verifique os dados e tente novamente.'
@@ -635,6 +746,7 @@ const mostrarToast = (type, ico, msg) => {
   toast.value = { visible: true, type, ico, msg }
   setTimeout(() => { toast.value.visible = false }, 4000)
 }
+const severidadeLabel = (s) => ({ critico: 'Crítico', alto: 'Alto', medio: 'Médio', baixo: 'Baixo' }[s] ?? 'Baixo')
 
 const exportarPDF = () => {
   const escala = escalaDados.value
@@ -786,6 +898,26 @@ const exportarPDF = () => {
 
 /* ── HERO CONTROLS ─────────────────────────────────────────── */
 .hero-controls { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 11px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.25);
+}
+.mode-btn {
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.mode-btn.active {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
 .ctrl-group { display: flex; flex-direction: column; gap: 4px; }
 .ctrl-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }
 .ctrl-select {
@@ -862,6 +994,20 @@ const exportarPDF = () => {
 .state-box h3 { font-size: 20px; font-weight: 800; color: #1e293b; margin: 0 0 8px; }
 .state-box p { font-size: 14px; margin: 0; max-width: 320px; }
 .state-box.init-state { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; }
+.state-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.state-head h3 { margin-bottom: 4px; text-align: left; }
+.state-head p { text-align: left; max-width: none; }
+.escala-cards-wrap { width: 100%; display: grid; gap: 10px; }
+.escala-cards-empty { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; font-size: 13px; color: #64748b; }
+.escala-card { border: 1px solid #dbeafe; border-radius: 12px; background: linear-gradient(180deg, #f8fbff, #ffffff); overflow: hidden; }
+.escala-card.expanded { border-color: #93c5fd; box-shadow: 0 8px 22px -16px rgba(30, 64, 175, 0.55); }
+.escala-card-head { width: 100%; border: none; background: transparent; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; text-align: left; }
+.ec-title { font-size: 14px; font-weight: 800; color: #0f172a; }
+.ec-sub { font-size: 12px; font-weight: 600; color: #64748b; margin-top: 2px; }
+.ec-arrow { font-size: 16px; color: #1d4ed8; }
+.escala-card-body { border-top: 1px solid #dbeafe; background: #f8fbff; padding: 10px 14px 12px; display: grid; gap: 10px; }
+.ec-metrics { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #334155; }
+.ec-open-btn { justify-self: flex-start; border: 1px solid #93c5fd; background: #eff6ff; color: #1e40af; border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .spinner { width: 48px; height: 48px; border: 3px solid #e2e8f0; border-top-color: #0d9488; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 14px; }
 
 /* ── TURNOS BAR ─────────────────────────────────────────────── */
@@ -886,6 +1032,23 @@ const exportarPDF = () => {
 .turno-nome { font-size: 12px; font-weight: 700; color: color-mix(in srgb, var(--tc) 80%, #000); }
 .turno-hora { font-size: 10px; color: color-mix(in srgb, var(--tc) 60%, #888); }
 .turno-apagar { --tc: #dc2626; --tl: #fef2f2; }
+.diag-card {
+  border: 1px solid #c7d2fe;
+  background: linear-gradient(160deg, rgba(239,246,255,0.9), rgba(255,255,255,0.9));
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+.diag-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
+.diag-head strong { font-size: 13px; color: #0f172a; }
+.diag-badge { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 8px; background: #e2e8f0; color: #334155; }
+.diag-metrics { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: #334155; }
+.diag-rec { margin: 0; font-size: 12px; color: #1e293b; font-weight: 600; }
+.diag-critico .diag-badge { background: #fee2e2; color: #991b1b; }
+.diag-alto .diag-badge { background: #ffedd5; color: #9a3412; }
+.diag-medio .diag-badge { background: #fef3c7; color: #92400e; }
+.diag-baixo .diag-badge { background: #dcfce7; color: #166534; }
 
 /* ── GRADE CARD ─────────────────────────────────────────────── */
 .grade-card {

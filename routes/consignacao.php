@@ -79,7 +79,7 @@ Route::post('/consignacao', function (\Illuminate\Http\Request $request) {
     try {
         $user = Auth::user();
         if (!$request->funcionario_id || !$request->convenio_id || !$request->valor_parcela)
-            return response()->json(['erro' => 'Campos obrigatÃ³rios faltando.'], 422);
+            return response()->json(['erro' => 'Campos obrigatórios faltando.'], 422);
 
         // Verificar margem consignÃ¡vel â€” BUG-01 corrigido: usar DETALHE_FOLHA_LIQUIDO
         // Â§12 das regras: margem separada 30% emprÃ©stimo / 10% cartÃ£o
@@ -186,13 +186,16 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
         $statusValidos = ['ATIVO', 'SUSPENSO', 'CANCELADO', 'QUITADO'];
 
         if (!in_array($novoStatus, $statusValidos)) {
-            return response()->json(['erro' => 'Status invÃ¡lido. Use: ' . implode(', ', $statusValidos)], 422);
+            return response()->json(['erro' => 'Status inválido. Use: ' . implode(', ', $statusValidos)], 422);
         }
 
-        DB::table('CONSIG_CONTRATO')->where('CONTRATO_ID', $id)->update([
+        $updatedContrato = DB::table('CONSIG_CONTRATO')->where('CONTRATO_ID', $id)->update([
             'STATUS' => $novoStatus,
             'updated_at' => now(),
         ]);
+        if (!$updatedContrato) {
+            return response()->json(['erro' => 'Contrato não encontrado.'], 404);
+        }
 
         // Suspender parcelas pendentes
         if ($novoStatus === 'SUSPENSO') {
@@ -234,13 +237,16 @@ Route::patch('/consignacao/{id}/status', function (Request $request, $id) {
 Route::patch('/consignacao/{id}/autorizar', function ($id) {
     try {
         $user = Auth::user();
-        DB::table('CONSIG_CONTRATO')->where('CONTRATO_ID', $id)->update([
+        $updatedContrato = DB::table('CONSIG_CONTRATO')->where('CONTRATO_ID', $id)->update([
             'STATUS' => 'ATIVO',
             'STATUS_AUTORIZACAO' => 'AUTORIZADO',
             'AUTORIZADO_POR' => $user->USUARIO_ID ?? null,
             'AUTORIZADO_EM' => now(),
             'updated_at' => now(),
         ]);
+        if (!$updatedContrato) {
+            return response()->json(['erro' => 'Contrato não encontrado.'], 404);
+        }
         if (\Illuminate\Support\Facades\Schema::hasTable('CONSIG_OCORRENCIA')) {
             DB::table('CONSIG_OCORRENCIA')->insert([
                 'CONTRATO_ID' => $id,
@@ -261,12 +267,15 @@ Route::patch('/consignacao/{id}/autorizar', function ($id) {
 Route::patch('/consignacao/{id}/rejeitar', function (Request $request, $id) {
     try {
         $user = Auth::user();
-        DB::table('CONSIG_CONTRATO')->where('CONTRATO_ID', $id)->update([
+        $updatedContrato = DB::table('CONSIG_CONTRATO')->where('CONTRATO_ID', $id)->update([
             'STATUS' => 'CANCELADO',
             'STATUS_AUTORIZACAO' => 'REJEITADO',
             'MOTIVO_REJEICAO' => $request->motivo,
             'updated_at' => now(),
         ]);
+        if (!$updatedContrato) {
+            return response()->json(['erro' => 'Contrato não encontrado.'], 404);
+        }
         if (\Illuminate\Support\Facades\Schema::hasTable('CONSIG_OCORRENCIA')) {
             DB::table('CONSIG_OCORRENCIA')->insert([
                 'CONTRATO_ID' => $id,

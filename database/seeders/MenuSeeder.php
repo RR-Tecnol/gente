@@ -19,20 +19,57 @@ class MenuSeeder extends Seeder
 
     public function run(): void
     {
+        $isSqlServer = DB::getDriverName() === 'sqlsrv';
+
         // ── APLICACAO ─────────────────────────────────────────────────────────
         foreach ($this->aplicacoes() as $app) {
-            DB::table('APLICACAO')->updateOrInsert(
-                ['APLICACAO_ID' => $app['id']],
-                [
-                    'APLICACAO_NOME' => $app['nome'],
-                    'APLICACAO_ICONE' => $app['icon'],
-                    'APLICACAO_URL' => $app['url'],
-                    'APLICACAO_PAI_ID' => $app['pai'],
-                    'APLICACAO_ORDEM' => $app['ordem'],
-                    'APLICACAO_ATIVA' => 1,
-                    'APLICACAO_GESTAO' => 1,
-                ]
-            );
+            $payload = [
+                'APLICACAO_NOME' => $app['nome'],
+                'APLICACAO_ICONE' => $app['icon'],
+                'APLICACAO_URL' => $app['url'],
+                'APLICACAO_PAI_ID' => $app['pai'],
+                'APLICACAO_ORDEM' => $app['ordem'],
+                'APLICACAO_ATIVA' => 1,
+                'APLICACAO_GESTAO' => 1,
+            ];
+
+            if ($isSqlServer) {
+                $id = (int) $app['id'];
+                $nome = str_replace("'", "''", (string) $app['nome']);
+                $icon = str_replace("'", "''", (string) $app['icon']);
+                $url = $app['url'] === null ? 'NULL' : "'" . str_replace("'", "''", (string) $app['url']) . "'";
+                $pai = $app['pai'] === null ? 'NULL' : (int) $app['pai'];
+                $ordem = (int) $app['ordem'];
+
+                DB::unprepared("
+IF EXISTS (SELECT 1 FROM dbo.APLICACAO WHERE APLICACAO_ID = {$id})
+BEGIN
+    UPDATE dbo.APLICACAO
+       SET APLICACAO_NOME = '{$nome}',
+           APLICACAO_ICONE = '{$icon}',
+           APLICACAO_URL = {$url},
+           APLICACAO_PAI_ID = {$pai},
+           APLICACAO_ORDEM = {$ordem},
+           APLICACAO_ATIVA = 1,
+           APLICACAO_GESTAO = 1
+     WHERE APLICACAO_ID = {$id};
+END
+ELSE
+BEGIN
+    SET IDENTITY_INSERT dbo.APLICACAO ON;
+    INSERT INTO dbo.APLICACAO
+    (APLICACAO_ID, APLICACAO_NOME, APLICACAO_ICONE, APLICACAO_URL, APLICACAO_PAI_ID, APLICACAO_ORDEM, APLICACAO_ATIVA, APLICACAO_GESTAO)
+    VALUES
+    ({$id}, '{$nome}', '{$icon}', {$url}, {$pai}, {$ordem}, 1, 1);
+    SET IDENTITY_INSERT dbo.APLICACAO OFF;
+END
+");
+            } else {
+                DB::table('APLICACAO')->updateOrInsert(
+                    ['APLICACAO_ID' => $app['id']],
+                    $payload
+                );
+            }
         }
 
         // ── ACESSO ────────────────────────────────────────────────────────────

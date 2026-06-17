@@ -31,10 +31,10 @@ class PerfilSeeder extends Seeder
             [15, 'RH Rede'],
         ];
 
-        foreach ($perfis as [$id, $nome]) {
+        foreach ($perfis as [, $nome]) {
             DB::table('PERFIL')->updateOrInsert(
-                ['PERFIL_ID' => $id],
-                ['PERFIL_NOME' => $nome, 'PERFIL_ATIVO' => 1]
+                ['PERFIL_NOME' => $nome],
+                ['PERFIL_ATIVO' => 1]
             );
         }
     }

@@ -88,12 +88,14 @@ class TabelaSalarialPMSLzSeeder extends Seeder
             $this->upsertProgConfig($carrId3, 24, 7.00, 1.00, 'E', null, 36);
 
         $tabelaMag = [
-            'PNM-I' => [1412.00, 1448.30, 1485.51, 1523.65, 1562.74],
-            'PNM-II' => [1562.74, 1601.81, 1641.85, 1682.90, 1724.97],
-            'PNM-III' => [1724.97, 1768.09, 1812.29, 1857.60, 1904.04],
-            'PNS-I' => [2118.00, 2170.95, 2225.22, 2280.85, 2337.87],
-            'PNS-II' => [2337.87, 2396.32, 2456.23, 2517.63, 2580.57],
-            'PNS-III' => [2580.57, 2645.08, 2711.21, 2779.00, 2848.47],
+            // TABELA_CLASSE em alguns ambientes foi criada com tamanho 5.
+            // Usamos códigos curtos para evitar truncamento em SQL Server.
+            'PNM1' => [1412.00, 1448.30, 1485.51, 1523.65, 1562.74],
+            'PNM2' => [1562.74, 1601.81, 1641.85, 1682.90, 1724.97],
+            'PNM3' => [1724.97, 1768.09, 1812.29, 1857.60, 1904.04],
+            'PNS1' => [2118.00, 2170.95, 2225.22, 2280.85, 2337.87],
+            'PNS2' => [2337.87, 2396.32, 2456.23, 2517.63, 2580.57],
+            'PNS3' => [2580.57, 2645.08, 2711.21, 2779.00, 2848.47],
         ];
         $this->insertTabela($carrId3, $tabelaMag, ['A', 'B', 'C', 'D', 'E'], $temTabelaOrdem, $temTabelaTS);
 

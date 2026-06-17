@@ -18,6 +18,8 @@ class DetalheEscalaItem extends Model
 {
     protected $table = "DETALHE_ESCALA_ITEM";
     protected $primaryKey = "DETALHE_ESCALA_ITEM_ID";
+
+    /** Tabela legada / variante sem created_at/updated_at — nunca persistir timestamps via Eloquent aqui. */
     public $timestamps = false;
     public static $snakeAttributes = false;
     protected $fillable = [

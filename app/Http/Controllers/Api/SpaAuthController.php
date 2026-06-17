@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Support\LoginLookupNormalizer;
+use App\Support\SpaAuthPayloadBuilder;
+use App\Support\UsuarioLoginResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -33,11 +36,18 @@ class SpaAuthController extends Controller
                 'USUARIO_SENHA' => 'required|string',
             ]);
 
-            $login = $request->input('USUARIO_LOGIN');
+            $loginBruto = (string) $request->input('USUARIO_LOGIN');
             $password = $request->input('USUARIO_SENHA');
 
+            if (config('app.debug')) {
+                \Illuminate\Support\Facades\Log::info('SpaAuthController.login USUARIO_LOGIN', [
+                    'bruto_recebido' => $loginBruto,
+                    'apos_lookup' => LoginLookupNormalizer::forDatabaseLookup($loginBruto),
+                ]);
+            }
+
             // Rate limiting básico por IP
-            $throttleKey = Str::lower($login) . '|' . $request->ip();
+            $throttleKey = Str::lower($loginBruto) . '|' . $request->ip();
             if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
                 $seconds = RateLimiter::availableIn($throttleKey);
                 return response()->json([
@@ -45,15 +55,10 @@ class SpaAuthController extends Controller
                 ], 429);
             }
 
-            // Normaliza: remover não-numéricos exceto para "admin"
-            if ($login !== 'admin') {
-                $login = preg_replace('/[^0-9]/', '', $login);
-            }
+            // CPF só-dígitos (legado) ou e-mail em USUARIO_LOGIN (personas Lab)
+            $login = LoginLookupNormalizer::forDatabaseLookup($loginBruto);
 
-            // Busca o usuário ativo
-            $user = Usuario::where('USUARIO_LOGIN', $login)
-                ->where('USUARIO_ATIVO', 1)
-                ->first();
+            $user = UsuarioLoginResolver::resolveByNormalizedLogin($login);
 
             if (!$user) {
                 RateLimiter::hit($throttleKey, 60 * 30);
@@ -94,11 +99,8 @@ class SpaAuthController extends Controller
 
             return response()->json([
                 'message' => 'Autenticado com sucesso.',
-                'user' => [
-                    'id' => $user->USUARIO_ID,
-                    'nome' => $user->USUARIO_NOME,
-                    'login' => $user->USUARIO_LOGIN,
-                ],
+                'ok' => true,
+                'user' => SpaAuthPayloadBuilder::forAuthenticatedUser($user),
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $ve) {
@@ -143,25 +145,77 @@ class SpaAuthController extends Controller
 
         $user = Auth::user();
 
-        // Busca o perfil via relacionamento
-        $perfilNome = null;
-        try {
-            $perfilNome = optional($user->usuarioPerfis()->with('perfil')->first())->perfil->PERFIL_NOME ?? null;
-        } catch (\Exception $e) {
-            // Ignora erros de relacionamento
+        return response()->json(SpaAuthPayloadBuilder::forAuthenticatedUser($user));
+    }
+
+    /**
+     * Chamado pelo login em routes/web.php e por {@see login()} aqui.
+     * Em produção não altera dados (no-op).
+     */
+    public function applyDevAdminFuncionarioVinculo(Usuario $user): void
+    {
+        // Compatibilidade retroativa: bypass desativado por segurança.
+    }
+
+    private function ensureAdminFuncionarioVinculo(Usuario $user): void
+    {
+        // Bypass removido por segurança: vínculo técnico automático desativado.
+        return;
+    }
+
+    private function ensureAdminLotacao(int $funcionarioId): void
+    {
+        if (
+            $funcionarioId <= 0 ||
+            !\Illuminate\Support\Facades\Schema::hasTable('LOTACAO') ||
+            !\Illuminate\Support\Facades\Schema::hasTable('SETOR')
+        ) {
+            return;
         }
 
-        if (!$perfilNome || strtolower(trim($perfilNome)) === 'usuário' || strtolower(trim($perfilNome)) === 'usuario') {
-            $perfilNome = 'funcionario';
+        $lotAtiva = \Illuminate\Support\Facades\DB::table('LOTACAO')
+            ->where('FUNCIONARIO_ID', $funcionarioId)
+            ->whereNull('LOTACAO_DATA_FIM')
+            ->exists();
+        if ($lotAtiva) {
+            // Trava de segurança: se houver duplicidade ativa legada, mantém somente a mais recente.
+            $ativos = \Illuminate\Support\Facades\DB::table('LOTACAO')
+                ->where('FUNCIONARIO_ID', $funcionarioId)
+                ->whereNull('LOTACAO_DATA_FIM')
+                ->orderByDesc('LOTACAO_DATA_INICIO')
+                ->orderByDesc('LOTACAO_ID')
+                ->get(['LOTACAO_ID']);
+            if ($ativos->count() > 1) {
+                $keeperId = (int) ($ativos->first()->LOTACAO_ID ?? 0);
+                if ($keeperId > 0) {
+                    $payload = ['LOTACAO_DATA_FIM' => now()->toDateString()];
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('LOTACAO', 'LOTACAO_OBSERVACAO')) {
+                        $payload['LOTACAO_OBSERVACAO'] = 'SANEAMENTO AUTOMÁTICO: DUPLICIDADE DE LOTAÇÃO ATIVA';
+                    }
+                    \Illuminate\Support\Facades\DB::table('LOTACAO')
+                        ->where('FUNCIONARIO_ID', $funcionarioId)
+                        ->whereNull('LOTACAO_DATA_FIM')
+                        ->where('LOTACAO_ID', '<>', $keeperId)
+                        ->update($payload);
+                }
+            }
+            return;
         }
 
-        return response()->json([
-            'id' => $user->USUARIO_ID,
-            'nome' => $user->USUARIO_NOME,
-            'login' => $user->USUARIO_LOGIN,
-            'email' => $user->USUARIO_EMAIL,
-            'perfil' => $perfilNome,
-            'alterar_senha' => (bool) $user->USUARIO_ALTERAR_SENHA,
-        ]);
+        $setorId = \Illuminate\Support\Facades\DB::table('SETOR')->value('SETOR_ID');
+        if (!$setorId) {
+            return;
+        }
+
+        $dados = ['FUNCIONARIO_ID' => $funcionarioId, 'SETOR_ID' => $setorId];
+        $lotCols = \Illuminate\Support\Facades\Schema::getColumnListing('LOTACAO');
+        if (in_array('LOTACAO_DATA_INICIO', $lotCols, true))
+            $dados['LOTACAO_DATA_INICIO'] = now()->toDateString();
+        if (in_array('LOTACAO_DATA_CADASTRO', $lotCols, true))
+            $dados['LOTACAO_DATA_CADASTRO'] = now()->toDateString();
+        if (in_array('LOTACAO_DATA_ATUALIZACAO', $lotCols, true))
+            $dados['LOTACAO_DATA_ATUALIZACAO'] = now()->toDateString();
+
+        \Illuminate\Support\Facades\DB::table('LOTACAO')->insert($dados);
     }
 }

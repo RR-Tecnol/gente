@@ -89,6 +89,18 @@ class FuncionariosPMSLzSeeder extends Seeder
         $total = 0;
         $atualizados = 0;
         foreach ($funcionarios as [$cpf, $nome, $sexo, $nasc, $admissao, $vinId, $regime, $matr, $uSigla, $classe, $referencia, $carrId]) {
+            if ($classe === 'PNM-II')
+                $classe = 'PNM2';
+            if ($classe === 'PNM-III')
+                $classe = 'PNM3';
+            if ($classe === 'PNM-I')
+                $classe = 'PNM1';
+            if ($classe === 'PNS-II')
+                $classe = 'PNS2';
+            if ($classe === 'PNS-III')
+                $classe = 'PNS3';
+            if ($classe === 'PNS-I')
+                $classe = 'PNS1';
 
             // Se já existe — atualizar CLASSE/REFERENCIA/CARREIRA
             $funcExiste = DB::table('FUNCIONARIO')->where('FUNCIONARIO_MATRICULA', $matr)->first();
@@ -115,9 +127,11 @@ class FuncionariosPMSLzSeeder extends Seeder
                     'PESSOA_CPF_NUMERO' => $cpf,
                     'PESSOA_SEXO' => $sexo,
                     'PESSOA_DATA_NASCIMENTO' => $nasc,
-                    'PESSOA_ATIVO' => 1,
-                    'PESSOA_DATA_CADASTRO' => now()->toDateString(),
                 ];
+                if (Schema::hasColumn('PESSOA', 'PESSOA_ATIVO'))
+                    $pessoaData['PESSOA_ATIVO'] = 1;
+                if (Schema::hasColumn('PESSOA', 'PESSOA_DATA_CADASTRO'))
+                    $pessoaData['PESSOA_DATA_CADASTRO'] = now()->toDateString();
                 if (Schema::hasColumn('PESSOA', 'PESSOA_CPF'))
                     $pessoaData['PESSOA_CPF'] = $cpf;
                 if (Schema::hasColumn('PESSOA', 'PESSOA_NASC'))
@@ -132,11 +146,15 @@ class FuncionariosPMSLzSeeder extends Seeder
                 'PESSOA_ID' => $pessoaId,
                 'FUNCIONARIO_MATRICULA' => $matr,
                 'FUNCIONARIO_DATA_INICIO' => $admissao,
-                'FUNCIONARIO_ATIVO' => 1,
-                'FUNCIONARIO_REGIME_PREV' => $regime,
-                'FUNCIONARIO_DATA_CADASTRO' => now()->toDateString(),
-                'FUNCIONARIO_DATA_ATUALIZACAO' => now()->toDateString(),
             ];
+            if (Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_ATIVO'))
+                $funcData['FUNCIONARIO_ATIVO'] = 1;
+            if (Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_REGIME_PREV'))
+                $funcData['FUNCIONARIO_REGIME_PREV'] = $regime;
+            if (Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_CADASTRO'))
+                $funcData['FUNCIONARIO_DATA_CADASTRO'] = now()->toDateString();
+            if (Schema::hasColumn('FUNCIONARIO', 'FUNCIONARIO_DATA_ATUALIZACAO'))
+                $funcData['FUNCIONARIO_DATA_ATUALIZACAO'] = now()->toDateString();
             if ($vinId && Schema::hasColumn('FUNCIONARIO', 'VINCULO_ID'))
                 $funcData['VINCULO_ID'] = $vinId;
             if ($colClasse && $classe !== null)

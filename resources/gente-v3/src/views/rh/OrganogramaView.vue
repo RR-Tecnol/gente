@@ -6,9 +6,15 @@
       <div class="hero-shapes"><div class="hs hs1"></div><div class="hs hs2"></div></div>
       <div class="hero-inner">
         <div>
-          <span class="hero-eyebrow">🏥 Gestão Hospitalar</span>
+          <span class="hero-eyebrow">🏛️ Gestão de Unidades SEMED</span>
           <h1 class="hero-title">Organograma</h1>
-          <p class="hero-sub">Estrutura hierárquica · {{ totalFuncionarios }} servidores em {{ totalSetores }} setores</p>
+          <p class="hero-sub">
+            Estrutura hierárquica · {{ servidoresAtivosTotalFmt }} servidores ({{ servidoresLotadosAtivosFmt }} lotados · {{ totalSetores }} setores)
+            <span v-if="servidoresEmLimbo > 0" class="limbo-alert">⚠️ {{ servidoresEmLimboFmt }} em limbo</span>
+          </p>
+          <div class="hero-future-note">
+            🏛️ GENTE v3 — Segurança Nível 1 ativa (Hash + QR Code). Fase 2 ICP-Brasil (A1) planejada.
+          </div>
         </div>
         <div class="hero-controls">
           <div class="search-wrap">
@@ -39,7 +45,7 @@
           <span class="msh-nome">{{ meuNome }}</span>
           <span class="msh-cargo">{{ meuCargo }}</span>
           <div class="msh-trilha">
-            <span class="msh-hosp">{{ nomeHospital }}</span>
+            <span class="msh-hosp">{{ nomeEstrutura }}</span>
             <span class="msh-sep">›</span>
             <span class="msh-dir" :style="{ color: meuSetorDir?.cor || '#6366f1' }">{{ meuSetorDir?.nome || '—' }}</span>
             <span class="msh-sep">›</span>
@@ -74,16 +80,16 @@
       <!-- Organograma somente-leitura (modo árvore, sem CRUD) -->
       <div class="func-section">
         <div class="func-section-hdr">
-          <span class="fsh-ico">🏥</span>
+            <span class="fsh-ico">🏛️</span>
           <h3>Estrutura da Instituição</h3>
           <span class="fsh-count">{{ totalSetores }} setores</span>
         </div>
         <!-- TASK-ORG-02 somente-leitura: accordion vertical -->
         <div class="acc-container">
           <div class="acc-root" style="pointer-events:none">
-            <span class="root-ico">🏥</span>
+            <span class="root-ico">🏛️</span>
             <div class="root-info">
-              <span class="root-nome">{{ nomeHospital }}</span>
+              <span class="root-nome">{{ nomeEstrutura }}</span>
               <span class="root-sub">{{ totalFuncionarios }} servidores</span>
             </div>
           </div>
@@ -129,13 +135,13 @@
       <div class="acc-container">
         <!-- Cabeçalho da instituição -->
         <div class="acc-root">
-          <span class="root-ico">🏥</span>
+          <span class="root-ico">🏛️</span>
           <div class="root-info">
-            <span class="root-nome">{{ nomeHospital }}</span>
+            <span class="root-nome">{{ nomeEstrutura }}</span>
             <span class="root-sub">{{ totalFuncionarios }} servidores · {{ totalSetores }} setores</span>
           </div>
           <div class="root-actions">
-            <button class="btn-edit-hosp" @click.stop="abrirModalEditarHospital" title="Editar nome">Editar</button>
+            <button class="btn-edit-hosp" @click.stop="abrirModalEditarEstrutura" title="Editar nome">Editar</button>
             <button class="btn-nova-dir" @click.stop="abrirModalNovaDiretoria" title="Nova Diretoria">+ Nova Diretoria</button>
           </div>
         </div>
@@ -176,6 +182,7 @@
                     <span class="asc-resp">{{ s.responsavel || '—' }}</span>
                     <div class="asc-bar-wrap"><div class="asc-bar" :style="{ width: ((s.funcionarios.length/(maxFuncPorSetor||1))*100)+'%', background: dir.cor }"></div></div>
                     <div class="asc-actions" @click.stop>
+                      <button class="sca-btn sca-link" @click="abrirModalVincular(s)">Vincular</button>
                       <button class="sca-btn sca-edit" @click="abrirModalEditar(s)">Editar</button>
                       <button class="sca-btn sca-del" @click="confirmarExcluir(s)">Excluir</button>
                     </div>
@@ -224,6 +231,7 @@
               <p class="drawer-sub">{{ setorAberto.funcionarios.length }} servidor{{ setorAberto.funcionarios.length !== 1 ? 'es' : '' }}</p>
             </div>
             <div class="drawer-hdr-actions">
+              <button class="sca-btn sca-link" @click="abrirModalVincular(setorAberto); setorAberto = null" title="Vincular">Vincular</button>
               <button class="sca-btn sca-edit" @click="abrirModalEditar(setorAberto); setorAberto = null" title="Editar">Editar</button>
               <button class="drawer-close" @click="setorAberto = null">✕</button>
             </div>
@@ -248,6 +256,37 @@
               </div>
               <div v-if="setorAberto.funcionarios.length === 0" class="dr-vazio">Nenhum servidor registrado neste setor.</div>
             </div>
+            <div class="dr-section-title">Histórico de Alterações</div>
+            <div class="dr-historico">
+              <div v-if="historicoCarregando" class="dr-vazio">Carregando histórico...</div>
+              <div v-else-if="historicoEventos.length === 0" class="dr-vazio">Nenhuma movimentação registrada para este setor.</div>
+              <div v-else class="hist-lista">
+                <div v-for="evt in historicoEventos" :key="evt.id" class="hist-item">
+                  <div class="hist-topo">
+                    <strong>{{ evt.usuario_nome || evt.usuario_login || 'Usuário do sistema' }}</strong>
+                    <span>{{ formatarDataHora(evt.created_at) }}</span>
+                  </div>
+                  <div class="hist-linhas">
+                    <div v-for="(m, idx) in evt.movimentacoes" :key="`${evt.id}-${idx}`" class="hist-linha-item">
+                      <span>
+                        Servidor #{{ m.funcionario_id }} · {{ nomeSetorPorId(m.setor_origem_id) }} → {{ nomeSetorPorId(m.setor_destino_id) }}
+                      </span>
+                      <button
+                        class="hist-pdf-btn"
+                        type="button"
+                        title="Abrir Portaria em PDF"
+                        @click="abrirPortariaHistorico(m.funcionario_id)"
+                      >
+                        📄 PDF
+                      </button>
+                    </div>
+                  </div>
+                  <div class="hist-motivo">
+                    Motivo: <strong>{{ evt.justificativa || 'Não informado' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -264,18 +303,57 @@
           <div class="modal-body">
             <div class="mf-group">
               <label>Nome do Setor <span class="req">*</span></label>
-              <input v-model="formSetor.nome" class="mf-input" placeholder="Ex: UTI Adulto" maxlength="200" />
+              <input v-model="formSetor.nome" class="mf-input" placeholder="Ex: Coordenação Pedagógica" maxlength="200" />
             </div>
             <div class="mf-group">
               <label>Sigla</label>
-              <input v-model="formSetor.sigla" class="mf-input" placeholder="Ex: UTI-A" maxlength="20" />
+              <input v-model="formSetor.sigla" class="mf-input" placeholder="Ex: CPED" maxlength="20" />
             </div>
             <div class="mf-group">
               <label>Diretoria / Unidade</label>
-              <select v-model="formSetor.unidade_id" class="mf-input">
-                <option :value="null">Sem diretoria</option>
-                <option v-for="u in unidadesFlat" :key="u.id" :value="u.id">{{ u.nome }}</option>
-              </select>
+              <input
+                v-model="formSetor.unidade_nome"
+                list="org-unidades-list"
+                class="mf-input"
+                placeholder="Digite para buscar ou criar (ex: SAGEP)"
+                @input="onUnidadeNomeInput"
+              />
+              <datalist id="org-unidades-list">
+                <option v-for="u in unidadesDatalist" :key="u" :value="u" />
+              </datalist>
+              <small class="vf-hint" v-if="deveCriarUnidadeOnTheFly">
+                Nome não encontrado no cadastro. Para criar a unidade <strong>{{ unidadeNomeNormalizada }}</strong> e vincular o setor, marque a confirmação abaixo (herança obrigatória de <code>unidade_id</code>).
+              </small>
+              <label v-if="deveCriarUnidadeOnTheFly && !editandoId" class="vf-check-nova-unidade">
+                <input type="checkbox" v-model="confirmarCriarUnidadeNova" />
+                <span>Confirmo a criação desta nova diretoria/unidade e o vínculo do setor a ela.</span>
+              </label>
+            </div>
+            <div class="mf-group">
+              <label>Vincular Funcionários (opcional)</label>
+              <div class="vf-toolbar">
+                <input v-model="buscaFuncionariosModal" class="mf-input" placeholder="Pesquisar funcionário..." />
+                <div class="vf-filtros">
+                  <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosModal === 'todos' }" @click="filtroFuncionariosModal = 'todos'">Todos</button>
+                  <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosModal === 'com_matricula' }" @click="filtroFuncionariosModal = 'com_matricula'">Com matrícula</button>
+                  <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosModal === 'sem_matricula' }" @click="filtroFuncionariosModal = 'sem_matricula'">Sem matrícula</button>
+                </div>
+              </div>
+              <div class="vf-lista">
+                <button
+                  v-for="f in funcionariosFiltradosModal"
+                  :key="f.id"
+                  type="button"
+                  class="vf-item"
+                  :class="{ selected: ordemSelecao(formSetor.funcionario_ids, f.id) > 0 }"
+                  @click="toggleSelecao(formSetor.funcionario_ids, f.id)"
+                >
+                  <span class="vf-nome">{{ f.nome }}</span>
+                  <span class="vf-meta">{{ f.matricula ? `Matrícula ${f.matricula}` : 'Sem matrícula' }}</span>
+                  <span v-if="ordemSelecao(formSetor.funcionario_ids, f.id) > 0" class="vf-ordem">{{ ordemSelecao(formSetor.funcionario_ids, f.id) }}</span>
+                </button>
+              </div>
+              <small class="vf-hint">{{ formSetor.funcionario_ids.length }} selecionado(s). Clique no nome para marcar/desmarcar.</small>
             </div>
             <p v-if="erroModal" class="modal-err">{{ erroModal }}</p>
           </div>
@@ -284,6 +362,119 @@
             <button class="modal-save" :disabled="salvando || !formSetor.nome.trim()" @click="salvarSetor">
               <span v-if="salvando" class="btn-spin"></span>
               <template v-else>{{ editandoId ? 'Salvar' : 'Criar Setor' }}</template>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- MODAL VINCULAR FUNCIONÁRIOS ───────────────────────────── -->
+    <transition name="modal">
+      <div v-if="modalVincularAberto" class="modal-overlay" @click.self="modalVincularAberto = false">
+        <div class="modal">
+          <div class="modal-hdr">
+            <h3>Vincular Funcionários — {{ setorVinculo?.nome }}</h3>
+            <button class="modal-close" @click="modalVincularAberto = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="vf-toolbar">
+              <input v-model="buscaFuncionariosVinculo" class="mf-input" placeholder="Pesquisar funcionário..." />
+              <div class="vf-filtros">
+                <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosVinculo === 'todos' }" @click="filtroFuncionariosVinculo = 'todos'">Todos</button>
+                <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosVinculo === 'com_matricula' }" @click="filtroFuncionariosVinculo = 'com_matricula'">Com matrícula</button>
+                <button type="button" class="vf-filtro-btn" :class="{ active: filtroFuncionariosVinculo === 'sem_matricula' }" @click="filtroFuncionariosVinculo = 'sem_matricula'">Sem matrícula</button>
+              </div>
+            </div>
+            <div class="vf-lista">
+              <button
+                v-for="f in funcionariosFiltradosVinculo"
+                :key="f.id"
+                type="button"
+                class="vf-item"
+                :class="{ selected: ordemSelecao(funcionariosSelecionadosVinculo, f.id) > 0 }"
+                @click="toggleSelecao(funcionariosSelecionadosVinculo, f.id)"
+              >
+                <span class="vf-nome">{{ f.nome }}</span>
+                <span class="vf-meta">{{ f.matricula ? `Matrícula ${f.matricula}` : 'Sem matrícula' }}</span>
+                <span v-if="ordemSelecao(funcionariosSelecionadosVinculo, f.id) > 0" class="vf-ordem">{{ ordemSelecao(funcionariosSelecionadosVinculo, f.id) }}</span>
+              </button>
+            </div>
+            <small class="vf-hint">{{ funcionariosSelecionadosVinculo.length }} selecionado(s). A bolha mostra a ordem de seleção.</small>
+            <p v-if="erroVinculoModal" class="modal-err">{{ erroVinculoModal }}</p>
+          </div>
+          <div class="modal-footer">
+            <button class="modal-cancel" @click="modalVincularAberto = false">Cancelar</button>
+            <button class="modal-save" :disabled="salvandoVinculo" @click="salvarVinculos">
+              <span v-if="salvandoVinculo" class="btn-spin"></span>
+              <template v-else>Salvar Vínculos</template>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- CONFIRM MOVIMENTAÇÃO DE SETOR ───────────────────────── -->
+    <transition name="modal">
+      <div v-if="modalConfirmMovAberto" class="modal-overlay" @click.self="fecharConfirmMovimentacao">
+        <div class="modal modal-sm">
+          <div class="modal-hdr">
+            <h3>Confirmar Realocação</h3>
+            <button class="modal-close" @click="fecharConfirmMovimentacao">✕</button>
+          </div>
+          <div class="modal-body">
+            <div v-if="movimentacaoConcluida" class="confirm-ok">
+              ✅ Movimentação concluída e auditada.
+            </div>
+            <p class="confirm-txt" v-if="movimentacoesPendentes.length === 1">
+              Deseja mover <strong>{{ movimentacoesPendentes[0].nome }}</strong> do setor
+              <strong>{{ movimentacoesPendentes[0].origem }}</strong> para o setor
+              <strong>{{ movimentacoesPendentes[0].destino }}</strong>?
+            </p>
+            <div v-else>
+              <p class="confirm-txt">
+                Deseja mover <strong>{{ movimentacoesPendentes.length }}</strong> servidor(es) para
+                <strong>{{ setorVinculo?.nome }}</strong>?
+              </p>
+              <div class="confirm-lista">
+                <div v-for="m in movimentacoesPendentes" :key="m.id" class="confirm-item">
+                  <strong>{{ m.nome }}</strong> — {{ m.origem }} → {{ m.destino }}
+                </div>
+              </div>
+            </div>
+            <p class="confirm-sub">
+              Esta ação desativará a lotação anterior, mantendo o princípio de vínculo único da SEMED.
+            </p>
+            <div class="mf-group" style="margin-top:10px;">
+              <label>Motivo da Movimentação <span class="req">*</span></label>
+              <select v-model="motivoMovTipo" class="mf-input">
+                <option value="">Selecione o motivo...</option>
+                <option value="pedido_servidor">A Pedido (Interesse do Servidor)</option>
+                <option value="ex_officio">Ex Offício (Necessidade da Administração)</option>
+                <option value="substituicao_temporaria">Substituição Temporária</option>
+                <option value="remanejamento_decreto">Remanejamento por Decreto</option>
+                <option value="outros">Outros</option>
+              </select>
+            </div>
+            <div class="mf-group" v-if="motivoMovTipo === 'outros'">
+              <label>Descrição do Motivo <span class="req">*</span></label>
+              <textarea
+                v-model="motivoMovDescricao"
+                class="mf-input"
+                rows="3"
+                maxlength="500"
+                placeholder="Descreva a justificativa da movimentação..."
+              ></textarea>
+            </div>
+            <p v-if="erroVinculoModal" class="modal-err">{{ erroVinculoModal }}</p>
+          </div>
+          <div class="modal-footer">
+            <button class="modal-cancel" @click="fecharConfirmMovimentacao">{{ movimentacaoConcluida ? 'Fechar' : 'Cancelar' }}</button>
+            <button v-if="portariaDownloadUrl" class="modal-save" @click="baixarPortariaMovimentacao">
+              Baixar Portaria
+            </button>
+            <button v-if="!movimentacaoConcluida" class="modal-save" :disabled="salvandoVinculo || !motivoMovValido" @click="confirmarMovimentacaoVinculos">
+              <span v-if="salvandoVinculo" class="btn-spin"></span>
+              <template v-else>Confirmar Realocação</template>
             </button>
           </div>
         </div>
@@ -323,7 +514,7 @@
           <div class="modal-body">
             <div class="mf-group">
               <label>Nome da Diretoria <span class="req">*</span></label>
-              <input v-model="formDiretoria.nome" class="mf-input" placeholder="Ex: Diretoria Médica" maxlength="200" />
+              <input v-model="formDiretoria.nome" class="mf-input" placeholder="Ex: Diretoria de Gestão Escolar" maxlength="200" />
             </div>
             <div class="mf-group">
               <label>Sigla</label>
@@ -366,23 +557,23 @@
 
     <!-- MODAL EDITAR HOSPITAL ─────────────────────────────── -->
     <transition name="modal">
-      <div v-if="modalHospitalAberto" class="modal-overlay" @click.self="modalHospitalAberto = false">
+      <div v-if="modalEstruturaAberto" class="modal-overlay" @click.self="modalEstruturaAberto = false">
         <div class="modal">
           <div class="modal-hdr">
-            <h3>Editar Hospital</h3>
-            <button class="modal-close" @click="modalHospitalAberto = false">✕</button>
+            <h3>Editar Estrutura Organizacional</h3>
+            <button class="modal-close" @click="modalEstruturaAberto = false">✕</button>
           </div>
           <div class="modal-body">
             <div class="mf-group">
-              <label>Nome do Hospital <span class="req">*</span></label>
-              <input v-model="formHospital.nome" class="mf-input" placeholder="Ex: Hospital Municipal" maxlength="200" />
+              <label>Nome da Estrutura <span class="req">*</span></label>
+              <input v-model="formEstrutura.nome" class="mf-input" placeholder="Ex: Secretaria Municipal de Educação" maxlength="200" />
             </div>
-            <p v-if="erroHospitalModal" class="modal-err">{{ erroHospitalModal }}</p>
+            <p v-if="erroEstruturaModal" class="modal-err">{{ erroEstruturaModal }}</p>
           </div>
           <div class="modal-footer">
-            <button class="modal-cancel" @click="modalHospitalAberto = false">Cancelar</button>
-            <button class="modal-save" :disabled="salvandoHospital || !formHospital.nome.trim()" @click="salvarHospital">
-              <span v-if="salvandoHospital" class="btn-spin"></span>
+            <button class="modal-cancel" @click="modalEstruturaAberto = false">Cancelar</button>
+            <button class="modal-save" :disabled="salvandoEstrutura || !formEstrutura.nome.trim()" @click="salvarEstrutura">
+              <span v-if="salvandoEstrutura" class="btn-spin"></span>
               <template v-else>Salvar</template>
             </button>
           </div>
@@ -400,7 +591,7 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import api from '@/plugins/axios'
 import { useAuthStore } from '@/store/auth'
 
-const icones = ['🏥','💉','📋','🔬','🏃','🛡️','🩺','🫀','👶','🚑','🛏️','💼','💰','🧪','🦴']
+const icones = ['🏛️','📚','📋','🧭','🏫','🛡️','🗂️','👥','🧠','🧾','📌','💼','💰','📊','🧩']
 
 const loaded      = ref(false)
 const busca       = ref('')
@@ -433,12 +624,12 @@ const meuSetorDir = computed(() => {
   return estrutura.value.find(d => d.setores.some(s => s.funcionarios.some(f => f.nome === nome))) ?? estrutura.value[0] ?? null
 })
 
-// ── Hospital (nó raiz) ────────────────────────────────────────
-const nomeHospital       = ref(localStorage.getItem('sisgep_hospital_nome') || 'Hospital Municipal')
-const modalHospitalAberto = ref(false)
-const salvandoHospital   = ref(false)
-const erroHospitalModal  = ref('')
-const formHospital       = reactive({ nome: '' })
+// ── Estrutura organizacional (nó raiz) ───────────────────────
+const nomeEstrutura       = ref(localStorage.getItem('sisgep_estrutura_nome') || 'Secretaria Municipal de Educação')
+const modalEstruturaAberto = ref(false)
+const salvandoEstrutura   = ref(false)
+const erroEstruturaModal  = ref('')
+const formEstrutura       = reactive({ nome: '' })
 
 // ── CRUD Setor state ──────────────────────────────────────────
 const modalAberto    = ref(false)
@@ -447,8 +638,30 @@ const editandoId     = ref(null)
 const salvando       = ref(false)
 const excluindo      = ref(false)
 const erroModal      = ref('')
-const formSetor      = reactive({ nome: '', sigla: '', unidade_id: null, ico: '🏥' })
+const formSetor      = reactive({ nome: '', sigla: '', unidade_id: null, unidade_nome: '', funcionario_ids: [], ico: '🏛️' })
+/** Obrigatório ao digitar nome de unidade inexistente (evita criação acidental — Regra de Ouro). */
+const confirmarCriarUnidadeNova = ref(false)
 const unidadesFlat   = ref([])
+const unidadesCanonicas = ['SAGEP', 'SAFE', 'SAPE']
+const funcionariosDisponiveis = ref([])
+const buscaFuncionariosModal = ref('')
+const filtroFuncionariosModal = ref('todos')
+
+const modalVincularAberto = ref(false)
+const setorVinculo = ref(null)
+const funcionariosSelecionadosVinculo = ref([])
+const modalConfirmMovAberto = ref(false)
+const movimentacoesPendentes = ref([])
+const movimentacaoConcluida = ref(false)
+const portariaFuncionarioId = ref(null)
+const motivoMovTipo = ref('')
+const motivoMovDescricao = ref('')
+const buscaFuncionariosVinculo = ref('')
+const filtroFuncionariosVinculo = ref('todos')
+const salvandoVinculo = ref(false)
+const erroVinculoModal = ref('')
+const historicoEventos = ref([])
+const historicoCarregando = ref(false)
 
 // ── CRUD Diretoria state ──────────────────────────────────────
 const modalDiretoriaAberto    = ref(false)
@@ -465,18 +678,18 @@ const formDiretoria           = reactive({ nome: '', sigla: '', ico: '🏢' })
 const CORES = ['#6366f1','#0d9488','#f59e0b','#e11d48','#0ea5e9','#8b5cf6']
 const mockEstrutura = [
   {
-    id: 1, nome: 'Diretoria Médica', ico: '🩺', cor: '#6366f1',
+    id: 1, nome: 'Diretoria Pedagógica', ico: '📚', cor: '#6366f1',
     setores: [
-      { id: 11, ico: '🫀', nome: 'UTI Adulto', responsavel: 'Dr. Carlos Mendes', unidade_id: 1, funcionarios: [{ nome: 'Ana Silva', cargo: 'Médica Intensivista' },{ nome: 'Roberto Lima', cargo: 'Enfermeiro' },{ nome: 'Carla Santos', cargo: 'Técnica de Enfermagem' }] },
-      { id: 12, ico: '👶', nome: 'UTI Neonatal', responsavel: 'Dra. Fernanda Azevedo', unidade_id: 1, funcionarios: [{ nome: 'Marcos Pereira', cargo: 'Neonatologista' }, { nome: 'Juliana Costa', cargo: 'Enfermeira Pediátrica' }] },
-      { id: 13, ico: '🚑', nome: 'Pronto-Socorro', responsavel: 'Dr. Lucas Ferreira', unidade_id: 1, funcionarios: [{ nome: 'Patricia Oliveira', cargo: 'Médica Emergencista' }, { nome: 'Thiago Nunes', cargo: 'Técnico de Enfermagem' }] },
+      { id: 11, ico: '📘', nome: 'Coordenação de Currículo', responsavel: 'Carlos Mendes', unidade_id: 1, funcionarios: [{ nome: 'Ana Silva', cargo: 'Analista Pedagógica' },{ nome: 'Roberto Lima', cargo: 'Técnico Educacional' },{ nome: 'Carla Santos', cargo: 'Assistente Administrativa' }] },
+      { id: 12, ico: '🧠', nome: 'Coordenação de Formação', responsavel: 'Fernanda Azevedo', unidade_id: 1, funcionarios: [{ nome: 'Marcos Pereira', cargo: 'Especialista em Formação' }, { nome: 'Juliana Costa', cargo: 'Analista Pedagógica' }] },
+      { id: 13, ico: '🧭', nome: 'Coordenação de Avaliação', responsavel: 'Lucas Ferreira', unidade_id: 1, funcionarios: [{ nome: 'Patricia Oliveira', cargo: 'Analista de Indicadores' }, { nome: 'Thiago Nunes', cargo: 'Técnico de Avaliação' }] },
     ]
   },
   {
-    id: 2, nome: 'Diretoria de Enfermagem', ico: '💉', cor: '#0d9488',
+    id: 2, nome: 'Diretoria de Gestão Escolar', ico: '🏫', cor: '#0d9488',
     setores: [
-      { id: 21, ico: '🛏️', nome: 'Clínica Médica', responsavel: 'Enf. Maria Carvalho', unidade_id: 2, funcionarios: [{ nome: 'Sandra Lima', cargo: 'Enfermeira' }, { nome: 'Paulo Freitas', cargo: 'Técnico de Enfermagem' }] },
-      { id: 22, ico: '🏃', nome: 'Fisioterapia', responsavel: 'Ft. João Batista', unidade_id: 2, funcionarios: [{ nome: 'Larissa Cunha', cargo: 'Fisioterapeuta' }] },
+      { id: 21, ico: '🏫', nome: 'Núcleo de Unidades Escolares', responsavel: 'Maria Carvalho', unidade_id: 2, funcionarios: [{ nome: 'Sandra Lima', cargo: 'Gestora Escolar' }, { nome: 'Paulo Freitas', cargo: 'Técnico de Gestão' }] },
+      { id: 22, ico: '🏃', nome: 'Núcleo de Apoio Territorial', responsavel: 'João Batista', unidade_id: 2, funcionarios: [{ nome: 'Larissa Cunha', cargo: 'Analista Territorial' }] },
     ]
   },
   {
@@ -490,6 +703,11 @@ const mockEstrutura = [
 
 // ── Estrutura reativa ─────────────────────────────────────────
 const estrutura = ref([])
+const stats = ref({
+  servidores_lotados_ativos: 0,
+  servidores_ativos_total: 0,
+  servidores_em_limbo: 0,
+})
 
 // Mapear dados reais do backend → formato da view
 const mapEstrutura = (unidades) => {
@@ -497,7 +715,7 @@ const mapEstrutura = (unidades) => {
     id:      u.id ?? 0,  // null vira 0 (grupo virtual 'Sem Diretoria')
     nome:    u.nome || 'Sem Diretoria',
     sigla:   u.sigla ?? null,
-    ico:     u.sigla ? ['🏥','💉','📋','🔬','🏃','🛡️'][i % 6] : '🏥',
+    ico:     u.sigla ? ['🏛️','📚','📋','🧭','🏫','🛡️'][i % 6] : '🏛️',
     cor:     CORES[i % CORES.length],
     setores: (u.setores ?? []).map(s => ({
       id:           s.id,
@@ -512,27 +730,168 @@ const mapEstrutura = (unidades) => {
 }
 
 onMounted(async () => {
+  await refreshDashboardData()
+  // TASK-ORG-01: iniciar todas as diretorias colapsadas por padrão
+  estrutura.value.forEach(dir => colapsados.add(dir.id))
+  setTimeout(() => { loaded.value = true }, 80)
+})
+
+const carregarOrganograma = async () => {
   try {
     const { data } = await api.get('/api/v3/organograma')
+    stats.value = {
+      servidores_lotados_ativos: Number(data?.stats?.servidores_lotados_ativos || 0),
+      servidores_ativos_total: Number(data?.stats?.servidores_ativos_total || 0),
+      servidores_em_limbo: Number(data?.stats?.servidores_em_limbo || 0),
+    }
     if (!data.fallback && data.unidades?.length) {
       estrutura.value  = mapEstrutura(data.unidades)
       unidadesFlat.value = data.unidades_flat ?? []
+      return
     } else {
-      estrutura.value  = mockEstrutura
+      estrutura.value = data.unidades ? mapEstrutura(data.unidades) : mockEstrutura
+      unidadesFlat.value = data.unidades_flat ?? []
     }
   } catch {
     estrutura.value = mockEstrutura
-  } finally {
-    // TASK-ORG-01: iniciar todas as diretorias colapsadas por padrão
-    estrutura.value.forEach(dir => colapsados.add(dir.id))
-    setTimeout(() => { loaded.value = true }, 80)
+    unidadesFlat.value = []
+    stats.value = { servidores_lotados_ativos: 0, servidores_ativos_total: 0, servidores_em_limbo: 0 }
   }
+}
+
+const carregarFuncionariosDisponiveis = async () => {
+  try {
+    const { data } = await api.get('/api/v3/organograma/funcionarios')
+    funcionariosDisponiveis.value = data?.funcionarios ?? []
+  } catch {
+    funcionariosDisponiveis.value = []
+  }
+}
+
+const refreshDashboardData = async () => {
+  await Promise.all([
+    carregarOrganograma(),
+    carregarFuncionariosDisponiveis(),
+  ])
+}
+
+const obterIdsFuncionariosSetor = (setorId) => {
+  for (const dir of estrutura.value) {
+    const setor = dir.setores.find(s => s.id === setorId)
+    if (setor) return (setor.funcionarios || []).map(f => String(f.id))
+  }
+  return []
+}
+
+const filtrarFuncionarios = (lista, buscaTxt, filtro) => {
+  const termo = (buscaTxt || '').toLowerCase().trim()
+  return (lista || []).filter((f) => {
+    const casaBusca = !termo || (f.nome || '').toLowerCase().includes(termo) || String(f.matricula || '').toLowerCase().includes(termo)
+    if (!casaBusca) return false
+    if (filtro === 'com_matricula') return !!f.matricula
+    if (filtro === 'sem_matricula') return !f.matricula
+    return true
+  })
+}
+
+const funcionariosFiltradosModal = computed(() =>
+  filtrarFuncionarios(funcionariosDisponiveis.value, buscaFuncionariosModal.value, filtroFuncionariosModal.value)
+)
+
+const funcionariosFiltradosVinculo = computed(() =>
+  filtrarFuncionarios(funcionariosDisponiveis.value, buscaFuncionariosVinculo.value, filtroFuncionariosVinculo.value)
+)
+
+const unidadeNomeNormalizada = computed(() => (formSetor.unidade_nome || '').trim().toUpperCase())
+const unidadesDatalist = computed(() => {
+  const nomes = [
+    ...unidadesCanonicas,
+    ...(unidadesFlat.value || []).map((u) => String(u.nome || '').trim()).filter(Boolean),
+  ]
+  return [...new Set(nomes)]
 })
+const unidadeEncontrada = computed(() => {
+  const alvo = unidadeNomeNormalizada.value
+  if (!alvo) return null
+  return (unidadesFlat.value || []).find((u) => String(u.nome || '').trim().toUpperCase() === alvo) || null
+})
+const deveCriarUnidadeOnTheFly = computed(() => !!unidadeNomeNormalizada.value && !unidadeEncontrada.value)
+
+const onUnidadeNomeInput = () => {
+  if (unidadeEncontrada.value) {
+    formSetor.unidade_id = unidadeEncontrada.value.id
+    formSetor.unidade_nome = unidadeEncontrada.value.nome
+    return
+  }
+  formSetor.unidade_id = null
+}
+
+const toggleSelecao = (targetArray, funcionarioId) => {
+  const id = String(funcionarioId)
+  const idx = targetArray.indexOf(id)
+  if (idx >= 0) {
+    targetArray.splice(idx, 1)
+    return
+  }
+  targetArray.push(id)
+}
+
+const ordemSelecao = (lista, funcionarioId) => {
+  const idx = (lista || []).indexOf(String(funcionarioId))
+  return idx >= 0 ? idx + 1 : 0
+}
+const motivoMovMapLabel = {
+  pedido_servidor: 'A Pedido (Interesse do Servidor)',
+  ex_officio: 'Ex Offício (Necessidade da Administração)',
+  substituicao_temporaria: 'Substituição Temporária',
+  remanejamento_decreto: 'Remanejamento por Decreto',
+  outros: 'Outros',
+}
+const motivoMovValido = computed(() => {
+  if (!motivoMovTipo.value) return false
+  if (motivoMovTipo.value === 'outros') {
+    return String(motivoMovDescricao.value || '').trim().length > 0
+  }
+  return true
+})
+const motivoMovTexto = computed(() => {
+  if (!motivoMovTipo.value) return ''
+  const base = motivoMovMapLabel[motivoMovTipo.value] || motivoMovTipo.value
+  const desc = String(motivoMovDescricao.value || '').trim()
+  if (motivoMovTipo.value === 'outros' && desc) return `Outros: ${desc}`
+  return base
+})
+const portariaDownloadUrl = computed(() => {
+  if (!portariaFuncionarioId.value) return ''
+  return `/api/v3/servidor/portaria-lotacao/${portariaFuncionarioId.value}`
+})
+
+const nomeFuncionarioPorId = (funcionarioId) => {
+  const id = String(funcionarioId)
+  const f = (funcionariosDisponiveis.value || []).find((x) => String(x.id) === id)
+  return f?.nome || `Servidor ${id}`
+}
+
+const setorOrigemPorFuncionario = (funcionarioId) => {
+  const id = String(funcionarioId)
+  for (const dir of estrutura.value) {
+    for (const setor of dir.setores || []) {
+      const found = (setor.funcionarios || []).some((f) => String(f.id) === id)
+      if (found) {
+        return { setorId: setor.id, setorNome: setor.nome || 'Sem setor' }
+      }
+    }
+  }
+  return null
+}
 
 
 // ── Computed ──────────────────────────────────────────────────
 const toggleDir       = (id) => { colapsados.has(id) ? colapsados.delete(id) : colapsados.add(id) }
-const selecionarSetor = (s, dir) => { setorAberto.value = { ...s, cor: dir?.cor } }
+const selecionarSetor = (s, dir) => {
+  setorAberto.value = { ...s, cor: dir?.cor }
+  carregarHistoricoSetor(s?.id, s?.unidade_id)
+}
 
 const filteredSetores = (dir) => {
   if (!busca.value) return dir.setores
@@ -545,9 +904,53 @@ const totalFuncDir      = (dir) => dir.setores.reduce((a, s) => a + s.funcionari
 const totalFuncionarios = computed(() => estrutura.value.reduce((a, d) => a + totalFuncDir(d), 0))
 const totalSetores      = computed(() => estrutura.value.reduce((a, d) => a + d.setores.length, 0))
 const maxFuncPorSetor   = computed(() => Math.max(1, ...estrutura.value.flatMap(d => d.setores.map(s => s.funcionarios.length))))
+const servidoresLotadosAtivos = computed(() => Number(stats.value?.servidores_lotados_ativos || totalFuncionarios.value || 0))
+const servidoresAtivosTotal = computed(() => Number(stats.value?.servidores_ativos_total || servidoresLotadosAtivos.value || 0))
+const servidoresEmLimbo = computed(() => Number(stats.value?.servidores_em_limbo || 0))
+const servidoresLotadosAtivosFmt = computed(() => new Intl.NumberFormat('pt-BR').format(servidoresLotadosAtivos.value))
+const servidoresAtivosTotalFmt = computed(() => new Intl.NumberFormat('pt-BR').format(servidoresAtivosTotal.value))
+const servidoresEmLimboFmt = computed(() => new Intl.NumberFormat('pt-BR').format(servidoresEmLimbo.value))
 
 const avatarHue = (id) => ((typeof id === 'number' ? id : String(id).length * 13) * 137) % 360
 const iniciais  = (n) => { const w = (n||'').trim().split(' ').filter(Boolean); return w.length >= 2 ? (w[0][0]+w[w.length-1][0]).toUpperCase() : (n||'?').substring(0,2).toUpperCase() }
+const formatarDataHora = (v) => {
+  if (!v) return '—'
+  try {
+    return new Date(v).toLocaleString('pt-BR')
+  } catch {
+    return String(v)
+  }
+}
+const nomeSetorPorId = (setorId) => {
+  if (!setorId) return 'Sem setor'
+  for (const dir of estrutura.value) {
+    const s = (dir.setores || []).find((x) => Number(x.id) === Number(setorId))
+    if (s) return s.nome || `Setor ${setorId}`
+  }
+  return `Setor ${setorId}`
+}
+const carregarHistoricoSetor = async (setorId, unidadeId) => {
+  if (!setorId) {
+    historicoEventos.value = []
+    return
+  }
+  historicoCarregando.value = true
+  try {
+    const { data } = await api.get('/api/v3/organograma/historico', {
+      params: { setor_id: setorId, unidade_id: unidadeId || null, limit: 30 },
+    })
+    historicoEventos.value = data?.events || []
+  } catch {
+    historicoEventos.value = []
+  } finally {
+    historicoCarregando.value = false
+  }
+}
+const abrirPortariaHistorico = (funcionarioId) => {
+  const id = Number(funcionarioId || 0)
+  if (!id) return
+  window.open(`/api/v3/servidor/portaria-lotacao/${id}`, '_blank')
+}
 
 // ── Toast ─────────────────────────────────────────────────────
 const showToast = (msg) => { toast.value = { visible: true, msg }; setTimeout(() => toast.value.visible = false, 3500) }
@@ -555,69 +958,87 @@ const showToast = (msg) => { toast.value = { visible: true, msg }; setTimeout(()
 // ── CRUD Setor ────────────────────────────────────────────────
 const abrirModalNovo = () => {
   editandoId.value = null; erroModal.value = ''
-  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: null, ico: '🏥' })
+  confirmarCriarUnidadeNova.value = false
+  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: null, unidade_nome: '', funcionario_ids: [], ico: '🏛️' })
+  buscaFuncionariosModal.value = ''
+  filtroFuncionariosModal.value = 'todos'
   modalAberto.value = true
 }
 const abrirModalNovoNaDir = (dir) => {
   editandoId.value = null; erroModal.value = ''
-  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: dir.id, ico: '🏥' })
+  confirmarCriarUnidadeNova.value = false
+  Object.assign(formSetor, { nome: '', sigla: '', unidade_id: dir.id, unidade_nome: dir.nome || '', funcionario_ids: [], ico: '🏛️' })
+  buscaFuncionariosModal.value = ''
+  filtroFuncionariosModal.value = 'todos'
   modalAberto.value = true
 }
 const abrirModalEditar = (s) => {
   editandoId.value = s.id; erroModal.value = ''
-  Object.assign(formSetor, { nome: s.nome, sigla: s.sigla ?? '', unidade_id: s.unidade_id ?? null, ico: s.ico ?? '🏥' })
+  confirmarCriarUnidadeNova.value = false
+  Object.assign(formSetor, {
+    nome: s.nome,
+    sigla: s.sigla ?? '',
+    unidade_id: s.unidade_id ?? null,
+    unidade_nome: ((unidadesFlat.value.find(u => u.id === (s.unidade_id ?? null)) || {}).nome ?? ''),
+    funcionario_ids: obterIdsFuncionariosSetor(s.id),
+    ico: s.ico ?? '🏛️',
+  })
+  buscaFuncionariosModal.value = ''
+  filtroFuncionariosModal.value = 'todos'
   modalAberto.value = true
+}
+const abrirModalVincular = (s) => {
+  if (!s?.id) return
+  setorVinculo.value = {
+    id: s.id,
+    nome: s.nome ?? '',
+    sigla: s.sigla ?? '',
+    unidade_id: s.unidade_id ?? null,
+  }
+  funcionariosSelecionadosVinculo.value = obterIdsFuncionariosSetor(s.id)
+  buscaFuncionariosVinculo.value = ''
+  filtroFuncionariosVinculo.value = 'todos'
+  erroVinculoModal.value = ''
+  movimentacoesPendentes.value = []
+  modalConfirmMovAberto.value = false
+  movimentacaoConcluida.value = false
+  portariaFuncionarioId.value = null
+  motivoMovTipo.value = ''
+  motivoMovDescricao.value = ''
+  modalVincularAberto.value = true
 }
 const confirmarExcluir = (s) => { confirmExcluir.value = s }
 
 const salvarSetor = async () => {
   if (!formSetor.nome.trim()) { erroModal.value = 'Nome é obrigatório.'; return }
+  if (!editandoId.value && !formSetor.unidade_id && !unidadeNomeNormalizada.value) {
+    erroModal.value = 'Diretoria/Unidade é obrigatória (selecione na lista ou informe o nome).'
+    return
+  }
+  if (!editandoId.value && deveCriarUnidadeOnTheFly.value && !confirmarCriarUnidadeNova.value) {
+    erroModal.value = 'Marque a confirmação para criar a nova unidade ou escolha uma unidade existente na lista.'
+    return
+  }
+  const payloadCriarUnidade = editandoId.value ? false : (deveCriarUnidadeOnTheFly.value && confirmarCriarUnidadeNova.value)
   salvando.value = true; erroModal.value = ''
   try {
     if (editandoId.value) {
-      await api.put(`/api/v3/organograma/setor/${editandoId.value}`, { ...formSetor })
-
-      // Encontrar em qual diretoria o setor está atualmente
-      let setorSnapshot = null
-      let dirAtualIdx = -1
-      estrutura.value.forEach((dir, di) => {
-        const idx = dir.setores.findIndex(s => s.id === editandoId.value)
-        if (idx !== -1) { setorSnapshot = { ...dir.setores[idx] }; dirAtualIdx = di }
+      await api.put(`/api/v3/organograma/setor/${editandoId.value}`, {
+        ...formSetor,
+        unidade_nome: unidadeNomeNormalizada.value || null,
+        criar_unidade: payloadCriarUnidade,
+        funcionario_ids: (formSetor.funcionario_ids || []).map(v => Number(v)).filter(Boolean),
       })
-
-      const novaUnidadeId = formSetor.unidade_id ?? 0
-      const velhaUnidadeId = setorSnapshot?.unidade_id ?? 0
-      const setorAtualizado = { ...setorSnapshot, nome: formSetor.nome, sigla: formSetor.sigla, ico: formSetor.ico, unidade_id: novaUnidadeId }
-
-      if (dirAtualIdx !== -1 && novaUnidadeId !== velhaUnidadeId) {
-        // Mudou de diretoria: remover da antiga
-        estrutura.value[dirAtualIdx].setores = estrutura.value[dirAtualIdx].setores.filter(s => s.id !== editandoId.value)
-        // Inserir na nova diretoria
-        const novaDirIdx = estrutura.value.findIndex(d => {
-          if (novaUnidadeId === 0 || novaUnidadeId === null) return !d.id || d.id === 0
-          return d.id === novaUnidadeId
-        })
-        if (novaDirIdx !== -1) {
-          estrutura.value[novaDirIdx].setores.push(setorAtualizado)
-        } else {
-          // Criar grupo 'Sem Diretoria' caso não exista
-          estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏥', cor: '#64748b', setores: [setorAtualizado] })
-        }
-        // Limpar grupos virtuais vazios
-        estrutura.value = estrutura.value.filter(d => d.setores.length > 0 || (d.id && d.id !== 0))
-      } else if (dirAtualIdx !== -1) {
-        // Mesma diretoria: apenas atualizar campos
-        const idx = estrutura.value[dirAtualIdx].setores.findIndex(s => s.id === editandoId.value)
-        if (idx !== -1) estrutura.value[dirAtualIdx].setores[idx] = setorAtualizado
-      }
-
+      await refreshDashboardData()
       showToast(`Setor "${formSetor.nome}" atualizado!`)
     } else {
-      const { data } = await api.post('/api/v3/organograma/setor', { ...formSetor })
-      const novoSetor = { id: data.id ?? Date.now(), nome: formSetor.nome, sigla: formSetor.sigla, ico: formSetor.ico, responsavel: '—', unidade_id: formSetor.unidade_id, funcionarios: [] }
-      const dirIdx = estrutura.value.findIndex(d => d.id === formSetor.unidade_id)
-      if (dirIdx !== -1) { estrutura.value[dirIdx].setores.push(novoSetor) }
-      else { estrutura.value.push({ id: 0, nome: 'Sem Diretoria', ico: '🏥', cor: '#64748b', setores: [novoSetor] }) }
+      await api.post('/api/v3/organograma/setor', {
+        ...formSetor,
+        unidade_nome: unidadeNomeNormalizada.value || null,
+        criar_unidade: payloadCriarUnidade,
+        funcionario_ids: (formSetor.funcionario_ids || []).map(v => Number(v)).filter(Boolean),
+      })
+      await refreshDashboardData()
       showToast(`Setor "${formSetor.nome}" criado!`)
     }
     modalAberto.value = false
@@ -628,6 +1049,102 @@ const salvarSetor = async () => {
   }
 }
 
+const executarSalvarVinculos = async () => {
+  if (!setorVinculo.value?.id) return
+  salvandoVinculo.value = true
+  erroVinculoModal.value = ''
+  try {
+    const { data } = await api.put(`/api/v3/organograma/setor/${setorVinculo.value.id}`, {
+      nome: setorVinculo.value.nome,
+      sigla: setorVinculo.value.sigla,
+      unidade_id: setorVinculo.value.unidade_id,
+      funcionario_ids: funcionariosSelecionadosVinculo.value.map(v => Number(v)).filter(Boolean),
+      movimentacao_motivo_tipo: motivoMovTipo.value || null,
+      movimentacao_motivo_texto: motivoMovTexto.value || null,
+    })
+    await refreshDashboardData()
+    if (setorAberto.value?.id) {
+      await carregarHistoricoSetor(setorAberto.value.id, setorAberto.value.unidade_id)
+    }
+    if (movimentacoesPendentes.value.length > 0) {
+      const emailed = Number(data?.document_delivery?.emailed || 0)
+      const generated = Number(data?.document_delivery?.generated || 0)
+      const failed = Number(data?.document_delivery?.failed || 0)
+      if (generated > 0 && failed === 0) {
+        showToast(`✅ Movimentação concluída. ${emailed > 0 ? 'O servidor recebeu cópia da Portaria por e-mail e o documento já está no Dossiê Digital.' : 'Portaria registrada no Dossiê Digital (sem e-mail institucional cadastrado).'}`)
+      } else {
+        showToast('✅ Movimentação registrada e auditada com alertas na entrega da Portaria.')
+      }
+      movimentacaoConcluida.value = true
+      if (movimentacoesPendentes.value.length === 1) {
+        portariaFuncionarioId.value = Number(movimentacoesPendentes.value[0].id || 0) || null
+      } else {
+        portariaFuncionarioId.value = null
+      }
+    } else {
+      showToast(`Vínculos atualizados em "${setorVinculo.value.nome}".`)
+    }
+    modalVincularAberto.value = false
+    if (movimentacoesPendentes.value.length === 0) {
+      modalConfirmMovAberto.value = false
+    }
+    motivoMovTipo.value = ''
+    motivoMovDescricao.value = ''
+  } catch (e) {
+    erroVinculoModal.value = e?.response?.data?.error ?? 'Erro ao salvar vínculos.'
+  } finally {
+    salvandoVinculo.value = false
+  }
+}
+
+const salvarVinculos = async () => {
+  if (!setorVinculo.value?.id) return
+  erroVinculoModal.value = ''
+  const destinoSetorId = setorVinculo.value.id
+  const destinoSetorNome = setorVinculo.value.nome || 'Setor de destino'
+  const pendentes = (funcionariosSelecionadosVinculo.value || [])
+    .map((fid) => {
+      const origem = setorOrigemPorFuncionario(fid)
+      if (!origem || Number(origem.setorId) === Number(destinoSetorId)) return null
+      return {
+        id: String(fid),
+        nome: nomeFuncionarioPorId(fid),
+        origem: origem.setorNome || 'Setor atual',
+        destino: destinoSetorNome,
+      }
+    })
+    .filter(Boolean)
+
+  movimentacoesPendentes.value = pendentes
+  if (pendentes.length > 0) {
+    movimentacaoConcluida.value = false
+    portariaFuncionarioId.value = null
+    motivoMovTipo.value = ''
+    motivoMovDescricao.value = ''
+    modalConfirmMovAberto.value = true
+    return
+  }
+  await executarSalvarVinculos()
+}
+
+const confirmarMovimentacaoVinculos = async () => {
+  await executarSalvarVinculos()
+}
+
+const baixarPortariaMovimentacao = () => {
+  if (!portariaDownloadUrl.value) return
+  window.open(portariaDownloadUrl.value, '_blank')
+}
+
+const fecharConfirmMovimentacao = () => {
+  modalConfirmMovAberto.value = false
+  movimentacoesPendentes.value = []
+  movimentacaoConcluida.value = false
+  portariaFuncionarioId.value = null
+  motivoMovTipo.value = ''
+  motivoMovDescricao.value = ''
+}
+
 const excluirSetor = async () => {
   if (!confirmExcluir.value) return
   excluindo.value = true
@@ -635,11 +1152,10 @@ const excluirSetor = async () => {
   const nome = confirmExcluir.value.nome
   try {
     await api.delete(`/api/v3/organograma/setor/${id}`)
-    estrutura.value.forEach(dir => { dir.setores = dir.setores.filter(s => s.id !== id) })
+    await refreshDashboardData()
     showToast(`🗑️ Setor "${nome}" removido.`)
   } catch {
-    showToast(`🗑️ Setor "${nome}" removido.`)
-    estrutura.value.forEach(dir => { dir.setores = dir.setores.filter(s => s.id !== id) })
+    showToast('❌ Erro ao remover setor.')
   } finally {
     excluindo.value = false
     confirmExcluir.value = null
@@ -670,36 +1186,14 @@ const salvarDiretoria = async () => {
         nome: formDiretoria.nome,
         sigla: formDiretoria.sigla,
       })
-      // Atualizar localmente
-      const dirIdx = estrutura.value.findIndex(d => d.id === editandoDiretoriaId.value)
-      if (dirIdx !== -1) {
-        estrutura.value[dirIdx].nome  = formDiretoria.nome
-        estrutura.value[dirIdx].sigla = formDiretoria.sigla
-        estrutura.value[dirIdx].ico   = formDiretoria.ico
-      }
-      // Atualizar também unidades_flat
-      const flatIdx = unidadesFlat.value.findIndex(u => u.id === editandoDiretoriaId.value)
-      if (flatIdx !== -1) {
-        unidadesFlat.value[flatIdx].nome  = formDiretoria.nome
-        unidadesFlat.value[flatIdx].sigla = formDiretoria.sigla
-      }
+      await refreshDashboardData()
       showToast(`✅ Diretoria "${formDiretoria.nome}" atualizada!`)
     } else {
-      const { data } = await api.post('/api/v3/organograma/diretoria', {
+      await api.post('/api/v3/organograma/diretoria', {
         nome: formDiretoria.nome,
         sigla: formDiretoria.sigla,
       })
-      const novaDiretoria = {
-        id:      data.id ?? Date.now(),
-        nome:    formDiretoria.nome,
-        sigla:   formDiretoria.sigla,
-        ico:     formDiretoria.ico,
-        cor:     CORES[estrutura.value.length % CORES.length],
-        setores: [],
-      }
-      estrutura.value.push(novaDiretoria)
-      // Adicionar ao unidades_flat para aparecer no select do modal de setor
-      unidadesFlat.value.push({ id: novaDiretoria.id, nome: novaDiretoria.nome, sigla: novaDiretoria.sigla })
+      await refreshDashboardData()
       showToast(`✅ Diretoria "${formDiretoria.nome}" criada!`)
     }
     modalDiretoriaAberto.value = false
@@ -710,18 +1204,18 @@ const salvarDiretoria = async () => {
   }
 }
 
-// ── Hospital ─────────────────────────────────────────────────
-const abrirModalEditarHospital = () => {
-  formHospital.nome = nomeHospital.value
-  erroHospitalModal.value = ''
-  modalHospitalAberto.value = true
+// ── Estrutura organizacional ─────────────────────────────────
+const abrirModalEditarEstrutura = () => {
+  formEstrutura.nome = nomeEstrutura.value
+  erroEstruturaModal.value = ''
+  modalEstruturaAberto.value = true
 }
-const salvarHospital = () => {
-  if (!formHospital.nome.trim()) { erroHospitalModal.value = 'Nome é obrigatório.'; return }
-  nomeHospital.value = formHospital.nome.trim()
-  localStorage.setItem('sisgep_hospital_nome', nomeHospital.value)
-  showToast(`Nome atualizado para "${nomeHospital.value}"!`)
-  modalHospitalAberto.value = false
+const salvarEstrutura = () => {
+  if (!formEstrutura.nome.trim()) { erroEstruturaModal.value = 'Nome é obrigatório.'; return }
+  nomeEstrutura.value = formEstrutura.nome.trim()
+  localStorage.setItem('sisgep_estrutura_nome', nomeEstrutura.value)
+  showToast(`Nome da estrutura atualizado para "${nomeEstrutura.value}"!`)
+  modalEstruturaAberto.value = false
 }
 
 const excluirDiretoria = async () => {
@@ -731,8 +1225,7 @@ const excluirDiretoria = async () => {
   const nome = confirmExcluirDiretoria.value.nome
   try {
     await api.delete(`/api/v3/organograma/diretoria/${id}`)
-    estrutura.value = estrutura.value.filter(d => d.id !== id)
-    unidadesFlat.value = unidadesFlat.value.filter(u => u.id !== id)
+    await refreshDashboardData()
     showToast(`🗑️ Diretoria "${nome}" removida.`)
   } catch {
     showToast('❌ Erro ao remover diretoria.')
@@ -757,6 +1250,30 @@ const excluirDiretoria = async () => {
 .hero-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #818cf8; margin-bottom: 5px; }
 .hero-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: -0.02em; margin: 0 0 3px; }
 .hero-sub { font-size: 13px; color: #94a3b8; margin: 0; }
+.hero-future-note {
+  margin-top: 8px;
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.35);
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.limbo-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 700;
+}
 .hero-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .search-wrap { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 9px 14px; }
 .s-ico { width: 15px; height: 15px; color: #94a3b8; flex-shrink: 0; }
@@ -849,6 +1366,7 @@ const excluirDiretoria = async () => {
 .sca-btn { padding: 4px 10px; border-radius: 7px; border: none; background: #f8fafc; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.13s; white-space: nowrap; height: auto; width: auto; }
 .sca-edit:hover { background: #eff6ff; color: #3b82f6; }
 .sca-del:hover { background: #fef2f2; color: #ef4444; }
+.sca-link:hover { background: #ecfeff; color: #0e7490; }
 .sc-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .sc-count { font-size: 11px; font-weight: 700; color: #475569; }
 .sc-resp { font-size: 10px; color: #94a3b8; }
@@ -888,6 +1406,15 @@ const excluirDiretoria = async () => {
 .dr-cargo { display: block; font-size: 11px; color: #64748b; margin-top: 1px; }
 .dr-pessoas { display: flex; flex-direction: column; gap: 6px; }
 .dr-vazio { font-size: 13px; color: #94a3b8; text-align: center; padding: 20px 0; }
+.dr-historico { display: flex; flex-direction: column; gap: 8px; }
+.hist-lista { display: flex; flex-direction: column; gap: 8px; }
+.hist-item { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; background: #f8fafc; }
+.hist-topo { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: #475569; margin-bottom: 6px; }
+.hist-linhas { font-size: 12px; color: #1e293b; display: grid; gap: 4px; margin-bottom: 6px; }
+.hist-linha-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hist-pdf-btn { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 8px; font-size: 11px; font-weight: 700; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+.hist-pdf-btn:hover { border-color: #94a3b8; background: #f8fafc; }
+.hist-motivo { font-size: 11px; color: #334155; }
 .drawer-enter-active, .drawer-leave-active { transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
 .drawer-enter-from, .drawer-leave-to { opacity: 0; }
 .drawer-enter-from .drawer, .drawer-leave-to .drawer { transform: translateX(100%); }
@@ -907,6 +1434,20 @@ const excluirDiretoria = async () => {
 .mf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .mf-input { border: 1.5px solid #e2e8f0; border-radius: 11px; padding: 10px 14px; font-size: 14px; font-family: inherit; color: #1e293b; background: #f8fafc; outline: none; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
 .mf-input:focus { border-color: #6366f1; }
+.vf-toolbar { display: flex; flex-direction: column; gap: 8px; }
+.vf-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+.vf-filtro-btn { border: 1px solid #e2e8f0; background: #fff; color: #475569; border-radius: 10px; padding: 5px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.vf-filtro-btn.active { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; }
+.vf-lista { max-height: 280px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.vf-item { width: 100%; border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; padding: 9px 10px; text-align: left; cursor: pointer; display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 10px; }
+.vf-item:hover { border-color: #c7d2fe; background: #f8faff; }
+.vf-item.selected { border-color: #6366f1; background: #eef2ff; }
+.vf-nome { font-size: 12px; font-weight: 700; color: #1e293b; }
+.vf-meta { font-size: 11px; color: #64748b; }
+.vf-ordem { min-width: 24px; height: 24px; border-radius: 999px; background: #6366f1; color: #fff; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.vf-hint { font-size: 11px; color: #64748b; }
+.vf-check-nova-unidade { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; font-size: 12px; color: #0f172a; line-height: 1.45; cursor: pointer; }
+.vf-check-nova-unidade input { margin-top: 3px; flex-shrink: 0; }
 .ico-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 .ico-btn { border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-size: 16px; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.13s; }
 .ico-btn:hover { border-color: #6366f1; }
@@ -914,6 +1455,33 @@ const excluirDiretoria = async () => {
 .modal-err { font-size: 12px; color: #ef4444; font-weight: 600; margin: 0; }
 .confirm-txt { font-size: 14px; color: #1e293b; line-height: 1.6; margin: 0; }
 .confirm-sub { font-size: 12px; color: #94a3b8; }
+.confirm-lista {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.confirm-item {
+  font-size: 12px;
+  color: #334155;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.confirm-ok {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
 .modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding: 0 24px 22px; }
 .modal-cancel { padding: 10px 18px; border-radius: 11px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; }
 .modal-save { display: flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 11px; border: none; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }

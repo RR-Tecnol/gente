@@ -39,6 +39,10 @@
           {{ t.ico }} {{ t.nome }}
         </button>
       </div>
+      <div class="filtros-chips">
+        <button class="fchip" :class="{ active: filtroSla === 'vencendo' }" @click="filtroSla = filtroSla === 'vencendo' ? '' : 'vencendo'">⏳ SLA vencendo</button>
+        <button class="fchip" :class="{ active: filtroSla === 'vencido' }" @click="filtroSla = filtroSla === 'vencido' ? '' : 'vencido'">🚨 SLA vencido</button>
+      </div>
     </div>
 
     <!-- LISTA -->
@@ -52,7 +56,7 @@
       <div v-else class="ouv-table">
         <div class="ouv-thead">
           <span>Protocolo</span><span>Tipo</span><span>Área</span><span>Autor</span>
-          <span>Data</span><span>Status</span><span>Ação</span>
+          <span>Data</span><span>SLA</span><span>Status</span><span>Ação</span>
         </div>
         <div v-for="(m, i) in itensFiltrados" :key="m.id" class="ouv-row" :style="{ '--ri': i }">
           <span class="ouv-proto">{{ m.protocolo ?? '—' }}</span>
@@ -65,6 +69,7 @@
             <span v-else>{{ m.autor ?? 'Não identificado' }}</span>
           </span>
           <span class="ouv-data">{{ fmtData(m.data) }}</span>
+          <span class="ouv-sla-chip" :class="`sla-${slaInfo(m).status}`">{{ slaInfo(m).label }}</span>
           <span class="ouv-status-chip" :class="`sc-${m.status}`">{{ statusLabel(m.status) }}</span>
           <button class="btn-detalhe" @click="abrirDetalhe(m)">Ver / Responder</button>
         </div>
@@ -136,6 +141,7 @@ const lista      = ref([])
 const busca      = ref('')
 const filtroStatus = ref('')
 const filtroTipo   = ref('')
+const filtroSla    = ref('')
 
 const modalAberto  = ref(false)
 const detalhe      = ref({})
@@ -190,6 +196,7 @@ const itensFiltrados = computed(() => {
   let r = lista.value
   if (filtroStatus.value) r = r.filter(m => m.status === filtroStatus.value)
   if (filtroTipo.value)   r = r.filter(m => m.tipo   === filtroTipo.value)
+  if (filtroSla.value)    r = r.filter(m => slaInfo(m).status === filtroSla.value)
   if (busca.value.trim()) {
     const b = busca.value.toLowerCase()
     r = r.filter(m =>
@@ -251,6 +258,23 @@ const statusLabel = s => ({ recebida: '📥 Recebida', analise: '🔍 Em Anális
   respondida: '✅ Respondida', arquivada: '📦 Arquivada' }[s] ?? s)
 
 const fmtData = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
+const slaInfo = (m) => {
+  const backend = m?.sla_status
+  if (backend === 'vencido') return { status: 'vencido', label: 'Vencido' }
+  if (backend === 'vencendo') return { status: 'vencendo', label: 'Vencendo' }
+  if (backend === 'ok') return { status: 'ok', label: 'No prazo' }
+
+  const urg = m?.urgencia ?? 'normal'
+  const prazo = urg === 'alta' ? 24 : urg === 'media' ? 48 : 72
+  const base = new Date((m?.data ?? '') + 'T12:00:00')
+  if (Number.isNaN(base.getTime())) return { status: 'ok', label: 'No prazo' }
+  const limite = new Date(base.getTime() + prazo * 60 * 60 * 1000)
+  const diffMs = limite.getTime() - Date.now()
+  const diffH = diffMs / (1000 * 60 * 60)
+  if (diffH < 0) return { status: 'vencido', label: 'Vencido' }
+  if (diffH <= 8) return { status: 'vencendo', label: 'Vencendo' }
+  return { status: 'ok', label: 'No prazo' }
+}
 </script>
 
 <style scoped>
@@ -302,10 +326,10 @@ const fmtData = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') :
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .ouv-table { display: flex; flex-direction: column; }
-.ouv-thead { display: grid; grid-template-columns: 130px 130px 1fr 1fr 100px 130px 140px;
+.ouv-thead { display: grid; grid-template-columns: 120px 120px 1fr 1fr 95px 95px 120px 130px;
   gap: 0 12px; padding: 10px 18px; background: #f8fafc; border-bottom: 1px solid #f1f5f9;
   font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.06em; }
-.ouv-row { display: grid; grid-template-columns: 130px 130px 1fr 1fr 100px 130px 140px;
+.ouv-row { display: grid; grid-template-columns: 120px 120px 1fr 1fr 95px 95px 120px 130px;
   gap: 0 12px; padding: 12px 18px; border-bottom: 1px solid #f8fafc; align-items: center;
   animation: rowIn 0.3s cubic-bezier(0.22,1,0.36,1) calc(var(--ri) * 30ms) both; }
 @keyframes rowIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
@@ -323,6 +347,10 @@ const fmtData = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') :
 .sc-analise    { background: #fffbeb; color: #92400e; }
 .sc-respondida { background: #f0fdf4; color: #065f46; }
 .sc-arquivada  { background: #f8fafc; color: #64748b; }
+.ouv-sla-chip { display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 8px; white-space: nowrap; }
+.sla-ok { background: #dcfce7; color: #166534; }
+.sla-vencendo { background: #fef3c7; color: #92400e; }
+.sla-vencido { background: #fee2e2; color: #991b1b; }
 
 .btn-detalhe { padding: 7px 14px; border-radius: 10px; border: 1.5px solid #10b981; background: #f0fdf4; color: #065f46; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .btn-detalhe:hover { background: #10b981; color: #fff; }

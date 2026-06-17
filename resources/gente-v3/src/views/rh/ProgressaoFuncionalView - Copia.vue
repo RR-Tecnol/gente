@@ -218,7 +218,7 @@ const mockProgressoes = [
 
 onMounted(async () => {
   try {
-    const { data } = await api.get('/api/v3/progressao-funcional')
+    const { data } = await api.get('/api/v3/servidor/progressao')
 
     if (data.fallback) {
       // backend retornou fallback — usa mock

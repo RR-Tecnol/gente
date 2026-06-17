@@ -19,5 +19,6 @@ class VerifyCsrfToken extends Middleware
         'api/auth/me',
         // Autocadastro: rotas públicas — candidato não tem sessão/CSRF
         'api/v3/autocadastro/*',
+        'api/auth/change-password',
     ];
 }

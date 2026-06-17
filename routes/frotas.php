@@ -155,9 +155,12 @@ Route::post('/frotas/saidas', function () {
                 'REGISTRADO_POR'     => Auth::id(),
                 'created_at'         => now(), 'updated_at' => now(),
             ]);
-            DB::table('VEICULO')->where('VEICULO_ID', $data['veiculo_id'])->update([
+            $updatedVeiculo = DB::table('VEICULO')->where('VEICULO_ID', $data['veiculo_id'])->update([
                 'VEICULO_STATUS' => 'EM_USO', 'updated_at' => now(),
             ]);
+            if (!$updatedVeiculo) {
+                throw new \RuntimeException('Veículo não encontrado para atualização de status.');
+            }
         });
 
         return response()->json(['ok' => true]);
@@ -180,17 +183,23 @@ Route::patch('/frotas/saidas/{id}/retorno', function (int $id) {
 
         DB::transaction(function () use ($saida, $id, $kmRetorno) {
             $kmPercorrido = $kmRetorno - $saida->KM_SAIDA;
-            DB::table('SAIDA_VEICULO')->where('SAIDA_ID', $id)->update([
+            $updatedSaida = DB::table('SAIDA_VEICULO')->where('SAIDA_ID', $id)->update([
                 'RETORNO_DATA_HORA' => request('retorno_data_hora', now()),
                 'KM_RETORNO'        => $kmRetorno,
                 'KM_PERCORRIDO'     => $kmPercorrido,
                 'updated_at'        => now(),
             ]);
-            DB::table('VEICULO')->where('VEICULO_ID', $saida->VEICULO_ID)->update([
+            if (!$updatedSaida) {
+                throw new \RuntimeException('Saída não encontrada para registrar retorno.');
+            }
+            $updatedVeiculo = DB::table('VEICULO')->where('VEICULO_ID', $saida->VEICULO_ID)->update([
                 'VEICULO_KM_ATUAL' => $kmRetorno,
                 'VEICULO_STATUS'   => 'DISPONIVEL',
                 'updated_at'       => now(),
             ]);
+            if (!$updatedVeiculo) {
+                throw new \RuntimeException('Veículo não encontrado para finalizar retorno.');
+            }
         });
 
         return response()->json(['ok' => true, 'km_percorrido' => $kmRetorno - $saida->KM_SAIDA]);
